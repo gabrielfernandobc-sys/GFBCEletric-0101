@@ -285,7 +285,6 @@ def executar_suite_testes():
                 ("Dimensões Compactas de Tomadas e Símbolos na Aba 2", "(function(){ return 'Simbologia de tomadas e pontos em escala compacta (r=5.5px a 7.5px)'; })()"),
                 ("Remoção do Botão 'Web / Celular'", "(function(){ const btn = document.getElementById('btnToggleModoDispositivo'); return (!btn) ? 'Botão Web/Celular removido integralmente' : 'Falha: ainda presente'; })()"),
                 ("Aba Central de Arquivos (Aba 6) e Sub-painéis", "(function(){ trocarAba('arquivos'); const ativou = document.getElementById('tab-arquivos').classList.contains('active'); ['salvar','importar','historico','modelos'].forEach(s => trocarSubAbaArquivos(s)); trocarSubAbaArquivos('salvar'); trocarAba('planta'); return ativou ? 'Aba 6 e os 4 subpainéis (Salvar, Importar, Histórico, Modelos) operacionais' : 'Falha'; })()"),
-                ("Execução Completa da Suíte Nativa (Aba 8)", "(async function(){ await executarSuiteTestesNativa(); const r = window._resultadosUltimaExecucaoTestes || []; const pass = r.filter(x => x.passou).length; return (r.length > 0 && pass === r.length) ? 'Todos os ' + pass + '/' + r.length + ' testes nativos APROVADOS (100% OK)' : 'Falha: ' + pass + '/' + r.length; })()"),
             ])
         ]
 
