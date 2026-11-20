@@ -64,6 +64,26 @@
     // Disjuntor mínimo adotado em qualquer circuito (A).
     const DISJUNTOR_MINIMO = 10;
 
+    // Diâmetro externo (mm) de cabos flexíveis de cobre 750 V, classe 5, isolação PVC
+    // (NBR NM 247-3). Valores típicos de catálogos de fabricantes nacionais; o
+    // diâmetro real varia por marca — confira o catálogo do cabo especificado.
+    const DIAMETRO_EXTERNO_CABO_MM = {
+        1.5: 3.0, 2.5: 3.6, 4.0: 4.2, 6.0: 4.8, 10.0: 6.3, 16.0: 7.6,
+        25.0: 9.4, 35.0: 10.9, 50.0: 12.9, 70.0: 15.0, 95.0: 17.0, 120.0: 19.2
+    };
+
+    // Eletrodutos de PVC flexível corrugado (NBR 15465): diâmetro nominal e
+    // diâmetro interno típico (mm). Valores aproximados de catálogo — confira o
+    // fabricante; o corrugado tem o menor diâmetro interno entre os tipos usuais.
+    const ELETRODUTOS_DN = [
+        { dn: 20, polegadas: '1/2"', diametroInterno: 15.4 },
+        { dn: 25, polegadas: '3/4"', diametroInterno: 19.0 },
+        { dn: 32, polegadas: '1"', diametroInterno: 24.7 },
+        { dn: 40, polegadas: '1.1/4"', diametroInterno: 31.4 },
+        { dn: 50, polegadas: '1.1/2"', diametroInterno: 40.0 },
+        { dn: 60, polegadas: '2"', diametroInterno: 50.0 }
+    ];
+
     // Queda de tensão máxima em circuitos terminais (%) — NBR 5410 item 6.2.7.
     const QUEDA_TENSAO_MAX_PCT = 4.0;
 
@@ -161,15 +181,89 @@
         return { volts, pct: (volts / tensaoV) * 100 };
     }
 
-    /** Diâmetro nominal do eletroduto para a seção (taxa de ocupação ≤ 40%, item 6.2.11). */
-    function dimensionarEletroduto(secaoMm2) {
-        if (secaoMm2 >= 70.0) return 'DN 60 mm (2")';
-        if (secaoMm2 >= 35.0) return 'DN 50 mm (1.1/2")';
-        if (secaoMm2 >= 16.0) return 'DN 40 mm (1.1/4")';
-        if (secaoMm2 >= 10.0) return 'DN 32 mm (1")';
-        if (secaoMm2 >= 4.0) return 'DN 25 mm (3/4")';
-        if (secaoMm2 >= 2.5) return 'DN 20/25 mm (3/4")';
-        return 'DN 20 mm (1/2")';
+    /** Taxa máxima de ocupação do eletroduto — NBR 5410 item 6.2.11.1.6. */
+    function taxaMaximaOcupacao(numCondutores) {
+        if (numCondutores <= 1) return 0.53;
+        if (numCondutores === 2) return 0.31;
+        return 0.40;
+    }
+
+    /** Área da seção transversal externa de um condutor (mm²). */
+    function areaExternaCondutor(secaoMm2) {
+        const d = DIAMETRO_EXTERNO_CABO_MM[secaoMm2];
+        if (d === undefined) throw new Error(`Diâmetro externo do cabo de ${secaoMm2} mm² não cadastrado.`);
+        return Math.PI * d * d / 4;
+    }
+
+    /**
+     * TUE 220 V (2P) que também precisa de neutro (comando/eletrônica em 127 V):
+     * ar-condicionado e forno. Usa palavra inteira "ar" para não pegar "carga", "lavar" etc.
+     */
+    function tueComNeutro(nome) {
+        const n = (nome || '').toLowerCase();
+        return /(^|[^a-zà-ú])ar([^a-zà-ú]|$)/.test(n) || n.includes('condicionado') || n.includes('split') || n.includes('forno');
+    }
+
+    /**
+     * Condutores que o circuito leva no eletroduto (lista de seções em mm²),
+     * coerente com o quantitativo de materiais do app:
+     *   Iluminação: F + N + Retorno + PE   |   1P: F + N + PE   |   2P: F + F + PE
+     *   TUE 2P de ar-condicionado/forno: + N (comando 127 V)
+     */
+    function condutoresDoCircuito(circ, secaoFase, secaoPE) {
+        const pe = secaoPE !== undefined ? secaoPE : secaoProtecao(secaoFase);
+        const nome = (circ.nome || '').toLowerCase();
+        if (circ.tipo === 'Iluminação') return [secaoFase, secaoFase, secaoFase, pe];
+        if (circ.polos === '2P') {
+            const lista = [secaoFase, secaoFase, pe];
+            if (circ.tipo === 'TUE' && tueComNeutro(nome)) lista.push(secaoFase);
+            return lista;
+        }
+        return [secaoFase, secaoFase, pe];
+    }
+
+    /**
+     * Menor eletroduto cuja área interna comporta os condutores dentro da taxa
+     * máxima de ocupação. Retorna o DN, a taxa obtida e se atende.
+     */
+    function dimensionarEletrodutoPorOcupacao(secoesCondutores) {
+        const areaCondutores = secoesCondutores.reduce((soma, sec) => soma + areaExternaCondutor(sec), 0);
+        const taxaMax = taxaMaximaOcupacao(secoesCondutores.length);
+        let escolhido = ELETRODUTOS_DN.find(e => areaCondutores <= taxaMax * Math.PI * e.diametroInterno * e.diametroInterno / 4);
+        const atende = !!escolhido;
+        if (!escolhido) escolhido = ELETRODUTOS_DN[ELETRODUTOS_DN.length - 1];
+        const areaInterna = Math.PI * escolhido.diametroInterno * escolhido.diametroInterno / 4;
+        const taxa = areaCondutores / areaInterna;
+        return {
+            dn: escolhido.dn,
+            polegadas: escolhido.polegadas,
+            diametroInterno: escolhido.diametroInterno,
+            numCondutores: secoesCondutores.length,
+            areaCondutores,
+            areaInterna,
+            taxa,
+            taxaMax,
+            atende,
+            rotulo: `DN ${escolhido.dn} mm (${escolhido.polegadas}) • ${Math.round(taxa * 100)}%`
+        };
+    }
+
+    /**
+     * Eletroduto do trecho compartilhado (ex.: saída do quadro) com os `n`
+     * circuitos de maior área de condutores — coerente com a premissa de FCA.
+     */
+    function dimensionarTrechoAgrupado(circuitos, n) {
+        const qtd = Math.max(1, Math.round(Number(n) || 1));
+        const ordenados = (circuitos || [])
+            .filter(c => Array.isArray(c.condutores) && c.condutores.length)
+            .map(c => ({ c, area: c.condutores.reduce((s, sec) => s + areaExternaCondutor(sec), 0) }))
+            .sort((a, b) => b.area - a.area)
+            .slice(0, qtd);
+        if (ordenados.length === 0) return null;
+        const secoes = [].concat(...ordenados.map(o => o.c.condutores));
+        return Object.assign(dimensionarEletrodutoPorOcupacao(secoes), {
+            circuitos: ordenados.map(o => o.c.num)
+        });
     }
 
     /** Circuito em área molhada ou de potência (IDR 30 mA obrigatório — item 5.1.3.2.2). */
@@ -257,8 +351,14 @@
             ? `${queda.pct.toFixed(1)}% (OK ≤ 4%)`
             : `${queda.pct.toFixed(1)}% (EXCEDE 4%)`;
 
-        // 4. Eletroduto (item 6.2.11 — taxa de ocupação máxima 40%)
-        circ.eletroduto = dimensionarEletroduto(secaoNum);
+        // 4. Eletroduto pela taxa de ocupação (item 6.2.11.1.6) com os condutores do circuito
+        circ.condutores = condutoresDoCircuito(circ, secaoNum, circ.secaoPE);
+        circ.eletrodutoInfo = dimensionarEletrodutoPorOcupacao(circ.condutores);
+        circ.eletrodutoDN = circ.eletrodutoInfo.dn;
+        circ.eletroduto = circ.eletrodutoInfo.rotulo;
+        if (!circ.eletrodutoInfo.atende) {
+            alertas.push(`Condutores ocupam ${Math.round(circ.eletrodutoInfo.taxa * 100)}% do maior eletroduto previsto (DN ${circ.eletrodutoInfo.dn}): use dois eletrodutos ou eletrocalha.`);
+        }
 
         // 5. Proteção diferencial-residual (IDR 30 mA — item 5.1.3.2.2)
         circ.requerIdr = true;
@@ -266,7 +366,7 @@
 
         // 6. Verificação final Ib ≤ In ≤ Iz (corrigida)
         circ.ampacidadeOk = (ib <= inDisj && inDisj <= iz);
-        circ.conforme = circ.ampacidadeOk && quedaOk;
+        circ.conforme = circ.ampacidadeOk && quedaOk && circ.eletrodutoInfo.atende;
         circ.alertas = alertas;
 
         return circ;
@@ -754,6 +854,8 @@
         FCA_TABELA_42,
         FCT_TABELA_40_PVC,
         PARAMETROS_PADRAO,
+        DIAMETRO_EXTERNO_CABO_MM,
+        ELETRODUTOS_DN,
         QUEDA_TENSAO_MAX_PCT,
         SECAO_MINIMA_ILUMINACAO,
         SECAO_MINIMA_FORCA,
@@ -771,7 +873,12 @@
         ehCargaResistiva,
         selecionarProtecaoTUE,
         calcularQuedaTensao,
-        dimensionarEletroduto,
+        taxaMaximaOcupacao,
+        areaExternaCondutor,
+        tueComNeutro,
+        condutoresDoCircuito,
+        dimensionarEletrodutoPorOcupacao,
+        dimensionarTrechoAgrupado,
         ehAreaMolhadaOuPotencia,
         dimensionarCircuito,
         normalizarSistema,

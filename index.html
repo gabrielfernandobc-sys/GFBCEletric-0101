@@ -551,6 +551,12 @@
                                     <button onclick="alterarPassagemCabos('chao')" class="bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded font-bold">Chão</button>
                                 </div>
                             </div>
+                            <div class="flex justify-between items-center pt-1 border-t border-slate-850">
+                                <span class="text-slate-400 text-[10px]">Prumada (shaft):</span>
+                                <button id="btnTogglePrumadaMobile" onclick="alternarPrumada()" class="text-[10px] px-2 py-1 rounded font-bold">
+                                    <span id="lblStatusPrumadaMobile">Ativa</span>
+                                </button>
+                            </div>
                             <button onclick="abrirModalNovoPavimento(); fecharDrawerMobile();" class="w-full bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold p-1.5 rounded-lg border border-slate-700 transition text-[10px] flex items-center justify-center gap-1">
                                 <i class="fa-solid fa-plus text-[9px]"></i> Criar Novo Andar
                             </button>
@@ -785,6 +791,9 @@
                                 </span>
                                 <div id="containerBotoesPavimentos" class="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800"></div>
                                 <button onclick="abrirModalNovoPavimento()" class="px-2 py-1 text-xs font-bold text-sky-400 hover:text-sky-300 bg-sky-950/60 rounded-lg border border-sky-500/40" title="Novo Andar">+ Andar</button>
+                                <button id="btnTogglePrumada" onclick="alternarPrumada()" class="px-2 py-1 text-xs font-bold rounded-lg border flex items-center gap-1" title="Ativar/desativar a prumada vertical (shaft) que interliga os andares ao quadro">
+                                    <i class="fa-solid fa-arrow-up-from-ground-water"></i> Prumada: <span id="lblStatusPrumada">Ativa</span>
+                                </button>
                             </div>
 
                             <div class="flex items-center gap-1.5">
@@ -1956,6 +1965,7 @@
                     </label>
                     <span id="lblFatoresCorrecaoNBR" class="font-mono text-sky-300 font-bold pb-1">FCA 0.70 × FCT 1.00 = 0.70 × Iz</span>
                     <span class="text-slate-500 text-[10px] pb-1 max-w-md">Use o nº de circuitos do trecho de eletroduto mais carregado (normalmente a saída do quadro). Circuitos em eletroduto exclusivo: 1.</span>
+                    <span id="lblTrechoAgrupadoNBR" class="w-full text-[11px] text-slate-300"></span>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -1974,7 +1984,7 @@
                                 <th class="p-3">Fase</th>
                                 <th class="p-3">Comprimento Rota</th>
                                 <th class="p-3">Queda ΔV (NBR 5410)</th>
-                                <th class="p-3">Eletroduto (Taxa ≤40%)</th>
+                                <th class="p-3" title="Taxa de ocupação: ≤ 53% (1 condutor), 31% (2), 40% (3 ou mais) — item 6.2.11.1.6">Eletroduto (ocupação)</th>
                                 <th class="p-3">Proteção DR (30mA)</th>
                             </tr>
                         </thead>
@@ -3018,96 +3028,26 @@
                         2. Por que estas Bitolas são Utilizadas? Fundamentação por Seção
                     </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- 1.5 mm² -->
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                                <span class="font-black text-amber-400 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center font-mono text-xs">1.5</span>
-                                    Bitola 1,5 mm² — Circuitos de Iluminação
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-mono">Disjuntor 10A / 16A</span>
-                            </div>
-                            <p class="text-slate-300 text-xs leading-relaxed">
-                                • <strong>Seção Mínima Obrigatória (Item 6.2.6.1.1, Tabela 47)</strong>: A NBR 5410 determina que a menor seção de condutor de cobre permitida em instalações fixas de iluminação é <strong>1,5 mm²</strong>, mesmo quando a carga total em lâmpadas LED demande correntes baixas (&lt; 2A). Isso garante integridade mecânica na tração dos fios dentro dos eletrodutos.<br>
-                                • <strong>Capacidade de Condução (Tabela 36, Método B1)</strong>: Suporta até <strong>17,5A</strong> (2 condutores carregados, isolação PVC 70°C). Com fator de agrupamento, opera com folga térmica absoluta sob disjuntor de 10A.
-                            </p>
-                        </div>
-
-                        <!-- 2.5 mm² -->
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                                <span class="font-black text-emerald-400 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center justify-center font-mono text-xs">2.5</span>
-                                    Bitola 2,5 mm² — Tomadas de Uso Geral (TUG)
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-mono">Disjuntor 16A / 20A</span>
-                            </div>
-                            <p class="text-slate-300 text-xs leading-relaxed">
-                                • <strong>Seção Mínima para Circuitos de Força (Item 6.2.6.1.1, Tabela 47)</strong>: A norma proíbe condutores menores que <strong>2,5 mm²</strong> para qualquer circuito de tomadas (TUG ou TUE).<br>
-                                • <strong>Capacidade de Condução (Tabela 36, Método B1)</strong>: Suporta até <strong>24A</strong>. Coordenado com disjuntor padrão de 16A ou 20A, assegura que mesmo tomadas padrão NBR 14136 de 10A ou 20A sob regime de consumo contínuo (ferro, aspirador, secador) não superaqueçam o circuito.
-                            </p>
-                        </div>
-
-                        <!-- 4.0 mm² -->
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                                <span class="font-black text-blue-400 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center justify-center font-mono text-xs">4.0</span>
-                                    Bitola 4,0 mm² — Cargas Médias & Cozinha/Serviço
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-mono">Disjuntor 25A</span>
-                            </div>
-                            <p class="text-slate-300 text-xs leading-relaxed">
-                                • <strong>Ampacidade Térmica (Tabela 36, Método B1)</strong>: Suporta até <strong>32A</strong> em regime normal. Aplicando o Fator de Correção de Agrupamento (<strong class="text-sky-300">FCA = 0,70</strong> para 3 circuitos na prumada), a corrente corrigida admissível é de <strong>22,4A a 25,6A</strong>.<br>
-                                • <strong>Aplicações Típicas</strong>: Circuitos dedicados para micro-ondas, forno elétrico, lava-louças, ar-condicionado de 18.000 a 24.000 BTU e bancadas de cozinha com tomadas de 600VA simultâneas.
-                            </p>
-                        </div>
-
-                        <!-- 6.0 mm² -->
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                                <span class="font-black text-indigo-400 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center justify-center font-mono text-xs">6.0</span>
-                                    Bitola 6,0 mm² — Chuveiros Elétricos (5500W a 6800W)
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-mono">Disjuntor 32A</span>
-                            </div>
-                            <p class="text-slate-300 text-xs leading-relaxed">
-                                • <strong>Dimensionamento por Carga (Item 6.2.5.1)</strong>: Um chuveiro residencial padrão de 5500W em 220V demanda <strong class="text-amber-300 font-mono">I<sub>b</sub> = 25A</strong>. Se o modelo for de 6800W, a corrente atinge <strong class="text-amber-300 font-mono">30,9A</strong>.<br>
-                                • <strong>Capacidade de Condução (Tabela 36, Método B1)</strong>: Suporta <strong>41A</strong>. Com disjuntor de 32A, a condição regulamentar <strong class="text-sky-300 font-mono">I<sub>b</sub> (25A) ≤ I<sub>n</sub> (32A) ≤ I<sub>z</sub> (41A)</strong> é atendida com 100% de segurança térmica e queda de tensão controlada.
-                            </p>
-                        </div>
-
-                        <!-- 10.0 mm² -->
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                                <span class="font-black text-purple-400 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center justify-center font-mono text-xs">10</span>
-                                    Bitola 10,0 mm² — Chuveiros 7500W+ & Sub-Quadros
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-mono">Disjuntor 40A / 50A</span>
-                            </div>
-                            <p class="text-slate-300 text-xs leading-relaxed">
-                                • <strong>Aparelhos de Alta Potência</strong>: Chuveiros modernos turbo de 7500W a 7800W em 220V exigem <strong class="text-amber-300 font-mono">I<sub>b</sub> = 34,1A a 35,5A</strong>. Em trechos longos, o cabo de 6 mm² excederia o limite térmico após agrupamento.<br>
-                                • <strong>Capacidade de Condução</strong>: Suporta até <strong>57A</strong> (Método B1), sendo também a bitola adotada para a prumada de interligação entre o Quadro do Térreo (QDT-G) e o Quadro Superior (QDT-P).
-                            </p>
-                        </div>
-
-                        <!-- 16.0 a 25.0 mm² -->
-                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-                            <div class="flex items-center justify-between border-b border-slate-850 pb-2">
-                                <span class="font-black text-rose-400 flex items-center gap-2">
-                                    <span class="w-6 h-6 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center justify-center font-mono text-xs">16+</span>
-                                    Bitola 16 a 25 mm² — Ramal de Entrada da Concessionária
-                                </span>
-                                <span class="text-[10px] text-slate-400 font-mono">Disjuntor Geral 63A / 80A</span>
-                            </div>
-                            <p class="text-slate-300 text-xs leading-relaxed">
-                                • <strong>Demanda Global Residencial (Item 9.5.2)</strong>: Dimensionado pela soma das potências com aplicação dos fatores de demanda da concessionária local (Copel, Enel, Cemig, CPFL).<br>
-                                • <strong>Capacidade de Condução</strong>: 16 mm² suporta até <strong>76A</strong> e 25 mm² suporta até <strong>101A</strong>, garantindo suprimento total sem oscilações de luminosidade no acionamento simultâneo de cargas.
-                            </p>
-                        </div>
+                    <p class="text-slate-400 text-xs leading-relaxed">
+                        Tabela gerada a partir do cálculo do projeto (js/nbr5410.js). A capacidade de condução da Tabela 36 (método B1, cobre/PVC, 2 condutores carregados)
+                        é corrigida pelas premissas da aba QDT: <strong id="lblGuiaFatoresNBR" class="text-sky-300 font-mono">FCA × FCT</strong>.
+                        O disjuntor de cada circuito é o menor valor comercial ≥ I<sub>b</sub>, e a bitola é a menor seção que atende I<sub>n</sub> ≤ I<sub>z</sub> corrigida e a queda de tensão ≤ 4%.
+                    </p>
+                    <div class="overflow-x-auto rounded-xl border border-slate-800">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-slate-900 text-slate-300 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                                    <th class="p-2.5">Bitola</th>
+                                    <th class="p-2.5 font-mono">I<sub>z</sub> Tab. 36</th>
+                                    <th class="p-2.5 font-mono">I<sub>z</sub> corrigida</th>
+                                    <th class="p-2.5 font-mono">Maior disjuntor</th>
+                                    <th class="p-2.5">Carga máx. 127 V / 220 V</th>
+                                    <th class="p-2.5">PE (Tab. 58)</th>
+                                    <th class="p-2.5">Uso / Circuitos deste projeto</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaGuiaBitolasNBR" class="divide-y divide-slate-850"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -3128,13 +3068,13 @@
                         <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
                             <span class="font-bold text-sky-300 block mb-1">Critério 2: Capacidade Térmica (Ampacidade)</span>
                             <p class="text-slate-400 text-[11px] leading-relaxed">
-                                Método B1 em eletrodutos embutidos em alvenaria. Condutores de cobre com isolação PVC 70°C sob regime contínuo.
+                                Tabela 36, método B1 (eletrodutos embutidos em alvenaria), cobre com isolação PVC 70°C, 2 condutores carregados. Seções de 1,5 a 120 mm² e disjuntores de 10 a 125 A.
                             </p>
                         </div>
                         <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
                             <span class="font-bold text-emerald-300 block mb-1">Critério 3: Fatores de Correção</span>
                             <p class="text-slate-400 text-[11px] leading-relaxed">
-                                Fator de Agrupamento (FCA - Tab. 42: 0,80 para 2 circ; 0,70 para 3 circ) e Temperatura ambiente (FCT - Tab. 40).
+                                Fator de Agrupamento (FCA - Tab. 42: 0,80 para 2 circ; 0,70 para 3 circ) e Temperatura ambiente (FCT - Tab. 40, PVC). Neste projeto: <strong id="lblGuiaCriterioFatores" class="text-white font-mono">—</strong>.
                             </p>
                         </div>
                         <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
@@ -3152,7 +3092,7 @@
                         <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
                             <span class="font-bold text-teal-300 block mb-1">Taxa de Ocupação de Tubos</span>
                             <p class="text-slate-400 text-[11px] leading-relaxed">
-                                Item 6.2.11: Máximo 40% da área útil do eletroduto ocupada por 3 ou mais cabos, permitindo dissipação de calor.
+                                Item 6.2.11.1.6: soma das áreas externas dos condutores ≤ 53% (1 condutor), 31% (2) ou 40% (3 ou mais) da área interna. O software calcula a ocupação de cada circuito (fase, neutro, retorno e PE) e do trecho com os circuitos agrupados.
                             </p>
                         </div>
                     </div>
@@ -4006,25 +3946,25 @@
                         </div>
                         <p class="text-[10px] text-slate-400 leading-tight">Cargas dedicadas exclusivas: Ar-condicionado, chuveiro, forno</p>
                         <div class="grid grid-cols-2 gap-1.5 pt-1">
-                            <button onclick="inserirPontoRapido('TUE', 7500, 220, 'alta', 'Chuveiro Turbo 7500W')" class="bg-blue-800 hover:bg-blue-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Chuveiro Elétrico Turbo Master 7500W (Cabo 10mm²)">
+                            <button onclick="inserirPontoRapido('TUE', 7500, 220, 'alta', 'Chuveiro Turbo 7500W')" class="bg-blue-800 hover:bg-blue-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Chuveiro Elétrico Turbo Master 7500W">
                                 + Chuv. 7500W
                             </button>
-                            <button onclick="inserirPontoRapido('TUE', 5500, 220, 'alta', 'Chuveiro 5500W')" class="bg-blue-800 hover:bg-blue-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Chuveiro Convencional 5500W (Cabo 6mm²)">
+                            <button onclick="inserirPontoRapido('TUE', 5500, 220, 'alta', 'Chuveiro 5500W')" class="bg-blue-800 hover:bg-blue-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Chuveiro Convencional 5500W">
                                 + Chuv. 5500W
                             </button>
                             <button onclick="inserirPontoRapido('TUE', 1150, 220, 'alta', 'Ar Condicionado 12.000 BTU')" class="bg-blue-700 hover:bg-blue-600 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Ar Condicionado Split 12.000 BTU">
                                 + Ar (12k BTU)
                             </button>
-                            <button onclick="inserirPontoRapido('TUE', 7200, 220, 'baixa', 'Cooktop Indução 4 Bocas')" class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Cooktop por Indução 7200W (Cabo 10mm²)">
+                            <button onclick="inserirPontoRapido('TUE', 7200, 220, 'baixa', 'Cooktop Indução 4 Bocas')" class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Cooktop por Indução 7200W">
                                 + Cooktop 7.2kW
                             </button>
-                            <button onclick="inserirPontoRapido('TUE', 5500, 220, 'media', 'Torneira Elétrica 5500W')" class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Torneira Elétrica Cozinha 5500W (Cabo 6mm²)">
+                            <button onclick="inserirPontoRapido('TUE', 5500, 220, 'media', 'Torneira Elétrica 5500W')" class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Torneira Elétrica Cozinha 5500W">
                                 + Torneira Elétr.
                             </button>
                             <button onclick="inserirPontoRapido('TUE', 2200, 220, 'media', 'Máquina Lava e Seca 2200W')" class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Máquina Lava e Seca Front Load">
                                 + Lava & Seca
                             </button>
-                            <button onclick="inserirPontoRapido('TUE', 7400, 220, 'media', 'Carregador Wallbox 7.4 kW')" class="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Carregador Veicular Wallbox 7.4 kW (Cabo 10mm²)">
+                            <button onclick="inserirPontoRapido('TUE', 7400, 220, 'media', 'Carregador Wallbox 7.4 kW')" class="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Carregador Veicular Wallbox 7.4 kW">
                                 + Carro Elétr.
                             </button>
                             <button onclick="abrirCatalogoCompletoTuesModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center border border-amber-500/40" title="Ver catálogo completo com mais de 70 aparelhos e cargas">
@@ -4792,41 +4732,41 @@
         // =========================================================================
         const SUGESTOES_CARGAS_BR = [
             // 1. BANHEIRO, SUÍTE & HIDRO (TUE)
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Turbo Master', tipo: 'TUE', pot: 7500, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro eletrônico pressurizado (cabo 10mm², disjuntor 40A)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Turbo Blindado', tipo: 'TUE', pot: 6800, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Resistência blindada contra água dura (cabo 6mm², disjuntor 32A)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Convencional 220V', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro multitemperaturas padrão 220V (cabo 6mm², disjuntor 32A)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Convencional 127V', tipo: 'TUE', pot: 5500, tensao: 127, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro 127V (demanda Ib=43.3A, cabo 10mm², disjuntor 50A)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Ducha Higiênica Aquecida 220V', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-spray-can-sparkles', desc: 'Aquecedor individual para ducha higiênica (cabo 4mm²)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Ducha Higiênica Aquecida 127V', tipo: 'TUE', pot: 3500, tensao: 127, altura: 'media', icon: 'fa-spray-can-sparkles', desc: 'Aquecedor individual ducha 127V (demanda 27.5A, cabo 6mm²)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Torneira Elétrica Banheiro / Lavatório', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'media', icon: 'fa-faucet-drip', desc: 'Torneira elétrica bica móvel lavatório (cabo 4mm²)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Individual (1.0 HP)', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba banheira com IDR 30mA (cabo 2.5mm²)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Turbo Master', tipo: 'TUE', pot: 7500, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro eletrônico pressurizado' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Turbo Blindado', tipo: 'TUE', pot: 6800, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Resistência blindada contra água dura' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Convencional 220V', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro multitemperaturas padrão 220V' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Convencional 127V', tipo: 'TUE', pot: 5500, tensao: 127, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro 127V (demanda Ib=43.3A)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Ducha Higiênica Aquecida 220V', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-spray-can-sparkles', desc: 'Aquecedor individual para ducha higiênica' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Ducha Higiênica Aquecida 127V', tipo: 'TUE', pot: 3500, tensao: 127, altura: 'media', icon: 'fa-spray-can-sparkles', desc: 'Aquecedor individual ducha 127V (demanda 27.5A)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Torneira Elétrica Banheiro / Lavatório', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'media', icon: 'fa-faucet-drip', desc: 'Torneira elétrica bica móvel lavatório' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Individual (1.0 HP)', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba banheira com IDR 30mA' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Dupla / Spa (1.5 HP)', tipo: 'TUE', pot: 2500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba + aquecedor auxiliar banheira' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Banheira Jacuzzi c/ Aquecimento', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Sistema integrado hidromassagem e aquecimento (cabo 4mm²)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Banheira Jacuzzi c/ Aquecimento', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Sistema integrado hidromassagem e aquecimento' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Toalheiro Térmico / Secador de Toalhas 220V', tipo: 'TUE', pot: 150, tensao: 220, altura: 'media', icon: 'fa-rug', desc: 'Aquecedor de toalhas de parede' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Toalheiro Térmico / Secador 127V', tipo: 'TUE', pot: 150, tensao: 127, altura: 'media', icon: 'fa-rug', desc: 'Aquecedor de toalhas de parede 127V' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Secador de Cabelo de Parede Hotel', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-wind', desc: 'Secador fixo em suporte de parede' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Sauna Seca Residencial', tipo: 'TUE', pot: 6000, tensao: 220, altura: 'baixa', icon: 'fa-temperature-high', desc: 'Gerador elétrico para sauna seca 220V (cabo 10mm²)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Sauna Úmida a Vapor', tipo: 'TUE', pot: 9000, tensao: 220, altura: 'baixa', icon: 'fa-cloud', desc: 'Gerador de vapor para sauna úmida (cabo 16mm²)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Sauna Seca Residencial', tipo: 'TUE', pot: 6000, tensao: 220, altura: 'baixa', icon: 'fa-temperature-high', desc: 'Gerador elétrico para sauna seca 220V' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Sauna Úmida a Vapor', tipo: 'TUE', pot: 9000, tensao: 220, altura: 'baixa', icon: 'fa-cloud', desc: 'Gerador de vapor para sauna úmida' },
 
             // 2. COZINHA, COPA & ESPAÇO GOURMET (TUE)
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop por Indução 4 Bocas', tipo: 'TUE', pot: 7200, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Fogão de indução 4 zonas turbo (cabo 10mm², disjuntor 40A)' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop por Indução 2 Bocas / Dominó', tipo: 'TUE', pot: 3600, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Fogão de indução 2 zonas (cabo 4mm², disjuntor 25A)' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop Vitrocerâmico Elétrico 4 Bocas', tipo: 'TUE', pot: 6000, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Cooktop por resistência radiante (cabo 6mm²)' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Elétrico de Embutir Grande (70L+)', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno de embutir alta capacidade com convecção (cabo 4mm²)' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Elétrico de Embutir Padrão (50L)', tipo: 'TUE', pot: 2800, tensao: 220, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno elétrico de bancada ou torre quente (cabo 4mm²)' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop por Indução 4 Bocas', tipo: 'TUE', pot: 7200, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Fogão de indução 4 zonas turbo' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop por Indução 2 Bocas / Dominó', tipo: 'TUE', pot: 3600, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Fogão de indução 2 zonas' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop Vitrocerâmico Elétrico 4 Bocas', tipo: 'TUE', pot: 6000, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Cooktop por resistência radiante' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Elétrico de Embutir Grande (70L+)', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno de embutir alta capacidade com convecção' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Elétrico de Embutir Padrão (50L)', tipo: 'TUE', pot: 2800, tensao: 220, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno elétrico de bancada ou torre quente' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Micro-ondas de Embutir 220V', tipo: 'TUE', pot: 1400, tensao: 220, altura: 'media', icon: 'fa-microchip', desc: 'Micro-ondas com grill de torre quente 220V' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Micro-ondas de Embutir 127V', tipo: 'TUE', pot: 1400, tensao: 127, altura: 'media', icon: 'fa-microchip', desc: 'Micro-ondas com grill de torre quente 127V' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Torneira Elétrica Cozinha 220V', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'media', icon: 'fa-faucet', desc: 'Torneira elétrica desengordurante (cabo 6mm², disjuntor 32A)' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Torneira Elétrica Cozinha 127V', tipo: 'TUE', pot: 4500, tensao: 127, altura: 'media', icon: 'fa-faucet', desc: 'Torneira elétrica 127V (demanda 35.4A, cabo 10mm²)' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Torneira Elétrica Cozinha 220V', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'media', icon: 'fa-faucet', desc: 'Torneira elétrica desengordurante' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Torneira Elétrica Cozinha 127V', tipo: 'TUE', pot: 4500, tensao: 127, altura: 'media', icon: 'fa-faucet', desc: 'Torneira elétrica 127V (demanda 35.4A)' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Aquecedor Elétrico de Pia (Sob Bancada)', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'baixa', icon: 'fa-fire', desc: 'Mini-boiler instantâneo sob a cuba' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Grande 14 Serviços', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-sink', desc: 'Máquina de lavar louças de embutir ou piso (cabo 2.5mm²)' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Grande 14 Serviços', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-sink', desc: 'Máquina de lavar louças de embutir ou piso' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Compacta 8 Serviços 220V', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'media', icon: 'fa-sink', desc: 'Lava-louças compacta de nicho 220V' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Compacta 8 Serviços 127V', tipo: 'TUE', pot: 1500, tensao: 127, altura: 'media', icon: 'fa-sink', desc: 'Lava-louças compacta 127V (demanda 11.8A)' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Triturador de Alimentos de Pia 1.0 HP', tipo: 'TUE', pot: 750, tensao: 220, altura: 'baixa', icon: 'fa-blender', desc: 'Triturador de resíduos orgânicos sob a cuba' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Triturador de Alimentos 127V', tipo: 'TUE', pot: 750, tensao: 127, altura: 'baixa', icon: 'fa-blender', desc: 'Triturador de resíduos sob a cuba 127V' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Coifa / Depurador Ilha Alta Sucção', tipo: 'TUE', pot: 350, tensao: 220, altura: 'alta', icon: 'fa-fan', desc: 'Coifa central de ilha com exaustão forçada' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Coifa de Parede / Depurador 127V', tipo: 'TUE', pot: 250, tensao: 127, altura: 'alta', icon: 'fa-fan', desc: 'Coifa de parede com iluminação LED integrada' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Churrasqueira Elétrica de Embutir Gourmet', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'media', icon: 'fa-drumstick-bite', desc: 'Grill elétrico com refratários para bancada (cabo 4mm²)' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Churrasqueira Elétrica de Embutir Gourmet', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'media', icon: 'fa-drumstick-bite', desc: 'Grill elétrico com refratários para bancada' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno de Pizza Elétrico de Embutir', tipo: 'TUE', pot: 2500, tensao: 220, altura: 'media', icon: 'fa-pizza-slice', desc: 'Forno refratário elétrico até 400°C' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Gaveta Aquecida de Louças (Warming Drawer)', tipo: 'TUE', pot: 600, tensao: 220, altura: 'baixa', icon: 'fa-box-archive', desc: 'Gaveta térmica de embutir sob o forno' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Máquina de Gelo (Ice Maker) Embutida', tipo: 'TUE', pot: 250, tensao: 220, altura: 'media', icon: 'fa-cubes', desc: 'Fabricador de gelo com abastecimento direto' },
@@ -4835,25 +4775,25 @@
 
             // 3. ÁREA DE SERVIÇO & LAVANDERIA (TUE)
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Máquina Lava e Seca Front Load 220V', tipo: 'TUE', pot: 2200, tensao: 220, altura: 'media', icon: 'fa-soap', desc: 'Lavadora e secadora automática com aquecimento' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Máquina Lava e Seca Front Load 127V', tipo: 'TUE', pot: 2000, tensao: 127, altura: 'media', icon: 'fa-soap', desc: 'Lava e seca 127V (demanda 15.7A, cabo 2.5mm²)' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas Elétrica Parede/Piso', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'alta', icon: 'fa-wind', desc: 'Secadora de roupas por resistência térmica (cabo 4mm²)' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Máquina Lava e Seca Front Load 127V', tipo: 'TUE', pot: 2000, tensao: 127, altura: 'media', icon: 'fa-soap', desc: 'Lava e seca 127V (demanda 15.7A)' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas Elétrica Parede/Piso', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'alta', icon: 'fa-wind', desc: 'Secadora de roupas por resistência térmica' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas a Gás (Tomada de Comando)', tipo: 'TUE', pot: 400, tensao: 127, altura: 'media', icon: 'fa-fire-flame-simple', desc: 'Ponto elétrico para comando da secadora a gás' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Torneira Elétrica Tanque / Lavanderia', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'media', icon: 'fa-faucet', desc: 'Torneira com aquecimento elétrico para tanque (cabo 4mm²)' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Boiler Central de Água Quente 200L', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Reservatório térmico com aquecedor de apoio (cabo 4mm²)' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Boiler Central de Água Quente 300L/400L', tipo: 'TUE', pot: 5000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Boiler alta capacidade residencial (cabo 6mm²)' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Torneira Elétrica Tanque / Lavanderia', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'media', icon: 'fa-faucet', desc: 'Torneira com aquecimento elétrico para tanque' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Boiler Central de Água Quente 200L', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Reservatório térmico com aquecedor de apoio' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Boiler Central de Água Quente 300L/400L', tipo: 'TUE', pot: 5000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Boiler alta capacidade residencial' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Pressurizador de Água Sanitária 220V', tipo: 'TUE', pot: 550, tensao: 220, altura: 'baixa', icon: 'fa-gauge-high', desc: 'Bomba pressurizadora da rede de água fria/quente' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Pressurizador de Água Sanitária 127V', tipo: 'TUE', pot: 550, tensao: 127, altura: 'baixa', icon: 'fa-gauge-high', desc: 'Bomba pressurizadora 127V' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Passadeira a Vapor / Estação Profissional', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'media', icon: 'fa-shirt', desc: 'Ferro com caldeira de vapor contínuo' },
 
             // 4. CLIMATIZAÇÃO & CONFORTO TÉRMICO (TUE)
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 7.000 BTU', tipo: 'TUE', pot: 750, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Quartos compactos até 9m² (cabo 2.5mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 9.000 BTU', tipo: 'TUE', pot: 900, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Dormitórios médios até 14m² (cabo 2.5mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 12.000 BTU', tipo: 'TUE', pot: 1150, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Suíte master e home offices até 20m² (cabo 2.5mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 18.000 BTU', tipo: 'TUE', pot: 1700, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Salas e ambientes integrados até 30m² (cabo 2.5mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 24.000 BTU', tipo: 'TUE', pot: 2300, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Salas amplas e espaços gourmet até 40m² (cabo 4mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 30.000 BTU', tipo: 'TUE', pot: 2900, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Grandes salões até 50m² (cabo 4mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Cassete / Piso-Teto 36.000 BTU', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Embutido no gesso para áreas sociais (cabo 4mm²)' },
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Central Dutado 48.000 BTU', tipo: 'TUE', pot: 4800, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Sistema central com dutos e grelhas lineares (cabo 6mm²)' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 7.000 BTU', tipo: 'TUE', pot: 750, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Quartos compactos até 9m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 9.000 BTU', tipo: 'TUE', pot: 900, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Dormitórios médios até 14m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 12.000 BTU', tipo: 'TUE', pot: 1150, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Suíte master e home offices até 20m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 18.000 BTU', tipo: 'TUE', pot: 1700, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Salas e ambientes integrados até 30m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 24.000 BTU', tipo: 'TUE', pot: 2300, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Salas amplas e espaços gourmet até 40m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 30.000 BTU', tipo: 'TUE', pot: 2900, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Grandes salões até 50m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Cassete / Piso-Teto 36.000 BTU', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Embutido no gesso para áreas sociais' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Central Dutado 48.000 BTU', tipo: 'TUE', pot: 4800, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Sistema central com dutos e grelhas lineares' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado de Janela 10.000 BTU 220V', tipo: 'TUE', pot: 1000, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Aparelho compacto monobloco 220V' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado de Janela 10.000 BTU 127V', tipo: 'TUE', pot: 1000, tensao: 127, altura: 'alta', icon: 'fa-snowflake', desc: 'Aparelho compacto monobloco 127V' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Piso Aquecido Quarto/Banheiro (5 m²)', tipo: 'TUE', pot: 750, tensao: 220, altura: 'baixa', icon: 'fa-border-none', desc: 'Manta térmica elétrica sob porcelanato (150W/m²)' },
@@ -4863,14 +4803,14 @@
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Desumidificador de Ar Ambiente', tipo: 'TUE', pot: 400, tensao: 127, altura: 'media', icon: 'fa-droplet-slash', desc: 'Controle de umidade para closets e bibliotecas' },
 
             // 5. GARAGEM, VEÍCULOS & ÁREA EXTERNA (TUE)
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Carro Elétrico Wallbox 7.4 kW (Monofásico/Bifásico)', tipo: 'TUE', pot: 7400, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Estação de recarga veicular Tipo 2 32A (cabo 10mm², disjuntor 40A)' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Rápido 11 kW (Trifásico 16A)', tipo: 'TUE', pot: 11000, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Recarga veicular rápida trifásica 380V/220V (cabo 6mm²)' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Rápido 22 kW (Trifásico 32A)', tipo: 'TUE', pot: 22000, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Estação ultra rápida comercial/residencial (cabo 16mm²)' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Portátil Tomada 20A / 3.5 kW', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Ponto dedicado de recarga lenta com plugue 20A (cabo 4mm²)' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Carro Elétrico Wallbox 7.4 kW (Monofásico/Bifásico)', tipo: 'TUE', pot: 7400, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Estação de recarga veicular Tipo 2 32A' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Rápido 11 kW (Trifásico 16A)', tipo: 'TUE', pot: 11000, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Recarga veicular rápida trifásica 380V/220V' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Rápido 22 kW (Trifásico 32A)', tipo: 'TUE', pot: 22000, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Estação ultra rápida comercial/residencial' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Portátil Tomada 20A / 3.5 kW', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Ponto dedicado de recarga lenta com plugue 20A' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 0.75 HP', tipo: 'TUE', pot: 550, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba de circulação e filtragem' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 1.0 HP', tipo: 'TUE', pot: 750, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba piscina média com IDR 30mA' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 1.5 HP', tipo: 'TUE', pot: 1100, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba piscina grande' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Aquecedor Piscina Bomba de Calor Inverter', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'baixa', icon: 'fa-temperature-arrow-up', desc: 'Trocador de calor elétrico para piscina (cabo 6mm²)' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Aquecedor Piscina Bomba de Calor Inverter', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'baixa', icon: 'fa-temperature-arrow-up', desc: 'Trocador de calor elétrico para piscina' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Cascata / Hidromassagem da Piscina', tipo: 'TUE', pot: 1100, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba auxiliar para efeitos de água' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Eletrônico Garagem 220V', tipo: 'TUE', pot: 400, tensao: 220, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador basculante/deslizante rápido' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Eletrônico Garagem 127V', tipo: 'TUE', pot: 400, tensao: 127, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador portão 127V' },
@@ -4943,8 +4883,8 @@
                 tues.push({ nome: 'Toalheiro Térmico / Secador de Toalhas 220V', pot: 150, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-rug', obs: 'Conforto térmico' });
                 tues.push({ nome: 'Secador de Cabelo de Parede Hotel', pot: 1800, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-wind', obs: 'Ponto dedicado de secador' });
             } else if (ehBanheiro) {
-                tues.push({ nome: 'Chuveiro Elétrico Turbo Master', pot: 7500, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-shower', obs: 'Item 9.5.3.1 NBR 5410 - Circuito Exclusivo (Cabo 10mm²)' });
-                tues.push({ nome: 'Chuveiro Elétrico Convencional 220V', pot: 5500, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-shower', obs: 'Alternativa convencional (Cabo 6mm²)' });
+                tues.push({ nome: 'Chuveiro Elétrico Turbo Master', pot: 7500, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-shower', obs: 'Item 9.5.3.1 NBR 5410 - Circuito Exclusivo' });
+                tues.push({ nome: 'Chuveiro Elétrico Convencional 220V', pot: 5500, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-shower', obs: 'Alternativa convencional' });
                 tues.push({ nome: 'Torneira Elétrica Banheiro / Lavatório', pot: 4500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-faucet-drip', obs: 'Água quente em cuba' });
                 tues.push({ nome: 'Ducha Higiênica Aquecida 220V', pot: 3500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-spray-can-sparkles', obs: 'Aquecedor individual' });
                 tues.push({ nome: 'Toalheiro Térmico / Secador de Toalhas 220V', pot: 150, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-rug', obs: 'Toalhas secas e aquecidas' });
@@ -4956,9 +4896,9 @@
             }
 
             if (ehCozinha) {
-                tues.push({ nome: 'Cooktop por Indução 4 Bocas', pot: 7200, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-fire-burner', obs: 'Circuito Exclusivo 32A (Cabo 10mm²)' });
-                tues.push({ nome: 'Forno Elétrico de Embutir Padrão (50L)', pot: 2800, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-temperature-arrow-up', obs: 'Torre quente convecção (Cabo 4mm²)' });
-                tues.push({ nome: 'Torneira Elétrica Cozinha 220V', pot: 5500, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-faucet', obs: 'Água quente para desengordurar (Cabo 6mm²)' });
+                tues.push({ nome: 'Cooktop por Indução 4 Bocas', pot: 7200, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-fire-burner', obs: 'Circuito Exclusivo' });
+                tues.push({ nome: 'Forno Elétrico de Embutir Padrão (50L)', pot: 2800, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-temperature-arrow-up', obs: 'Torre quente convecção' });
+                tues.push({ nome: 'Torneira Elétrica Cozinha 220V', pot: 5500, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-faucet', obs: 'Água quente para desengordurar' });
                 tues.push({ nome: 'Lava-Louças Grande 14 Serviços', pot: 1800, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-sink', obs: 'Máquina de lavar louça' });
                 tues.push({ nome: 'Forno Micro-ondas de Embutir 220V', pot: 1400, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-microchip', obs: 'Micro-ondas dedicado em torre quente' });
                 tues.push({ nome: 'Coifa / Depurador Ilha Alta Sucção', pot: 350, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-fan', obs: 'Exaustor de ilha / teto' });
@@ -4968,7 +4908,7 @@
 
             if (ehLavanderia) {
                 tues.push({ nome: 'Máquina Lava e Seca Front Load 220V', pot: 2200, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-soap', obs: 'Ciclo lavagem com água aquecida' });
-                tues.push({ nome: 'Secadora de Roupas Elétrica Parede/Piso', pot: 3500, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-wind', obs: 'Resistência térmica alta demanda (Cabo 4mm²)' });
+                tues.push({ nome: 'Secadora de Roupas Elétrica Parede/Piso', pot: 3500, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-wind', obs: 'Resistência térmica alta demanda' });
                 tues.push({ nome: 'Torneira Elétrica Tanque / Lavanderia', pot: 4500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-faucet', obs: 'Tanque aquecido' });
                 tues.push({ nome: 'Boiler Central de Água Quente 200L', pot: 3000, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-cubes-stacked', obs: 'Aquecedor central acumulador' });
                 tues.push({ nome: 'Pressurizador de Água Sanitária 220V', pot: 550, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-gauge-high', obs: 'Bomba de pressão da rede' });
@@ -4992,7 +4932,7 @@
             }
 
             if (ehGourmet) {
-                tues.push({ nome: 'Churrasqueira Elétrica de Embutir Gourmet', pot: 3000, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-drumstick-bite', obs: 'Bancada gourmet (Cabo 4mm²)' });
+                tues.push({ nome: 'Churrasqueira Elétrica de Embutir Gourmet', pot: 3000, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-drumstick-bite', obs: 'Bancada gourmet' });
                 tues.push({ nome: 'Cooktop por Indução 2 Bocas / Dominó', pot: 3600, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-fire-burner', obs: 'Cooktop auxiliar de bancada' });
                 tues.push({ nome: 'Ar Condicionado Split Inverter 18.000 BTU', pot: 1700, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-snowflake', obs: 'Climatização varanda fechada' });
                 tues.push({ nome: 'Chopeira Elétrica Residencial Gourmet', pot: 650, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-beer-mug-empty', obs: 'Ponto exclusivo para torre de chopp' });
@@ -5000,7 +4940,7 @@
             }
 
             if (ehGaragem) {
-                tues.push({ nome: 'Carregador Carro Elétrico Wallbox 7.4 kW (Monofásico/Bifásico)', pot: 7400, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-car-battery', obs: 'Recarga veicular Tipo 2 (Cabo 10mm², Disj. 40A)' });
+                tues.push({ nome: 'Carregador Carro Elétrico Wallbox 7.4 kW (Monofásico/Bifásico)', pot: 7400, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-car-battery', obs: 'Recarga veicular Tipo 2' });
                 tues.push({ nome: 'Motor Portão Eletrônico Garagem 220V', pot: 400, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-door-open', obs: 'Automatizador portão basculante' });
                 tues.push({ nome: 'Lavadora de Alta Pressão Externa (Wap)', pot: 2000, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-spray-can', obs: 'Tomada externa IP55 com tampa' });
                 tues.push({ nome: 'Compressor de Ar para Oficina 2 HP', pot: 1500, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-screwdriver-wrench', obs: 'Oficina / Ferramentas' });
@@ -7693,7 +7633,42 @@
             if (typeof atualizarModoFormulario === 'function') atualizarModoFormulario(false);
         }
 
+        // PRUMADA VERTICAL (SHAFT): liga/desliga a interligação vertical entre andares
+        function alternarPrumada() {
+            state.prumadaAtiva = (state.prumadaAtiva === false);
+            atualizarIndicadoresPrumada();
+            atualizarTudo();
+            if (typeof reconstruirCena3D === 'function') reconstruirCena3D();
+            if (typeof mostrarToast === 'function') {
+                mostrarToast(state.prumadaAtiva ? 'Prumada vertical ativada' : 'Prumada vertical desativada (andares com alimentação independente)');
+            }
+        }
+
+        // Sugestão de proteção e bitola para um aparelho, calculada pela NBR 5410 com as
+        // premissas do projeto (FCA/FCT) e trecho curto (a queda de tensão real depende da rota)
+        function sugestaoProtecaoAparelho(pot, tensao) {
+            const v = Number(tensao) || 220;
+            const c = NBR5410.dimensionarCircuito({ tipo: 'TUE', nome: '', tensao: v, ibVal: (Number(pot) || 0) / v, rota: 10, ehManual: true, polos: v >= 220 ? '2P' : '1P' }, obterParametrosNBR());
+            return `Cabo ${c.cabo} • Disj. ${c.disjuntor}A`;
+        }
+
+        function atualizarIndicadoresPrumada() {
+            const ativa = state.prumadaAtiva !== false;
+            const lbl = document.getElementById('lblStatusPrumada');
+            const btn = document.getElementById('btnTogglePrumada');
+            const lblMob = document.getElementById('lblStatusPrumadaMobile');
+            const btnMob = document.getElementById('btnTogglePrumadaMobile');
+            if (lbl) lbl.textContent = ativa ? 'Ativa' : 'Desativada';
+            if (btn) btn.className = 'px-2 py-1 text-xs font-bold rounded-lg border flex items-center gap-1 ' +
+                (ativa ? 'text-amber-300 bg-amber-950/60 border-amber-500/40 hover:text-amber-200' : 'text-slate-500 bg-slate-950 border-slate-800 line-through');
+            if (lblMob) lblMob.textContent = ativa ? 'Ativa' : 'Desativada';
+            if (btnMob) btnMob.className = 'text-[10px] px-2 py-1 rounded font-bold ' + (ativa ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400');
+            const chk = document.getElementById('cfgPrumadaAtiva');
+            if (chk) chk.checked = ativa;
+        }
+
         function renderizarSeletorPavimentos() {
+            atualizarIndicadoresPrumada();
             const container = document.getElementById('containerBotoesPavimentos');
             const containerMob = document.getElementById('containerBotoesPavimentosMobile');
             
@@ -9075,7 +9050,53 @@
             return html;
         }
 
+        // Seção 2 do Guia NBR: bitolas com Iz corrigida e circuitos do projeto que as usam
+        function renderizarGuiaBitolasNBR() {
+            const tbody = document.getElementById('tabelaGuiaBitolasNBR');
+            const p = obterParametrosNBR();
+            const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
+            const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
+            const fmt = (v, d = 1) => Number(v).toFixed(d).replace('.', ',');
+            const txtFatores = `${p.circuitosAgrupados} circuito(s) → FCA ${fmt(fca, 2)}; ${p.temperaturaAmbiente} °C → FCT ${fmt(fct, 2)}`;
+            const l1 = document.getElementById('lblGuiaFatoresNBR');
+            const l2 = document.getElementById('lblGuiaCriterioFatores');
+            if (l1) l1.textContent = `FCA ${fmt(fca, 2)} × FCT ${fmt(fct, 2)} (${p.circuitosAgrupados} circ., ${p.temperaturaAmbiente} °C)`;
+            if (l2) l2.textContent = txtFatores;
+            if (!tbody) return;
+
+            const usos = {
+                1.5: 'Seção mínima de iluminação (Tab. 47)',
+                2.5: 'Seção mínima de força/tomadas (Tab. 47)'
+            };
+            const circs = state.circuitosCalculados || [];
+            tbody.innerHTML = '';
+            NBR5410.SECOES_PADRONIZADAS.forEach(sec => {
+                const iz = NBR5410.izMetodoB1(sec);
+                const izc = NBR5410.izCorrigida(sec, fca, fct);
+                const maiorDj = [...NBR5410.DISJUNTORES_PADRONIZADOS].reverse().find(d => d <= izc);
+                const doProjeto = circs.filter(c => c.secaoMm2 === sec);
+                if (sec > 25 && doProjeto.length === 0) return; // seções grandes só quando usadas
+                const cargas = maiorDj ? `${fmt(maiorDj * 127 / 1000)} kW / ${fmt(maiorDj * 220 / 1000)} kW` : '—';
+                const lista = doProjeto.length
+                    ? doProjeto.map(c => `<span class="inline-block mr-1 mb-0.5 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-[10px]" title="${c.nome}">C${c.num} ${c.disjuntor}A</span>`).join('')
+                    : '<span class="text-slate-600">não usada neste projeto</span>';
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-900/60 transition';
+                tr.innerHTML = `
+                    <td class="p-2.5 font-mono font-bold text-amber-400">${fmt(sec, sec % 1 ? 1 : 0)} mm²</td>
+                    <td class="p-2.5 font-mono text-slate-300">${fmt(iz)} A</td>
+                    <td class="p-2.5 font-mono font-bold text-sky-300">${fmt(izc)} A</td>
+                    <td class="p-2.5 font-mono text-slate-300">${maiorDj ? maiorDj + ' A' : '<span class="text-red-400">nenhum ≥ 10 A</span>'}</td>
+                    <td class="p-2.5 font-mono text-slate-400">${cargas}</td>
+                    <td class="p-2.5 font-mono text-slate-400">${fmt(NBR5410.secaoProtecao(sec), NBR5410.secaoProtecao(sec) % 1 ? 1 : 0)} mm²</td>
+                    <td class="p-2.5 text-slate-400 text-[10px]">${usos[sec] ? `<div class="mb-1">${usos[sec]}</div>` : ''}${lista}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         function renderizarMemorialAba6() {
+            renderizarGuiaBitolasNBR();
             const tbody = document.getElementById('tabelaMemorialCircuitosAba6');
             if (!tbody) return;
             tbody.innerHTML = '';
@@ -11391,7 +11412,7 @@
                     const jaInstalada = tuesExistentes.some(ex => ex.nome.toLowerCase() === tue.nome.toLowerCase());
                     const idCheck = `chk_tue_${c.id}_${idx}`;
                     const ib = (tue.pot / tue.tensao).toFixed(1);
-                    const caboSug = tue.pot >= 7000 ? 'Cabo 10mm² • Disj. 40A' : (tue.pot >= 5000 ? 'Cabo 6mm² • Disj. 32A' : (tue.pot >= 3000 ? 'Cabo 4mm² • Disj. 25A' : 'Cabo 2.5mm² • Disj. 20A'));
+                    const caboSug = sugestaoProtecaoAparelho(tue.pot, tue.tensao);
 
                     htmlCard += `
                         <label for="${idCheck}" class="flex items-start gap-2.5 p-2.5 rounded-xl border transition cursor-pointer select-none ${jaInstalada ? 'bg-slate-900/40 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-700/80 hover:border-blue-500/50 hover:bg-slate-900/90'}">
@@ -11489,7 +11510,7 @@
             const idxCustom = 'custom_' + Date.now();
             const idCheck = `chk_tue_${comodoId}_${idxCustom}`;
             const ib = (item.pot / item.tensao).toFixed(1);
-            const caboSug = item.pot >= 7000 ? 'Cabo 10mm² • Disj. 40A' : (item.pot >= 5000 ? 'Cabo 6mm² • Disj. 32A' : (item.pot >= 3000 ? 'Cabo 4mm² • Disj. 25A' : 'Cabo 2.5mm² • Disj. 20A'));
+            const caboSug = sugestaoProtecaoAparelho(item.pot, item.tensao);
 
             const cardLabel = document.createElement('label');
             cardLabel.setAttribute('for', idCheck);
@@ -13546,7 +13567,7 @@
                     tipo: 'principal',
                     nome: `Eletroduto Principal - ${c.nome}`,
                     circuito: `Circuito ${circNum} (Distribuição)`,
-                    detalhes: `${ehPassagemChao ? 'Piso (Traço-ponto)' : 'Teto (Tracejado)'} • DN 20/25mm`,
+                    detalhes: `${ehPassagemChao ? 'Piso (Traço-ponto)' : 'Teto (Tracejado)'}${(state.trechoAgrupadoNBR) ? ' • trecho agrupado ' + state.trechoAgrupadoNBR.rotulo : ''}`,
                     corHover: ehPassagemChao ? '#f97316' : '#38bdf8',
                     pts: pontosRota
                 });
@@ -17047,6 +17068,20 @@
             state.circuitosCalculados = circuitosFinais;
             state.circuitos = circuitosFinais;
 
+            // Eletroduto do trecho compartilhado pelos circuitos agrupados (premissa do FCA)
+            const parNBR = obterParametrosNBR();
+            state.trechoAgrupadoNBR = (parNBR.circuitosAgrupados > 1)
+                ? NBR5410.dimensionarTrechoAgrupado(circuitosFinais, parNBR.circuitosAgrupados) : null;
+            const lblTrecho = document.getElementById('lblTrechoAgrupadoNBR');
+            if (lblTrecho) {
+                const t = state.trechoAgrupadoNBR;
+                lblTrecho.innerHTML = t
+                    ? `<i class="fa-solid fa-circle-info text-sky-400"></i> Trecho com ${t.circuitos.length} circuitos agrupados (pior caso: C${t.circuitos.join(', C')}): ` +
+                      `<strong class="font-mono ${t.atende ? 'text-emerald-300' : 'text-red-300'}">${t.rotulo}</strong> de ocupação ` +
+                      `(${t.numCondutores} condutores, máx. ${Math.round(t.taxaMax * 100)}% — item 6.2.11.1.6)`
+                    : '';
+            }
+
             // Renderiza Tabela de Circuitos
             const tb = document.getElementById('tbCircuitos');
             if (tb) {
@@ -19940,7 +19975,7 @@
                         registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, 'Fase 1 para aparelhos de alta potência 220V');
                         registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, 'Fase 2 para aparelhos de alta potência 220V');
                         registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Aterramento obrigatório da carcaça do aparelho TUE');
-                        if (circ.nome && (circ.nome.toLowerCase().includes('ar') || circ.nome.toLowerCase().includes('forno'))) {
+                        if (NBR5410.tueComNeutro(circ.nome)) {
                             registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, 'Neutro para placa eletrônica/comando 127V do aparelho');
                         }
                     } else {
@@ -20079,31 +20114,33 @@
             const ehInfraUnica = (qtdAndaresChao > 1 || (qtdAndaresChao >= 1 && pavs.length > 1));
             const fatorEletroduto = ehInfraUnica ? 0.75 : 1.0;
             const metragemEletrodutoBase = Math.ceil((somaMetragensFinais * 1.15) * fatorEletroduto);
-            const mEletro20 = Math.ceil(metragemEletrodutoBase * 0.35);
-            const mEletro25 = Math.ceil(metragemEletrodutoBase * 0.55);
-            const mEletro32 = Math.ceil(metragemEletrodutoBase * 0.10);
-
-            addItem(
-                'Eletrodutos & Conexões', 'eletrodutos',
-                'Eletroduto Corrugado Flexível Reforçado DN 20 mm (1/2")',
-                'NBR 15465, PVC Anti-chamas Amarelo / Laranja (Resistência mecânica a esforço de compressão)',
-                mEletro20, 'm', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('eletrodutos', '20', 2.30) : 2.30),
-                'Distribuição terminal de iluminação e descidas de interruptores simples'
-            );
-            addItem(
-                'Eletrodutos & Conexões', 'eletrodutos',
-                'Eletroduto Corrugado Flexível Reforçado DN 25 mm (3/4")',
-                'NBR 15465 / NBR 5410, PVC Anti-chamas Laranja (Reforçado para lajes e contrapisos)',
-                mEletro25, 'm', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('eletrodutos', '25', 3.10) : 3.10),
-                'Tubulação principal em lajes, contrapisos e alimentação de Tomadas TUG/TUE'
-            );
-            addItem(
-                'Eletrodutos & Conexões', 'eletrodutos',
-                'Eletroduto Corrugado Flexível Reforçado DN 32 mm (1")',
-                'NBR 15465, PVC Anti-chamas Laranja (Para alta taxa de ocupação de condutores)',
-                mEletro32, 'm', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('eletrodutos', '32', 4.50) : 4.50),
-                'Alimentadores de subquadros, prumada vertical e circuitos de alta potência'
-            );
+            // Distribui a metragem de eletroduto pelo DN calculado de cada circuito
+            // (taxa de ocupação, NBR 5410 item 6.2.11.1.6 — js/nbr5410.js)
+            const rotaPorDN = {};
+            let rotaTotalCirc = 0;
+            (circuitosFinais || []).forEach(circ => {
+                const dn = circ.eletrodutoDN || 20;
+                const r = circ.rota || circ.rotaCad || 0;
+                rotaPorDN[dn] = (rotaPorDN[dn] || 0) + r;
+                rotaTotalCirc += r;
+            });
+            if (rotaTotalCirc === 0) { rotaPorDN[20] = 1; rotaTotalCirc = 1; }
+            const precoRef32 = (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('eletrodutos', '32', 4.50) : 4.50);
+            NBR5410.ELETRODUTOS_DN.forEach(e => {
+                const metros = Math.ceil(metragemEletrodutoBase * ((rotaPorDN[e.dn] || 0) / rotaTotalCirc));
+                if (metros <= 0) return;
+                // DN acima de 32 sem preço cadastrado: estimativa proporcional ao DN 32 (revise com cotação)
+                const precoPadrao = { 20: 2.30, 25: 3.10, 32: 4.50 }[e.dn] || Math.round(precoRef32 * (e.dn / 32) * 100) / 100;
+                const preco = (typeof obterPrecoMaterial === 'function') ? obterPrecoMaterial('eletrodutos', String(e.dn), precoPadrao) : precoPadrao;
+                const circs = (circuitosFinais || []).filter(c => (c.eletrodutoDN || 20) === e.dn).map(c => 'C' + c.num);
+                addItem(
+                    'Eletrodutos & Conexões', 'eletrodutos',
+                    `Eletroduto Corrugado Flexível Reforçado DN ${e.dn} mm (${e.polegadas})`,
+                    'NBR 15465, PVC Anti-chamas (dimensionado pela taxa de ocupação, NBR 5410 item 6.2.11.1.6)',
+                    metros, 'm', preco,
+                    `Circuitos ${circs.join(', ')}`
+                );
+            });
 
             const totComodos = (comodosParaCalcular || []).length;
             const totCurvas = Math.max(8, Math.round(totComodos * 3.5));
