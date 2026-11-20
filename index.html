@@ -6762,19 +6762,23 @@
                 }
             }
 
+            // As coordenadas NÃO são arredondadas: no celular o gesto de pinça chama esta
+            // função dezenas de vezes por gesto, e arredondar cada cômodo a cada passo
+            // acumulava erro e desalinhava os cômodos entre si (visível na maquete 3D).
+
             // 1. AJUSTA CÔMODOS (POSIÇÃO X, Y RELATIVA AO PIVÔ)
             if (state.comodos) {
                 state.comodos.forEach(c => {
-                    c.x = Math.round(pivotX + (c.x - pivotX) * ratio);
-                    c.y = Math.round(pivotY + (c.y - pivotY) * ratio);
+                    c.x = (pivotX + (c.x - pivotX) * ratio);
+                    c.y = (pivotY + (c.y - pivotY) * ratio);
                 });
             }
 
             // 2. AJUSTA TODOS OS LANÇAMENTOS ELÉTRICOS (PONTOS: ILUM, TUG, TUE, INTERRUPTORES)
             if (state.pontosEletricos) {
                 state.pontosEletricos.forEach(pt => {
-                    pt.x = Math.round(pivotX + (pt.x - pivotX) * ratio);
-                    pt.y = Math.round(pivotY + (pt.y - pivotY) * ratio);
+                    pt.x = (pivotX + (pt.x - pivotX) * ratio);
+                    pt.y = (pivotY + (pt.y - pivotY) * ratio);
                 });
             }
 
@@ -6784,8 +6788,8 @@
                     const wps = state.eletrodutoWaypoints[k];
                     if (Array.isArray(wps)) {
                         wps.forEach(wp => {
-                            wp.x = Math.round(pivotX + (wp.x - pivotX) * ratio);
-                            wp.y = Math.round(pivotY + (wp.y - pivotY) * ratio);
+                            wp.x = (pivotX + (wp.x - pivotX) * ratio);
+                            wp.y = (pivotY + (wp.y - pivotY) * ratio);
                         });
                     }
                 });
@@ -6793,16 +6797,16 @@
 
             // 4. AJUSTA ELEMENTOS DE INFRAESTRUTURA GERAL (QDT, PRUMADA, ENTRADA DA CONCESSIONÁRIA)
             if (state.qdtPos) {
-                state.qdtPos.x = Math.round(pivotX + (state.qdtPos.x - pivotX) * ratio);
-                state.qdtPos.y = Math.round(pivotY + (state.qdtPos.y - pivotY) * ratio);
+                state.qdtPos.x = (pivotX + (state.qdtPos.x - pivotX) * ratio);
+                state.qdtPos.y = (pivotY + (state.qdtPos.y - pivotY) * ratio);
             }
             if (state.prumadaPos) {
-                state.prumadaPos.x = Math.round(pivotX + (state.prumadaPos.x - pivotX) * ratio);
-                state.prumadaPos.y = Math.round(pivotY + (state.prumadaPos.y - pivotY) * ratio);
+                state.prumadaPos.x = (pivotX + (state.prumadaPos.x - pivotX) * ratio);
+                state.prumadaPos.y = (pivotY + (state.prumadaPos.y - pivotY) * ratio);
             }
             if (state.alimentacaoExterna) {
-                state.alimentacaoExterna.x = Math.round(pivotX + (state.alimentacaoExterna.x - pivotX) * ratio);
-                state.alimentacaoExterna.y = Math.round(pivotY + (state.alimentacaoExterna.y - pivotY) * ratio);
+                state.alimentacaoExterna.x = (pivotX + (state.alimentacaoExterna.x - pivotX) * ratio);
+                state.alimentacaoExterna.y = (pivotY + (state.alimentacaoExterna.y - pivotY) * ratio);
             }
 
             // 5. AJUSTA LINHAS A MÃO LIVRE
@@ -6810,8 +6814,8 @@
                 state.linhasMaoLivre.forEach(linha => {
                     if (Array.isArray(linha)) {
                         linha.forEach(p => {
-                            p.x = Math.round(pivotX + (p.x - pivotX) * ratio);
-                            p.y = Math.round(pivotY + (p.y - pivotY) * ratio);
+                            p.x = (pivotX + (p.x - pivotX) * ratio);
+                            p.y = (pivotY + (p.y - pivotY) * ratio);
                         });
                     }
                 });
@@ -6820,23 +6824,23 @@
             // 6. AJUSTA TRANSIÇÕES (PORTAS E CORREDORES)
             if (state.transicoes) {
                 state.transicoes.forEach(tr => {
-                    if (tr.x !== undefined) tr.x = Math.round(pivotX + (tr.x - pivotX) * ratio);
-                    if (tr.y !== undefined) tr.y = Math.round(pivotY + (tr.y - pivotY) * ratio);
+                    if (tr.x !== undefined) tr.x = (pivotX + (tr.x - pivotX) * ratio);
+                    if (tr.y !== undefined) tr.y = (pivotY + (tr.y - pivotY) * ratio);
                 });
             }
 
             // 6b. AJUSTA ESCADAS
             if (state.escadas) {
                 state.escadas.forEach(esc => {
-                    esc.x = Math.round(pivotX + (esc.x - pivotX) * ratio);
-                    esc.y = Math.round(pivotY + (esc.y - pivotY) * ratio);
+                    esc.x = (pivotX + (esc.x - pivotX) * ratio);
+                    esc.y = (pivotY + (esc.y - pivotY) * ratio);
                 });
             }
 
             // 7. AJUSTA COORDENADAS DO TERRENO TOTAL
             if (state.terreno) {
-                state.terreno.x = Math.round(pivotX + (state.terreno.x - pivotX) * ratio);
-                state.terreno.y = Math.round(pivotY + (state.terreno.y - pivotY) * ratio);
+                state.terreno.x = (pivotX + (state.terreno.x - pivotX) * ratio);
+                state.terreno.y = (pivotY + (state.terreno.y - pivotY) * ratio);
             }
 
             // Atualiza escala global
