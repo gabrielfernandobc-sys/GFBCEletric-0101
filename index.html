@@ -6818,18 +6818,10 @@
         // CONTROLE VISUAL 3D: FILTROS DE ELEMENTOS (ILUMINAÇÃO, TOMADAS, TUBULAÇÕES)
         // =========================================================================
 
-        function setFiltroElemento3d(tipo) {
-            state.filtroElemento3d = tipo;
-            const btnTodos = document.getElementById('btn3dFiltroTodosElem');
-            const btnIlum = document.getElementById('btn3dFiltroIlum');
-            const btnTomadas = document.getElementById('btn3dFiltroTomadas');
-            const btnTubos = document.getElementById('btn3dFiltroTubos');
-
-            if (btnTodos) btnTodos.className = tipo === 'todos' ? 'px-2.5 py-1.5 rounded-lg font-bold bg-slate-800 text-emerald-400 shadow text-xs' : 'px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white text-xs';
-            if (btnIlum) btnIlum.className = tipo === 'ilum' ? 'px-2.5 py-1.5 rounded-lg font-bold bg-amber-500 text-slate-950 shadow text-xs flex items-center gap-1' : 'px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-amber-300 text-xs flex items-center gap-1';
-            if (btnTomadas) btnTomadas.className = tipo === 'tomadas' ? 'px-2.5 py-1.5 rounded-lg font-bold bg-emerald-500 text-slate-950 shadow text-xs flex items-center gap-1' : 'px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-emerald-300 text-xs flex items-center gap-1';
-            if (btnTubos) btnTubos.className = tipo === 'tubos' ? 'px-2.5 py-1.5 rounded-lg font-bold bg-sky-500 text-slate-950 shadow text-xs flex items-center gap-1' : 'px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-sky-300 text-xs flex items-center gap-1';
-
+        // Aplica o filtro de elementos (state.filtroElemento3d) aos meshes da cena 3D.
+        // Chamado ao final de reconstruirCena3D(), para o filtro persistir entre reconstruções.
+        function aplicarFiltroElemento3d() {
+            const tipo = state.filtroElemento3d || 'todos';
             if (!state.meshGroup3d) return;
 
             state.meshGroup3d.traverse(child => {
@@ -6912,6 +6904,7 @@
                     state.renderer3d.domElement.style.cursor = 'default';
                 }
             }
+            if (typeof pedirRenderizacao3D === 'function') pedirRenderizacao3D(20);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -11082,14 +11075,6 @@
                 }
                 fecharMenuContextoComodo();
             });
-        }
-
-        function distPontoParaSegmento(px, py, x1, y1, x2, y2) {
-            const l2 = Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2);
-            if (l2 === 0) return Math.sqrt(Math.pow(px - x1, 2) + Math.pow(py - y1, 2));
-            let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
-            t = Math.max(0, Math.min(1, t));
-            return Math.sqrt(Math.pow(px - (x1 + t * (x2 - x1)), 2) + Math.pow(py - (y1 + t * (y2 - y1)), 2));
         }
 
         function selecionarPontoEletrico(pt) {
@@ -15536,26 +15521,6 @@
             reconstruirCena3D(true);
         }
 
-        function toggleFullscreenViewport(tipo) {
-            const container = tipo === '3d' ? document.getElementById('tab-visualizacao3d') : document.getElementById('cadViewport');
-            if (!container) return;
-            if (!document.fullscreenElement) {
-                if (container.requestFullscreen) {
-                    container.requestFullscreen();
-                } else if (container.webkitRequestFullscreen) {
-                    container.webkitRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-            setTimeout(() => {
-                window.dispatchEvent(new Event('resize'));
-                pedirRenderizacao3D(35);
-            }, 100);
-        }
-
         function setFiltroElemento3d(tipo) {
             state.filtroElemento3d = tipo;
             const btns = {
@@ -15572,39 +15537,6 @@
                 }
             });
             reconstruirCena3D(true);
-        }
-
-        function toggle3dLajesPiso() {
-            state.mostrarLajesPiso3d = state.mostrarLajesPiso3d === undefined ? false : !state.mostrarLajesPiso3d;
-            const btn = document.getElementById('btn3dVerLajesPiso');
-            if (btn) {
-                btn.className = state.mostrarLajesPiso3d 
-                    ? 'px-2.5 py-1.5 rounded-lg font-bold bg-amber-500/30 text-amber-300 border border-amber-500/60 flex items-center gap-1 shadow' 
-                    : 'px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white border border-slate-800 flex items-center gap-1';
-            }
-            reconstruirCena3D(true);
-        }
-
-        function toggle3dLajesTeto() {
-            state.mostrarLajesTeto3d = state.mostrarLajesTeto3d === undefined ? false : !state.mostrarLajesTeto3d;
-            const btn = document.getElementById('btn3dVerLajesTeto');
-            if (btn) {
-                btn.className = state.mostrarLajesTeto3d 
-                    ? 'px-2.5 py-1.5 rounded-lg font-bold bg-sky-500/30 text-sky-300 border border-sky-500/60 flex items-center gap-1 shadow' 
-                    : 'px-2.5 py-1.5 rounded-lg font-bold text-slate-400 hover:text-white border border-slate-800 flex items-center gap-1';
-            }
-            reconstruirCena3D(true);
-        }
-
-        function toggleModoEdicao3D() {
-            state.modoEdicao3D = !state.modoEdicao3D;
-            const btn = document.getElementById('btn3dModoEdicao');
-            if (btn) {
-                btn.className = state.modoEdicao3D
-                    ? 'px-3 py-1.5 rounded-xl font-bold bg-emerald-500 text-slate-950 flex items-center gap-1.5 shadow'
-                    : 'px-3 py-1.5 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 flex items-center gap-1.5 shadow';
-            }
-            pedirRenderizacao3D(20);
         }
 
         // Reconstrói todas as Lajes, Paredes, Lâmpadas, Tomadas e Tubulações 3D (Teto vs Chão com Laje Unificada)
@@ -16336,6 +16268,7 @@
                 });
             });
 
+            aplicarFiltroElemento3d();
             state.cena3dDesatualizada = false;
             pedirRenderizacao3D(35);
             } catch (err3d) {
@@ -24899,4 +24832,4 @@
     </div>
 
 </body>
-</html>
+</html>
