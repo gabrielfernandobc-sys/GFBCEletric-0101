@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <title>PRO-ELÉTRICA CAD NBR 5410</title>
     <!-- PWA Manifest & App Configuration -->
     <link rel="manifest" href="manifest.json">
@@ -165,6 +165,36 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
+        /* CELULAR E TABLET (< 1024px): MODAIS MAIS ALTOS QUE A TELA
+           O fundo rola e o modal começa no topo. Quando o modal cabe, as margens
+           automáticas o mantêm centralizado. No computador nada muda. */
+        @media (max-width: 1023px) {
+            div.fixed.inset-0.flex.items-center[id^="modal"] {
+                overflow-y: auto;
+                align-items: flex-start;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+            }
+            div.fixed.inset-0.flex.items-center[id^="modal"] > * {
+                margin-top: auto;
+                margin-bottom: auto;
+                flex-shrink: 0;
+            }
+            /* Gavetas que abrem por baixo: continuam embaixo quando cabem */
+            div.fixed.inset-0.flex.items-end[id^="modal"] {
+                overflow-y: auto;
+                align-items: flex-start;
+                overscroll-behavior: contain;
+            }
+            div.fixed.inset-0.flex.items-end[id^="modal"] > * {
+                margin-top: auto;
+                flex-shrink: 0;
+            }
+        }
+        @media (min-width: 640px) and (max-width: 1023px) {
+            div.fixed.inset-0.flex.items-end[id^="modal"] > * { margin-bottom: auto; }
+        }
+
         /* OTIMIZAÇÕES MOBILE & TABLET (TOUCH & RESPONSIVIDADE) */
         @media (max-width: 1023px) {
             body {
@@ -193,6 +223,41 @@
             canvas {
                 touch-action: none;
             }
+
+            /* Nada pode alargar a página além da tela (o navegador do celular
+               "afasta" a página inteira quando um elemento fica mais largo) */
+            html { overflow-x: hidden; }
+            #wocaAppWrapper { overflow-x: clip; max-width: 100vw; }
+            select { max-width: 100%; }
+            .mob-wrap { flex-wrap: wrap; }
+            .mob-wrap > *, .mob-encolher { min-width: 0; max-width: 100%; }
+            #listaBotoesTransicoes > div { max-width: 100%; flex-wrap: wrap; }
+            /* Seletores com opções longas ocupam a linha inteira e encolhem o texto */
+            .mob-linha, .mob-encolher { flex: 1 1 100%; }
+            .mob-linha > select, .mob-encolher > select { flex: 1 1 0%; min-width: 0; width: 100%; }
+
+            /* Área de desenho da Planta antes dos painéis laterais */
+            .mob-primeiro { order: -1; }
+
+            /* Barra inferior e botão "+" respeitam a área do gesto/home do iPhone */
+            .mobile-bottom-nav { padding-bottom: calc(0.375rem + env(safe-area-inset-bottom)); }
+            .mobile-fab { bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }
+            #wocaAppWrapper { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+
+            /* Botão "+" (inserir pontos/cômodos) só nas abas de desenho */
+            body[data-aba="alimentador"] .mobile-fab,
+            body[data-aba="materiais"] .mobile-fab,
+            body[data-aba="arquivos"] .mobile-fab,
+            body[data-aba="duvidas"] .mobile-fab { display: none !important; }
+        }
+        /* Celulares comuns: subtítulo do cabeçalho não cabe ao lado dos botões */
+        @media (max-width: 419px) {
+            .mobile-header-sub { display: none; }
+        }
+        /* Celulares estreitos (iPhone SE, Galaxy compactos) */
+        @media (max-width: 380px) {
+            .mobile-header-acoes { gap: 4px; }
+            .mobile-header-acoes > button { padding-left: 7px; padding-right: 7px; }
         }
         @media (min-width: 1024px) {
             .mobile-bottom-nav {
@@ -443,7 +508,7 @@
         }
     </style>
 </head>
-<body class="theme-woca-dark bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
+<body data-aba="planta" class="theme-woca-dark bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
     <div id="wocaAppWrapper" class="w-full mx-auto px-1 sm:px-3 pt-1 pb-16 lg:pb-6 flex flex-col min-h-screen">
         
         <!-- MOBILE TOP HEADER (VISÍVEL APENAS EM CELULARES E TABLETS) -->
@@ -456,12 +521,12 @@
                     <h1 class="text-xs font-black tracking-tight text-amber-400 flex items-center gap-1 leading-none">
                         PRO-ELÉTRICA
                     </h1>
-                    <span class="text-[9px] text-slate-400 font-mono">NBR 5410 • CAD/BIM</span>
+                    <span class="mobile-header-sub text-[9px] text-slate-400 font-mono whitespace-nowrap">NBR 5410 • CAD/BIM</span>
                 </div>
             </div>
 
             <!-- SELETOR DE PAVIMENTO & AÇÕES RÁPIDAS NO CELULAR: SALVAR, IMPORTAR, PDF, MENU -->
-            <div class="flex items-center gap-1.5">
+            <div class="mobile-header-acoes flex items-center gap-1.5">
                 <button onclick="alternarPavimentoMobile()" id="btnMobilePavimentoBadge" class="bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2.5 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 shadow-sm active:scale-95 transition" title="Alternar Pavimento">
                     <i class="fa-solid fa-layer-group text-[10px]"></i> <span id="lblNomePavimentoMobile">Térreo</span> ▾
                 </button>
@@ -781,11 +846,11 @@
                 </div>
 
                 <!-- ÁREA DO CANVAS CAD 2D -->
-                <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-3 space-y-3">
+                <div class="mob-primeiro bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-3 space-y-3">
                     <div class="flex flex-col gap-2.5 text-xs pb-1">
                         <!-- BARRA SUPERIOR: INDICADOR DE PAVIMENTO E SELETOR -->
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
+                            <div class="mob-wrap flex items-center gap-2">
                                 <span id="badgeIndicadorPavimento" class="bg-sky-500/20 text-sky-400 border border-sky-500/40 px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5">
                                     🏢 PAVIMENTO TÉRREO
                                 </span>
@@ -796,7 +861,7 @@
                                 </button>
                             </div>
 
-                            <div class="flex items-center gap-1.5">
+                            <div class="mob-wrap flex items-center gap-1.5">
                                 <button id="btnConfigParedesCad" onclick="abrirModalConfigParedes()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-950 text-sky-300 border border-slate-800 hover:border-sky-500/40 flex items-center gap-1.5 transition" title="Espessura das Paredes">
                                     <i class="fa-solid fa-border-all text-sky-400"></i> Parede: <span id="lblEspessuraParedeCadToolbar">15 cm</span>
                                 </button>
@@ -1083,7 +1148,7 @@
                         </span>
 
                         <!-- SELETOR DE CIRCUITO -->
-                        <div class="flex items-center gap-1.5">
+                        <div class="mob-encolher flex items-center gap-1.5">
                             <select id="selCircuitoLancamento" onchange="selecionarCircuitoDestaque(this.value)" class="bg-slate-950 border border-slate-700 text-amber-300 font-bold px-3 py-1.5 rounded-xl text-xs focus:ring-1 focus:ring-amber-400 focus:outline-none shadow-inner">
                                 <option value="todos">⚡ Todos os Circuitos (Visão Geral)</option>
                                 <option value="ilum">💡 Circuito Iluminação & Retornos</option>
@@ -1625,7 +1690,7 @@
                                 <p class="text-[10px] text-slate-400">Ramal até o Quadro Geral de Distribuição (QDT Térreo) e Prumada aos Pavimentos</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="mob-wrap mob-linha flex items-center gap-2">
                             <label class="text-[11px] font-semibold text-slate-400">Sistema:</label>
                             <select id="selSistemaEntrada" class="bg-slate-900 border border-slate-700 text-amber-300 rounded-lg p-1.5 text-xs font-bold outline-none focus:ring-1 focus:ring-amber-400">
                                 <option value="bifasico">Bifásico 127/220V (2 Fases + Neutro + Terra = 4 Condutores)</option>
@@ -1871,7 +1936,7 @@
                             </div>
                             <span class="text-slate-500 hidden sm:inline">• Padrão DIN 43880 • Fileiras de 12 Pólos (216mm)</span>
                         </div>
-                        <div class="flex items-center gap-3 text-slate-400">
+                        <div class="mob-wrap flex items-center gap-3 text-slate-400">
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> Fase R</span>
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-gray-900 border border-slate-400"></span> Fase S</span>
                             <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-100"></span> Fase T</span>
@@ -7559,6 +7624,7 @@
             }
             // Abas inexistentes (ex.: a antiga aba 'testes') voltam para a planta
             if (!document.getElementById('tab-' + tabTarget)) tabTarget = 'planta';
+            document.body.dataset.aba = tabTarget;
             const btns = document.querySelectorAll('.tab-btn');
             btns.forEach(b => {
                 if (b.getAttribute('data-tab') === tabTarget) {
