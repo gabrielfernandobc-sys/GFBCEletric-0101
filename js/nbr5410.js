@@ -25,17 +25,44 @@
     // do PVC), em Ω·mm²/m — NBR 5410 Anexo J / Tabela 35.
     const RESISTIVIDADE_COBRE_70C = 0.0221;
 
-    // Seções nominais comerciais de condutores de cobre (mm²) usadas pelo app.
-    const SECOES_PADRONIZADAS = [1.5, 2.5, 4.0, 6.0, 10.0, 16.0, 25.0];
+    // Seções nominais comerciais de condutores de cobre (mm²).
+    const SECOES_PADRONIZADAS = [1.5, 2.5, 4.0, 6.0, 10.0, 16.0, 25.0, 35.0, 50.0, 70.0, 95.0, 120.0];
 
     // Capacidade de condução de corrente Iz (A) — NBR 5410 Tabela 36,
-    // método de referência B1, condutores de cobre isolados em PVC 70 °C,
-    // 2 condutores carregados, temperatura ambiente 30 °C.
-    // OBS.: valores sem fatores de correção de agrupamento (FCA) e temperatura (FCT).
-    const IZ_METODO_B1 = { 1.5: 17.5, 2.5: 24, 4.0: 32, 6.0: 41, 10.0: 57, 16.0: 76, 25.0: 101 };
+    // método de referência B1 (condutores isolados em eletroduto embutido em
+    // alvenaria), cobre, isolação PVC 70 °C, 2 condutores carregados, 30 °C.
+    // Valores de referência: devem ser corrigidos por FCA (Tabela 42) e FCT (Tabela 40).
+    const IZ_METODO_B1 = {
+        1.5: 17.5, 2.5: 24, 4.0: 32, 6.0: 41, 10.0: 57, 16.0: 76,
+        25.0: 101, 35.0: 125, 50.0: 151, 70.0: 192, 95.0: 232, 120.0: 269
+    };
 
-    // Iz assumida quando a seção não está na tabela (comportamento legado do app).
-    const IZ_PADRAO_SECAO_DESCONHECIDA = 24;
+    // Correntes nominais comerciais de disjuntores termomagnéticos (A) — NBR NM 60898.
+    const DISJUNTORES_PADRONIZADOS = [10, 16, 20, 25, 32, 40, 50, 63, 70, 80, 100, 125];
+
+    // Fator de correção de agrupamento (FCA) — NBR 5410 Tabela 42, item 1
+    // (feixe de circuitos em eletroduto ou em conduto fechado). Chave: nº de circuitos.
+    const FCA_TABELA_42 = [
+        { ate: 1, fca: 1.00 }, { ate: 2, fca: 0.80 }, { ate: 3, fca: 0.70 }, { ate: 4, fca: 0.65 },
+        { ate: 5, fca: 0.60 }, { ate: 6, fca: 0.57 }, { ate: 7, fca: 0.54 }, { ate: 8, fca: 0.52 },
+        { ate: 11, fca: 0.50 }, { ate: 15, fca: 0.45 }, { ate: 19, fca: 0.41 }, { ate: Infinity, fca: 0.38 }
+    ];
+
+    // Fator de correção de temperatura (FCT) para isolação PVC, temperatura
+    // ambiente (instalações não subterrâneas) — NBR 5410 Tabela 40.
+    const FCT_TABELA_40_PVC = [
+        { ate: 10, fct: 1.22 }, { ate: 15, fct: 1.17 }, { ate: 20, fct: 1.12 }, { ate: 25, fct: 1.06 },
+        { ate: 30, fct: 1.00 }, { ate: 35, fct: 0.94 }, { ate: 40, fct: 0.87 }, { ate: 45, fct: 0.79 },
+        { ate: 50, fct: 0.71 }, { ate: 55, fct: 0.61 }, { ate: 60, fct: 0.50 }
+    ];
+
+    // Premissas padrão do projeto (ajustáveis por projeto na interface).
+    // 3 circuitos no trecho de eletroduto mais carregado (saída do quadro) é a
+    // premissa usual em projetos residenciais.
+    const PARAMETROS_PADRAO = Object.freeze({ circuitosAgrupados: 3, temperaturaAmbiente: 30 });
+
+    // Disjuntor mínimo adotado em qualquer circuito (A).
+    const DISJUNTOR_MINIMO = 10;
 
     // Queda de tensão máxima em circuitos terminais (%) — NBR 5410 item 6.2.7.
     const QUEDA_TENSAO_MAX_PCT = 4.0;
@@ -58,9 +85,41 @@
     // 2. FUNÇÕES AUXILIARES
     // =========================================================================
 
-    /** Iz (A) da seção no método B1; seção fora da tabela → 24 A (legado). */
+    /** Iz (A) da seção no método B1, sem correções. Lança erro para seção fora da tabela. */
     function izMetodoB1(secaoMm2) {
-        return IZ_METODO_B1[secaoMm2] || IZ_PADRAO_SECAO_DESCONHECIDA;
+        const iz = IZ_METODO_B1[secaoMm2];
+        if (iz === undefined) throw new Error(`Seção ${secaoMm2} mm² não consta da Tabela 36 (método B1).`);
+        return iz;
+    }
+
+    /** FCA da Tabela 42 para o número de circuitos agrupados no mesmo eletroduto. */
+    function fatorAgrupamento(circuitosAgrupados) {
+        const n = Math.max(1, Math.round(Number(circuitosAgrupados) || 1));
+        return FCA_TABELA_42.find(l => n <= l.ate).fca;
+    }
+
+    /**
+     * FCT da Tabela 40 (PVC, ambiente). Temperaturas intermediárias usam a linha
+     * imediatamente superior (a favor da segurança); acima de 60 °C usa 0,50.
+     */
+    function fatorTemperatura(temperaturaAmbiente) {
+        const t = Number(temperaturaAmbiente);
+        if (!isFinite(t)) return 1.00;
+        const linha = FCT_TABELA_40_PVC.find(l => t <= l.ate);
+        return linha ? linha.fct : FCT_TABELA_40_PVC[FCT_TABELA_40_PVC.length - 1].fct;
+    }
+
+    /** Iz corrigida = Iz(B1) × FCA × FCT. */
+    function izCorrigida(secaoMm2, fca, fct) {
+        return izMetodoB1(secaoMm2) * fca * fct;
+    }
+
+    /** Seção mínima do condutor de proteção (PE) — NBR 5410 Tabela 58. */
+    function secaoProtecao(secaoFaseMm2) {
+        if (secaoFaseMm2 <= 16) return secaoFaseMm2;
+        if (secaoFaseMm2 <= 35) return 16;
+        const metade = secaoFaseMm2 / 2;
+        return SECOES_PADRONIZADAS.find(s => s >= metade) || secaoFaseMm2;
     }
 
     /** Formata a seção como no restante do app: 2.5 → "2.5 mm²", 6 → "6 mm²". */
@@ -104,6 +163,8 @@
 
     /** Diâmetro nominal do eletroduto para a seção (taxa de ocupação ≤ 40%, item 6.2.11). */
     function dimensionarEletroduto(secaoMm2) {
+        if (secaoMm2 >= 70.0) return 'DN 60 mm (2")';
+        if (secaoMm2 >= 35.0) return 'DN 50 mm (1.1/2")';
         if (secaoMm2 >= 16.0) return 'DN 40 mm (1.1/4")';
         if (secaoMm2 >= 10.0) return 'DN 32 mm (1")';
         if (secaoMm2 >= 4.0) return 'DN 25 mm (3/4")';
@@ -123,67 +184,90 @@
     // =========================================================================
 
     /**
-     * Dimensiona disjuntor, seção, queda de tensão, eletroduto e IDR de um circuito.
+     * Dimensiona disjuntor, seção, queda de tensão, condutor de proteção,
+     * eletroduto e IDR de um circuito terminal.
      *
-     * Entrada (campos lidos de `circ`):
-     *   tipo ('Iluminação' | 'TUG' | 'TUE'), nome, tensao (V), ibVal (A),
-     *   cabo ("2.5 mm²"), disj ("20 A"), rota (m), ehManual, distanciaCritica (m)
+     * Critérios (NBR 5410):
+     *   1. Disjuntor: menor corrente nominal comercial In ≥ Ib (mín. 10 A).
+     *   2. Seção: menor seção ≥ mínima da Tabela 47 com Iz × FCA × FCT ≥ In
+     *      (Ib ≤ In ≤ Iz — item 5.3.4; para disjuntores NBR NM 60898, I2 = 1,45·In,
+     *      logo a condição I2 ≤ 1,45·Iz fica atendida).
+     *   3. Queda de tensão ≤ 4% (item 6.2.7): aumenta a seção até atender.
      *
-     * Saída: o próprio `circ`, com cabo/disj atualizados e os campos
-     *   secaoMm2, bitola, disjuntor, deltaVVolts, deltaVPct, quedaTensaoOk,
-     *   quedaStatus, eletroduto, requerIdr, idrTag, ampacidadeOk.
+     * Entrada (campos de `circ`): tipo ('Iluminação' | 'TUG' | 'TUE'), nome,
+     *   tensao (V), ibVal (A), rota (m), ehManual, distanciaCritica (m)
+     * Opções: { circuitosAgrupados, temperaturaAmbiente } (padrão: 3 circuitos, 30 °C)
+     *
+     * Saída: o próprio `circ`, com cabo/disj definidos e os campos
+     *   secaoMm2, bitola, disjuntor, fca, fct, izCorrigida, secaoPE,
+     *   deltaVVolts, deltaVPct, quedaTensaoOk, quedaStatus, eletroduto,
+     *   requerIdr, idrTag, ampacidadeOk, conforme, alertas[].
      */
-    function dimensionarCircuito(circ) {
-        // 0. Capacidade de corrente / sobrecarga (item 5.3 e Tabela 36): Ib ≤ In ≤ Iz
-        let inDisj = parseFloat(circ.disj.replace(' A', '')) || 20;
-        const secaoMinPorTipo = (circ.tipo === 'Iluminação') ? SECAO_MINIMA_ILUMINACAO : SECAO_MINIMA_FORCA;
-        let secaoNum = Math.max(secaoMinPorTipo, parseFloat(circ.cabo.replace(' mm²', '').replace(',', '.')) || secaoMinPorTipo);
+    function dimensionarCircuito(circ, opcoes) {
+        const op = Object.assign({}, PARAMETROS_PADRAO, opcoes || {});
+        const fca = fatorAgrupamento(op.circuitosAgrupados);
+        const fct = fatorTemperatura(op.temperaturaAmbiente);
+        const ib = Number(circ.ibVal) || 0;
+        const alertas = [];
 
-        if (circ.ibVal > inDisj || inDisj > izMetodoB1(secaoNum)) {
-            if (circ.ibVal <= 10 && circ.tipo === 'Iluminação') { inDisj = 10; secaoNum = Math.max(secaoNum, 1.5); }
-            else if (circ.ibVal <= 16) { inDisj = 16; secaoNum = Math.max(secaoNum, 2.5); }
-            else if (circ.ibVal <= 20) { inDisj = 20; secaoNum = Math.max(secaoNum, 2.5); }
-            else if (circ.ibVal <= 25) { inDisj = 25; secaoNum = Math.max(secaoNum, 4.0); }
-            else if (circ.ibVal <= 32) { inDisj = 32; secaoNum = Math.max(secaoNum, 6.0); }
-            else if (circ.ibVal <= 40) { inDisj = 40; secaoNum = Math.max(secaoNum, 10.0); }
-            else if (circ.ibVal <= 50) { inDisj = 50; secaoNum = Math.max(secaoNum, 16.0); }
-            else { inDisj = 63; secaoNum = Math.max(secaoNum, 25.0); }
-            circ.disj = `${inDisj} A`;
-            circ.cabo = formatarSecao(secaoNum);
+        // 1. Disjuntor
+        const maiorDisj = DISJUNTORES_PADRONIZADOS[DISJUNTORES_PADRONIZADOS.length - 1];
+        let inDisj = DISJUNTORES_PADRONIZADOS.find(d => d >= Math.max(ib, DISJUNTOR_MINIMO));
+        if (inDisj === undefined) {
+            inDisj = maiorDisj;
+            alertas.push(`Corrente de projeto ${ib.toFixed(1)} A acima do maior disjuntor previsto (${maiorDisj} A): divida a carga em mais circuitos.`);
         }
 
-        // 1. Queda de tensão (item 6.2.7): máximo 4% em circuitos terminais.
-        //    Se exceder, aumenta a seção comercial até atender (ou até a maior disponível).
+        // 2. Seção pela capacidade de condução corrigida
+        const secaoMin = (circ.tipo === 'Iluminação') ? SECAO_MINIMA_ILUMINACAO : SECAO_MINIMA_FORCA;
+        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= secaoMin && izCorrigida(s, fca, fct) >= inDisj);
+        if (idx === -1) {
+            idx = SECOES_PADRONIZADAS.length - 1;
+            alertas.push(`Nenhuma seção até ${SECOES_PADRONIZADAS[idx]} mm² atende In ${inDisj} A com FCA ${fca.toFixed(2)} × FCT ${fct.toFixed(2)}.`);
+        }
+
+        // 3. Queda de tensão
         const distParaDeltaV = circ.ehManual ? circ.rota : (circ.distanciaCritica || circ.rota);
-        let queda = calcularQuedaTensao(circ.ibVal, distParaDeltaV, secaoNum, circ.tensao);
-
-        let idxBitola = SECOES_PADRONIZADAS.indexOf(secaoNum);
-        if (idxBitola === -1) idxBitola = 1;
-
-        while (queda.pct > QUEDA_TENSAO_MAX_PCT && idxBitola < SECOES_PADRONIZADAS.length - 1) {
-            idxBitola++;
-            secaoNum = SECOES_PADRONIZADAS[idxBitola];
-            circ.cabo = formatarSecao(secaoNum);
-            queda = calcularQuedaTensao(circ.ibVal, distParaDeltaV, secaoNum, circ.tensao);
+        let queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao);
+        while (queda.pct > QUEDA_TENSAO_MAX_PCT && idx < SECOES_PADRONIZADAS.length - 1) {
+            idx++;
+            queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao);
+        }
+        const quedaOk = queda.pct <= QUEDA_TENSAO_MAX_PCT;
+        if (!quedaOk) {
+            alertas.push(`Queda de tensão de ${queda.pct.toFixed(1)}% excede 4% mesmo com ${SECOES_PADRONIZADAS[idx]} mm²: reduza o comprimento ou divida o circuito.`);
         }
 
+        const secaoNum = SECOES_PADRONIZADAS[idx];
+        const iz = izCorrigida(secaoNum, fca, fct);
+
+        circ.disj = `${inDisj} A`;
+        circ.cabo = formatarSecao(secaoNum);
         circ.secaoMm2 = secaoNum;
         circ.bitola = secaoNum;
         circ.disjuntor = inDisj;
+        circ.fca = fca;
+        circ.fct = fct;
+        circ.izCorrigida = iz;
+        circ.secaoPE = secaoProtecao(secaoNum);
         circ.deltaVVolts = queda.volts;
         circ.deltaVPct = queda.pct;
-        circ.quedaTensaoOk = (queda.pct <= QUEDA_TENSAO_MAX_PCT);
-        circ.quedaStatus = `${queda.pct.toFixed(1)}% (OK ≤ 4%)`;
+        circ.quedaTensaoOk = quedaOk;
+        circ.quedaStatus = quedaOk
+            ? `${queda.pct.toFixed(1)}% (OK ≤ 4%)`
+            : `${queda.pct.toFixed(1)}% (EXCEDE 4%)`;
 
-        // 2. Eletroduto (item 6.2.11 — taxa de ocupação máxima 40%)
+        // 4. Eletroduto (item 6.2.11 — taxa de ocupação máxima 40%)
         circ.eletroduto = dimensionarEletroduto(secaoNum);
 
-        // 3. Proteção diferencial-residual (IDR 30 mA — item 5.1.3.2.2)
+        // 5. Proteção diferencial-residual (IDR 30 mA — item 5.1.3.2.2)
         circ.requerIdr = true;
         circ.idrTag = ehAreaMolhadaOuPotencia(circ) ? 'IDR 30mA (Obrigatório)' : 'IDR 30mA (Geral)';
 
-        // 4. Verificação final da regra de ampacidade Ib ≤ In ≤ Iz
-        circ.ampacidadeOk = (circ.ibVal <= inDisj && inDisj <= izMetodoB1(secaoNum));
+        // 6. Verificação final Ib ≤ In ≤ Iz (corrigida)
+        circ.ampacidadeOk = (ib <= inDisj && inDisj <= iz);
+        circ.conforme = circ.ampacidadeOk && quedaOk;
+        circ.alertas = alertas;
 
         return circ;
     }
@@ -666,6 +750,10 @@
         RESISTIVIDADE_COBRE_70C,
         SECOES_PADRONIZADAS,
         IZ_METODO_B1,
+        DISJUNTORES_PADRONIZADOS,
+        FCA_TABELA_42,
+        FCT_TABELA_40_PVC,
+        PARAMETROS_PADRAO,
         QUEDA_TENSAO_MAX_PCT,
         SECAO_MINIMA_ILUMINACAO,
         SECAO_MINIMA_FORCA,
@@ -675,6 +763,10 @@
         CONCESSIONARIAS,
         // funções
         izMetodoB1,
+        fatorAgrupamento,
+        fatorTemperatura,
+        izCorrigida,
+        secaoProtecao,
         formatarSecao,
         ehCargaResistiva,
         selecionarProtecaoTUE,

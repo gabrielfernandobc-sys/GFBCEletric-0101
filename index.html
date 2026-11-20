@@ -1940,6 +1940,24 @@
                     </div>
                 </h2>
 
+                <!-- PREMISSAS DE CORREÇÃO DA CAPACIDADE DE CONDUÇÃO (NBR 5410 TABELAS 40 E 42) -->
+                <div class="flex flex-wrap items-end gap-4 mb-4 p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
+                    <label class="flex flex-col gap-1">
+                        <span class="text-slate-400 font-semibold">Circuitos no mesmo eletroduto (FCA, Tab. 42)</span>
+                        <input id="inpCircuitosAgrupados" type="number" min="1" max="30" step="1" value="3"
+                            onchange="alterarParametroNBR('circuitosAgrupados', this.value)"
+                            class="w-24 bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                    </label>
+                    <label class="flex flex-col gap-1">
+                        <span class="text-slate-400 font-semibold">Temperatura ambiente °C (FCT, Tab. 40)</span>
+                        <input id="inpTemperaturaAmbiente" type="number" min="10" max="60" step="5" value="30"
+                            onchange="alterarParametroNBR('temperaturaAmbiente', this.value)"
+                            class="w-24 bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                    </label>
+                    <span id="lblFatoresCorrecaoNBR" class="font-mono text-sky-300 font-bold pb-1">FCA 0.70 × FCT 1.00 = 0.70 × Iz</span>
+                    <span class="text-slate-500 text-[10px] pb-1 max-w-md">Use o nº de circuitos do trecho de eletroduto mais carregado (normalmente a saída do quadro). Circuitos em eletroduto exclusivo: 1.</span>
+                </div>
+
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse text-xs">
                         <thead>
@@ -5088,6 +5106,7 @@
             escadas: [],
             transicaoAtiva: null,
             circuitosCalculados: [],
+            parametrosNBR: { circuitosAgrupados: 3, temperaturaAmbiente: 30 }, // FCA (Tab. 42) e FCT (Tab. 40)
             // Gestão Avançada de Lançamento de Condutores & Filtro de Circuitos
             circuitoDestaque: 'todos', // 'todos' | 'ilum' | 'tugs' | 'tues' | 'comodo_X'
             circuitosOcultos: [], // array de chaves de circuitos ocultos
@@ -5416,6 +5435,7 @@
                 prumadaPos: { ...state.prumadaPos },
                 prumadaAtiva: state.prumadaAtiva !== false,
                 alimentacaoExterna: { ...state.alimentacaoExterna },
+                parametrosNBR: { ...obterParametrosNBR() },
 
                 // Configurações do Terreno Total (Lote)
                 terreno: state.terreno ? JSON.parse(JSON.stringify(state.terreno)) : null,
@@ -5494,6 +5514,9 @@
             if (snapshot.modoCanaletasQuadro) state.modoCanaletasQuadro = snapshot.modoCanaletasQuadro;
             if (snapshot.modoVisualQuadro) state.modoVisualQuadro = snapshot.modoVisualQuadro;
             if (snapshot.alimentacaoExterna) state.alimentacaoExterna = { ...snapshot.alimentacaoExterna };
+            // Projetos antigos (sem parâmetros) passam a usar a premissa padrão de 3 circuitos / 30 °C
+            state.parametrosNBR = { ...NBR5410.PARAMETROS_PADRAO, ...(snapshot.parametrosNBR || {}) };
+            if (typeof sincronizarControlesParametrosNBR === 'function') sincronizarControlesParametrosNBR();
             if (snapshot.tabelaPrecos) state.tabelaPrecos = JSON.parse(JSON.stringify(snapshot.tabelaPrecos));
 
             // Terreno Total (Lote) - Preserva fielmente as medidas e configurações salvas
@@ -6694,6 +6717,7 @@
             setupSugestoesBR(); popularSelectModalPontoPredefinido();
             setupSubFormCargas();
             setupAlimentacaoExternaInputs();
+            sincronizarControlesParametrosNBR();
             setupFormulario();
             setupCanvasEvents();
             setupInstalacoesCanvasEvents();
@@ -9033,95 +9057,51 @@
         // =====================================================================
         // ABA 6: RENDERIZAÇÃO DO MEMORIAL TÉCNICO DE CIRCUITOS NBR 5410
         // =====================================================================
+        // Justificativa técnica de um circuito a partir do dimensionamento do módulo NBR5410
+        function justificativaCircuitoNBR(c) {
+            const fmt = v => String(v).replace('.', ',');
+            const secMin = c.tipo === 'Iluminação' ? NBR5410.SECAO_MINIMA_ILUMINACAO : NBR5410.SECAO_MINIMA_FORCA;
+            const partes = [
+                `I<sub>b</sub> ${fmt(c.ibVal.toFixed(1))} A ≤ I<sub>n</sub> ${c.disjuntor} A ≤ I<sub>z</sub> ${fmt((c.izCorrigida || 0).toFixed(1))} A ` +
+                    `(Tab. 36 B1 × FCA ${fmt((c.fca || 1).toFixed(2))} × FCT ${fmt((c.fct || 1).toFixed(2))})`,
+                `ΔV ${fmt(c.deltaVPct.toFixed(1))}% em ${Math.round(c.ehManual ? c.rota : (c.distanciaCritica || c.rota))} m (item 6.2.7: ≤ 4%)`,
+                `Seção mín. ${fmt(secMin)} mm² (Tab. 47)`,
+                `PE ${fmt(c.secaoPE || c.secaoMm2)} mm² (Tab. 58)`
+            ];
+            let html = partes.join(' • ');
+            if (c.alertas && c.alertas.length) {
+                html += `<br><span class="text-red-400 font-bold">⚠ ${c.alertas.join(' ')}</span>`;
+            }
+            return html;
+        }
+
         function renderizarMemorialAba6() {
             const tbody = document.getElementById('tabelaMemorialCircuitosAba6');
             if (!tbody) return;
             tbody.innerHTML = '';
 
-            const comodos = state.comodos;
-            let circIdx = 1;
+            const estilos = {
+                'Iluminação': { cor: 'amber', rotulo: 'ILUM' },
+                'TUG': { cor: 'emerald', rotulo: 'TUG' },
+                'TUE': { cor: 'blue', rotulo: 'TUE' }
+            };
 
-            comodos.forEach(c => {
-                const pts = state.pontosEletricos.filter(p => p.comodoId === c.id);
-                const potIlum = pts.filter(p => p.tipo === 'ILUM').reduce((s, p) => s + (p.pot || 100), 0) || (100 + (c.area >= 6 ? Math.floor((c.area - 6) / 4) * 60 : 0));
-                const tugs = pts.filter(p => p.tipo === 'TUG');
-                const tues = pts.filter(p => p.tipo === 'TUE');
-
-                // 1. Circuito de Iluminação
-                const ibIlum = (potIlum / 127).toFixed(1);
-                const trIlum = document.createElement('tr');
-                trIlum.className = 'hover:bg-slate-900/60 transition';
-                trIlum.innerHTML = `
-                    <td class="p-2.5 font-bold text-amber-400 font-mono">C${circIdx++}</td>
-                    <td class="p-2.5 text-white font-medium">Iluminação ${c.nome}</td>
-                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">ILUM</span></td>
-                    <td class="p-2.5 font-mono text-slate-300">${potIlum} VA</td>
-                    <td class="p-2.5 font-mono text-slate-400">127 V</td>
-                    <td class="p-2.5 font-mono text-sky-400 font-bold">${ibIlum} A</td>
-                    <td class="p-2.5 font-mono text-slate-300">DJ 10A</td>
-                    <td class="p-2.5 font-mono font-bold text-amber-400">1,5 mm²</td>
-                    <td class="p-2.5 text-slate-400 text-[10px]">Item 6.2.6.1.1 (Tabela 47: Seção mínima regulamentar para iluminação). Capacidade 17,5A (B1).</td>
+            (state.circuitosCalculados || []).forEach(c => {
+                const e = estilos[c.tipo] || estilos.TUG;
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-900/60 transition';
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-${e.cor}-400 font-mono">C${c.num}</td>
+                    <td class="p-2.5 text-white font-medium">${c.nome}</td>
+                    <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-${e.cor}-500/20 text-${e.cor}-300 border border-${e.cor}-500/30">${e.rotulo}</span></td>
+                    <td class="p-2.5 font-mono text-slate-300">${c.pot}</td>
+                    <td class="p-2.5 font-mono text-slate-400">${c.tensao} V</td>
+                    <td class="p-2.5 font-mono text-sky-400 font-bold">${c.ibVal.toFixed(1)} A</td>
+                    <td class="p-2.5 font-mono text-slate-300">DJ ${c.disjuntor}A</td>
+                    <td class="p-2.5 font-mono font-bold text-${e.cor}-400">${c.cabo.replace('.', ',')}</td>
+                    <td class="p-2.5 text-slate-400 text-[10px]">${justificativaCircuitoNBR(c)}</td>
                 `;
-                tbody.appendChild(trIlum);
-
-                // 2. Circuito TUG
-                if (tugs.length > 0) {
-                    const potTug = tugs.reduce((s, p) => s + (p.pot || 100), 0);
-                    const ibTug = (potTug / 127).toFixed(1);
-                    const trTug = document.createElement('tr');
-                    trTug.className = 'hover:bg-slate-900/60 transition';
-                    trTug.innerHTML = `
-                        <td class="p-2.5 font-bold text-emerald-400 font-mono">C${circIdx++}</td>
-                        <td class="p-2.5 text-white font-medium">Tomadas TUG ${c.nome} (${tugs.length} pts)</td>
-                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">TUG</span></td>
-                        <td class="p-2.5 font-mono text-slate-300">${potTug} W</td>
-                        <td class="p-2.5 font-mono text-slate-400">127 V</td>
-                        <td class="p-2.5 font-mono text-sky-400 font-bold">${ibTug} A</td>
-                        <td class="p-2.5 font-mono text-slate-300">DJ 16A/20A</td>
-                        <td class="p-2.5 font-mono font-bold text-emerald-400">2,5 mm²</td>
-                        <td class="p-2.5 text-slate-400 text-[10px]">Tabela 47: Seção mínima de força/tomadas. Suporta 24A em Método B1 com proteção por disjuntor termomagnético.</td>
-                    `;
-                    tbody.appendChild(trTug);
-                }
-
-                // 3. Circuitos TUE
-                tues.forEach((tue, tIdx) => {
-                    const potTue = tue.pot || 1500;
-                    const vTue = tue.tensao || 220;
-                    const ibTue = (potTue / vTue).toFixed(1);
-                    let bitola = '2,5 mm²';
-                    let dj = 'DJ 16A';
-                    let just = 'Circuito independente (Item 9.5.3.1).';
-
-                    if (potTue >= 7000) {
-                        bitola = '10,0 mm²';
-                        dj = 'DJ 40A/50A';
-                        just = 'Alta potência: capacidade de corrente de 57A (Tabela 36 B1) para evitar sobreaquecimento.';
-                    } else if (potTue >= 4500) {
-                        bitola = '6,0 mm²';
-                        dj = 'DJ 32A';
-                        just = 'Chuveiro/Forno: Ib = 25A a 31A. Cabo de 6mm² suporta 41A (Método B1) assegurando queda de tensão < 2%.';
-                    } else if (potTue >= 3000) {
-                        bitola = '4,0 mm²';
-                        dj = 'DJ 25A';
-                        just = 'Carga média: cabo de 4mm² suporta 32A, compensando fator de agrupamento na prumada.';
-                    }
-
-                    const trTue = document.createElement('tr');
-                    trTue.className = 'hover:bg-slate-900/60 transition';
-                    trTue.innerHTML = `
-                        <td class="p-2.5 font-bold text-blue-400 font-mono">C${circIdx++}</td>
-                        <td class="p-2.5 text-white font-medium">${tue.nome} (${c.nome})</td>
-                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">TUE</span></td>
-                        <td class="p-2.5 font-mono text-slate-300">${potTue} W</td>
-                        <td class="p-2.5 font-mono text-slate-400">${vTue} V</td>
-                        <td class="p-2.5 font-mono text-sky-400 font-bold">${ibTue} A</td>
-                        <td class="p-2.5 font-mono text-slate-300">${dj}</td>
-                        <td class="p-2.5 font-mono font-bold text-blue-400">${bitola}</td>
-                        <td class="p-2.5 text-slate-400 text-[10px]">${just}</td>
-                    `;
-                    tbody.appendChild(trTue);
-                });
+                tbody.appendChild(tr);
             });
         }
 
@@ -9391,62 +9371,24 @@
         }
 
         function gerarLinhasTabelaPdfCircuitos() {
+            if (!state.circuitosCalculados || state.circuitosCalculados.length === 0) atualizarTabelas();
             let html = '';
-            let idx = 1;
-            state.comodos.forEach(c => {
-                const pts = state.pontosEletricos.filter(p => p.comodoId === c.id);
-                const potIlum = pts.filter(p => p.tipo === 'ILUM').reduce((s, p) => s + (p.pot || 100), 0) || (100 + (c.area >= 6 ? Math.floor((c.area - 6) / 4) * 60 : 0));
-                const tugs = pts.filter(p => p.tipo === 'TUG');
-                const tues = pts.filter(p => p.tipo === 'TUE');
-
+            (state.circuitosCalculados || []).forEach(c => {
+                const rotulo = c.tipo === 'Iluminação' ? 'ILUM' : c.tipo;
+                const obrigatorio = c.idrTag && c.idrTag.includes('Obrigatório');
+                const alerta = (c.alertas && c.alertas.length)
+                    ? `<br><span style="color: #dc2626; font-weight: bold;">⚠ ${c.alertas.join(' ')}</span>` : '';
                 html += `<tr style="border-bottom: 1px solid #e2e8f0;">
-                    <td style="padding: 5px; font-weight: bold;">C${idx++}</td>
-                    <td style="padding: 5px;">Iluminação ${c.nome}</td>
-                    <td style="padding: 5px;">ILUM</td>
-                    <td style="padding: 5px;">${potIlum} VA</td>
-                    <td style="padding: 5px;">127 V</td>
-                    <td style="padding: 5px;">${(potIlum/127).toFixed(1)} A</td>
-                    <td style="padding: 5px;">DJ 10A</td>
-                    <td style="padding: 5px; font-weight: bold;">1,5 mm²</td>
-                    <td style="padding: 5px; color: #059669;">Dispensado / Opcional</td>
+                    <td style="padding: 5px; font-weight: bold;">C${c.num}</td>
+                    <td style="padding: 5px;">${c.nome}${alerta}</td>
+                    <td style="padding: 5px;">${rotulo}</td>
+                    <td style="padding: 5px;">${c.pot}</td>
+                    <td style="padding: 5px;">${c.tensao} V</td>
+                    <td style="padding: 5px;">${c.ibVal.toFixed(1)} A</td>
+                    <td style="padding: 5px;">DJ ${c.disjuntor}A</td>
+                    <td style="padding: 5px; font-weight: bold;">${c.cabo.replace('.', ',')}</td>
+                    <td style="padding: 5px; color: ${obrigatorio ? '#dc2626' : '#059669'}; font-weight: bold;">${c.idrTag}</td>
                 </tr>`;
-
-                if (tugs.length > 0) {
-                    const potTug = tugs.reduce((s, p) => s + (p.pot || 100), 0);
-                    html += `<tr style="border-bottom: 1px solid #e2e8f0;">
-                        <td style="padding: 5px; font-weight: bold;">C${idx++}</td>
-                        <td style="padding: 5px;">Tomadas TUG ${c.nome}</td>
-                        <td style="padding: 5px;">TUG</td>
-                        <td style="padding: 5px;">${potTug} W</td>
-                        <td style="padding: 5px;">127 V</td>
-                        <td style="padding: 5px;">${(potTug/127).toFixed(1)} A</td>
-                        <td style="padding: 5px;">DJ 16A/20A</td>
-                        <td style="padding: 5px; font-weight: bold;">2,5 mm²</td>
-                        <td style="padding: 5px; color: #dc2626; font-weight: bold;">DR 30mA Obrigatório</td>
-                    </tr>`;
-                }
-
-                tues.forEach(tue => {
-                    const potTue = tue.pot || 1500;
-                    const vTue = tue.tensao || 220;
-                    let bit = '2,5 mm²';
-                    let dj = 'DJ 16A';
-                    if (potTue >= 7000) { bit = '10,0 mm²'; dj = 'DJ 50A'; }
-                    else if (potTue >= 4500) { bit = '6,0 mm²'; dj = 'DJ 32A'; }
-                    else if (potTue >= 3000) { bit = '4,0 mm²'; dj = 'DJ 25A'; }
-
-                    html += `<tr style="border-bottom: 1px solid #e2e8f0;">
-                        <td style="padding: 5px; font-weight: bold;">C${idx++}</td>
-                        <td style="padding: 5px;">${tue.nome} (${c.nome})</td>
-                        <td style="padding: 5px;">TUE</td>
-                        <td style="padding: 5px;">${potTue} W</td>
-                        <td style="padding: 5px;">${vTue} V</td>
-                        <td style="padding: 5px;">${(potTue/vTue).toFixed(1)} A</td>
-                        <td style="padding: 5px;">${dj}</td>
-                        <td style="padding: 5px; font-weight: bold;">${bit}</td>
-                        <td style="padding: 5px; color: #dc2626; font-weight: bold;">DR 30mA Obrigatório</td>
-                    </tr>`;
-                });
             });
             return html;
         }
@@ -11028,11 +10970,11 @@
         }
 
         function atualizarTudo() {
-            renderizarMemorialAba6();
             renderListaComodosSidebar();
             desenharCAD();
             desenharInstalacoes();
             atualizarTabelas();
+            renderizarMemorialAba6(); // depois do cálculo, para refletir os circuitos atuais
         }
 
         function renderListaComodosSidebar() {
@@ -16644,6 +16586,37 @@
         }
 
         // CÁLCULOS TÉCNICOS CONSOLIDADOS (CONFORME NBR 5410 & REGIME DE IMÓVEIS)
+        // Premissas de correção da capacidade de condução (FCA / FCT) do projeto
+        function obterParametrosNBR() {
+            if (!state.parametrosNBR) state.parametrosNBR = { ...NBR5410.PARAMETROS_PADRAO };
+            return state.parametrosNBR;
+        }
+
+        function alterarParametroNBR(campo, valor) {
+            const v = parseFloat(String(valor).replace(',', '.'));
+            if (!isFinite(v)) return;
+            const p = obterParametrosNBR();
+            if (campo === 'circuitosAgrupados') p.circuitosAgrupados = Math.min(30, Math.max(1, Math.round(v)));
+            if (campo === 'temperaturaAmbiente') p.temperaturaAmbiente = Math.min(60, Math.max(10, v));
+            sincronizarControlesParametrosNBR();
+            atualizarTabelas();
+            renderizarMemorialAba6();
+        }
+
+        function sincronizarControlesParametrosNBR() {
+            const p = obterParametrosNBR();
+            const inpN = document.getElementById('inpCircuitosAgrupados');
+            const inpT = document.getElementById('inpTemperaturaAmbiente');
+            const lbl = document.getElementById('lblFatoresCorrecaoNBR');
+            if (inpN) inpN.value = p.circuitosAgrupados;
+            if (inpT) inpT.value = p.temperaturaAmbiente;
+            if (lbl) {
+                const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
+                const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
+                lbl.textContent = `FCA ${fca.toFixed(2)} × FCT ${fct.toFixed(2)} = ${(fca * fct).toFixed(2)} × Iz`;
+            }
+        }
+
         function atualizarTabelas() {
             // 1. Determina quais cômodos entram no cálculo (respeita regime de imóveis)
             let comodosParaCalcular = state.comodos;
@@ -17068,7 +17041,7 @@
                 somaMetragensFinais += circ.rota;
 
                 // Dimensionamento normativo (Ib ≤ In ≤ Iz, queda de tensão, eletroduto, IDR) — js/nbr5410.js
-                NBR5410.dimensionarCircuito(circ);
+                NBR5410.dimensionarCircuito(circ, obterParametrosNBR());
             });
 
             state.circuitosCalculados = circuitosFinais;
@@ -17084,11 +17057,11 @@
                     tr.innerHTML = `
                         <td class="p-3 font-bold text-amber-400">${c.num}</td>
                         <td class="p-3 font-semibold text-slate-300 font-mono text-[11px]">${c.andar}</td>
-                        <td class="p-3 font-semibold text-white">${c.nome}</td>
+                        <td class="p-3 font-semibold text-white">${c.nome}${(c.alertas && c.alertas.length) ? `<div class="mt-1 text-[10px] font-bold text-red-300"><i class="fa-solid fa-triangle-exclamation"></i> ${c.alertas.join(' ')}</div>` : ''}</td>
                         <td class="p-3"><span class="px-2 py-0.5 rounded border text-[10px] font-bold ${c.tipo === 'TUE' ? 'bg-blue-900/40 text-blue-300 border-blue-500/40' : (c.tipo === 'TUG' ? 'bg-emerald-900/40 text-emerald-300 border-emerald-500/40' : 'bg-slate-800 text-amber-300 border-amber-500/40')}">${c.tipo}</span></td>
                         <td class="p-3 font-mono text-slate-300">${c.pot}</td>
                         <td class="p-3 font-mono text-slate-300">${c.ib}</td>
-                        <td class="p-3 font-bold font-mono text-emerald-400">${c.cabo}</td>
+                        <td class="p-3 font-bold font-mono ${c.ampacidadeOk ? 'text-emerald-400' : 'text-red-400'}" title="Iz corrigida ${c.izCorrigida.toFixed(1)} A (FCA ${c.fca.toFixed(2)} × FCT ${c.fct.toFixed(2)}) • PE ${c.secaoPE} mm² (Tab. 58)">${c.cabo}</td>
                         <td class="p-3 font-bold font-mono text-amber-300">${c.disj}</td>
                         <td class="p-3 font-bold text-amber-400">Curva ${c.curva}</td>
                         <td class="p-3"><span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-950 border border-slate-700 text-slate-300">Fase ${c.fase}</span></td>
@@ -18922,22 +18895,36 @@
             }
         }
 
+        // Chave da tabela de preços: "6 mm²", "6,0" e "6.0" → "6.0"
+        function normalizarChaveBitola(bitolaStr) {
+            const n = parseFloat((bitolaStr || '2.5').toString().replace(' mm²', '').replace(',', '.').trim());
+            return (isFinite(n) ? n : 2.5).toFixed(1);
+        }
+
         function obterPrecoCaboMetro(bitolaStr) {
             inicializarTabelaPrecos();
-            const s = (bitolaStr || '2.5').toString().replace(' mm²', '').replace(',', '.').trim();
+            const s = normalizarChaveBitola(bitolaStr);
             if (state.tabelaPrecos.cabos && state.tabelaPrecos.cabos[s]) {
                 return Number(state.tabelaPrecos.cabos[s].metro) || 2.85;
             }
-            return PRECOS_PADRAO_MATERIAIS.cabos[s]?.metro || 2.85;
+            if (PRECOS_PADRAO_MATERIAIS.cabos[s]) return PRECOS_PADRAO_MATERIAIS.cabos[s].metro;
+            // Seções acima da tabela (35 mm² ou mais): estimativa proporcional à seção,
+            // a partir do preço do 25 mm² (revise com cotação real do fornecedor)
+            const n = parseFloat(s);
+            if (n > 25) {
+                const ref = (state.tabelaPrecos.cabos && Number(state.tabelaPrecos.cabos['25.0']?.metro)) || PRECOS_PADRAO_MATERIAIS.cabos['25.0'].metro;
+                return Math.round(ref * (n / 25) * 100) / 100;
+            }
+            return 2.85;
         }
 
         function obterPrecoCaboRolo(bitolaStr) {
             inicializarTabelaPrecos();
-            const s = (bitolaStr || '2.5').toString().replace(' mm²', '').replace(',', '.').trim();
+            const s = normalizarChaveBitola(bitolaStr);
             if (state.tabelaPrecos.cabos && state.tabelaPrecos.cabos[s]) {
                 return Number(state.tabelaPrecos.cabos[s].rolo100) || (obterPrecoCaboMetro(s) * 100);
             }
-            return (PRECOS_PADRAO_MATERIAIS.cabos[s]?.metro || 2.85) * 100;
+            return obterPrecoCaboMetro(s) * 100;
         }
 
         function obterPrecoMaterial(categoria, chave, valorPadrao) {
