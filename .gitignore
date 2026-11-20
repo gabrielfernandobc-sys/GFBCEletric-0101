@@ -1,0 +1,8 @@
+# Projetos salvos pelo servidor local (dados do usuário)
+projetos/
+
+# Perfil temporário do Chrome usado pela suíte de testes
+.temp_chrome_suite/
+
+__pycache__/
+*.pyc

@@ -31,7 +31,24 @@ if hasattr(sys.stdout, 'reconfigure'):
 
 PORTA_SERVIDOR = 8080
 PORTA_DEBUG_CHROME = 9666
-CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+def localizar_chrome():
+    """Localiza o Chrome/Edge/Chromium. Pode ser forçado pela variável de ambiente CHROME_PATH."""
+    candidatos = [os.environ.get("CHROME_PATH")]
+    for base in (os.environ.get("PROGRAMFILES"), os.environ.get("PROGRAMFILES(X86)"), os.environ.get("LOCALAPPDATA")):
+        if base:
+            candidatos.append(os.path.join(base, "Google", "Chrome", "Application", "chrome.exe"))
+            candidatos.append(os.path.join(base, "Microsoft", "Edge", "Application", "msedge.exe"))
+    candidatos += [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        shutil.which("google-chrome"), shutil.which("chromium"),
+        shutil.which("chromium-browser"), shutil.which("chrome"), shutil.which("msedge"),
+    ]
+    for c in candidatos:
+        if c and os.path.isfile(c):
+            return c
+    return None
+
+CHROME_PATH = localizar_chrome()
 URL_APP = f"http://127.0.0.1:{PORTA_SERVIDOR}/"
 
 def log(msg, flush=True):
@@ -154,6 +171,9 @@ def executar_suite_testes():
     if os.path.exists(user_data):
         shutil.rmtree(user_data, ignore_errors=True)
 
+    if not CHROME_PATH:
+        log("[-] ERRO: Chrome/Edge não encontrado. Defina a variável de ambiente CHROME_PATH.")
+        return
     log(f"[+] Iniciando navegador Chrome Headless (CDP Porta {PORTA_DEBUG_CHROME})...")
     chrome_proc = subprocess.Popen([
         CHROME_PATH,
@@ -286,6 +306,11 @@ def executar_suite_testes():
                     msg_err = err.get('text', 'TIMEOUT') if err else 'TIMEOUT'
                     log(f"  [-] {nome}: FALHA ({msg_err} -> {err.get('exception', {}).get('description', '')})")
                     resultados.append({"grupo": grupo_nome, "nome": nome, "status": "FALHA", "valor": msg_err, "tempo_ms": dt})
+                elif isinstance(val, str) and val.strip().lower().startswith(("falha", "erro")):
+                    # O teste rodou mas reportou falha no próprio texto de retorno
+                    total_fail += 1
+                    log(f"  [-] {nome}: FALHA ({val})")
+                    resultados.append({"grupo": grupo_nome, "nome": nome, "status": "FALHA", "valor": str(val), "tempo_ms": dt})
                 else:
                     total_pass += 1
                     log(f"  [+] {nome}: {val} ({dt:.0f}ms)")
