@@ -2078,6 +2078,7 @@
                     <span id="lblFatoresCorrecaoNBR" class="font-mono text-sky-300 font-bold pb-1">FCA 0.70 × FCT 1.00 = 0.70 × Iz</span>
                     <span class="text-slate-500 text-[10px] pb-1 max-w-md">Use o nº de circuitos do trecho de eletroduto mais carregado (normalmente a saída do quadro). Circuitos em eletroduto exclusivo: 1.</span>
                     <span id="lblTrechoAgrupadoNBR" class="w-full text-[11px] text-slate-300"></span>
+                    <span id="lblCargaFasesNBR" class="w-full text-[11px] text-slate-300"></span>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -5470,6 +5471,41 @@
             }, 3500);
         }
 
+        // =========================================================================
+        // SEGURANÇA: TEXTOS VINDOS DE ARQUIVOS, SERVIDOR OU NAVEGADOR
+        // Nomes de cômodos, pontos e projetos são exibidos via innerHTML em vários
+        // pontos do app. Para que um arquivo .proeletrica (ou DXF) de terceiros não
+        // consiga injetar HTML/JavaScript, os caracteres que abrem tags, atributos e
+        // strings são trocados por equivalentes tipográficos visualmente iguais.
+        // =========================================================================
+        const _MAPA_TEXTO_SEGURO = { '<': '‹', '>': '›', '"': '”', "'": '’', '`': 'ˋ' };
+        function textoSeguro(v) {
+            if (typeof v !== 'string' || v.startsWith('data:')) return v;
+            return v.replace(/[<>"'`]/g, c => _MAPA_TEXTO_SEGURO[c]);
+        }
+        function sanitizarTextosProfundo(v) {
+            if (typeof v === 'string') return textoSeguro(v);
+            if (Array.isArray(v)) return v.map(sanitizarTextosProfundo);
+            if (v && typeof v === 'object') {
+                const o = {};
+                Object.keys(v).forEach(k => { o[textoSeguro(k)] = sanitizarTextosProfundo(v[k]); });
+                return o;
+            }
+            return v;
+        }
+        // Argumento de função para uso dentro de onclick="...": string JS com aspas escapadas para HTML
+        function argJsEmAtributo(v) {
+            return JSON.stringify(String(v)).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        // Varredura leve dos nomes editáveis (cobre também o que o usuário digita)
+        function sanitizarNomesEstado() {
+            const limpar = lista => (lista || []).forEach(o => { if (o && typeof o.nome === 'string') o.nome = textoSeguro(o.nome); });
+            limpar(state.comodos); limpar(state.pontosEletricos); limpar(state.pavimentos);
+            limpar(state.imoveis); limpar(state.escadas); limpar(state.anotacoes);
+            (state.transicoes || []).forEach(t => { if (t) { t.nomeA = textoSeguro(t.nomeA); t.nomeB = textoSeguro(t.nomeB); } });
+            if (state.projetoAtual && typeof state.projetoAtual.nome === 'string') state.projetoAtual.nome = textoSeguro(state.projetoAtual.nome);
+        }
+
         function exportarSnapshotEstado() {
             return {
                 projetoAtual: JSON.parse(JSON.stringify(state.projetoAtual)),
@@ -5546,6 +5582,7 @@
 
         function restaurarSnapshotEstado(snapshot) {
             if (!snapshot) return;
+            snapshot = sanitizarTextosProfundo(snapshot);
             if (snapshot.projetoAtual) state.projetoAtual = JSON.parse(JSON.stringify(snapshot.projetoAtual));
             if (snapshot.pavimentos) state.pavimentos = JSON.parse(JSON.stringify(snapshot.pavimentos));
             if (snapshot.pavimentoAtivoId) state.pavimentoAtivoId = snapshot.pavimentoAtivoId;
@@ -5997,7 +6034,7 @@
                             <span class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-xs font-mono font-bold">
                                 ${idx + 1}
                             </span>
-                            <span class="font-bold text-white text-sm">${ckpt.nome}</span>
+                            <span class="font-bold text-white text-sm">${textoSeguro(ckpt.nome)}</span>
                             <span class="text-[10px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-md border border-slate-800">
                                 <i class="fa-regular fa-clock"></i> ${ckpt.dataHora}
                             </span>
@@ -6151,7 +6188,7 @@
                 <div class="bg-slate-950 p-4 rounded-xl border ${ehOAtual ? 'border-emerald-500/60 ring-1 ring-emerald-500/30' : 'border-slate-800'} hover:border-slate-700 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div class="space-y-1">
                         <div class="flex items-center gap-2">
-                            <span class="font-bold text-white text-sm">${proj.nome}</span>
+                            <span class="font-bold text-white text-sm">${textoSeguro(proj.nome)}</span>
                             ${ehOAtual ? '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/40">Em Edição</span>' : ''}
                         </div>
                         <div class="flex items-center gap-3 text-slate-400 text-[11px]">
@@ -6208,7 +6245,7 @@
                 try {
                     const dados = JSON.parse(e.target.result);
                     if (dados.projeto) {
-                        state.projetoAtual = dados.projeto;
+                        state.projetoAtual = sanitizarTextosProfundo(dados.projeto);
                         if (dados.projeto.concessionaria) {
                             state.concessionariaId = dados.projeto.concessionaria;
                         }
@@ -6526,8 +6563,8 @@
                         <div class="space-y-1">
                             <div class="flex flex-wrap items-center gap-2">
                                 <i class="fa-solid fa-file-shield text-sky-400 text-sm"></i>
-                                <span class="font-bold text-white text-sm">${proj.nome}</span>
-                                <span class="text-[10px] bg-sky-950 text-sky-300 border border-sky-800 px-1.5 py-0.5 rounded font-mono">${proj.arquivo}</span>
+                                <span class="font-bold text-white text-sm">${textoSeguro(proj.nome)}</span>
+                                <span class="text-[10px] bg-sky-950 text-sky-300 border border-sky-800 px-1.5 py-0.5 rounded font-mono">${textoSeguro(proj.arquivo)}</span>
                             </div>
                             <div class="flex flex-wrap items-center gap-3 text-slate-400 text-[11px]">
                                 <span><i class="fa-regular fa-clock text-amber-400"></i> ${proj.modificado_em}</span>
@@ -6538,15 +6575,16 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <button onclick="carregarProjetoDaPastaServidor('${proj.arquivo}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow text-xs">
+                            <button onclick="carregarProjetoDaPastaServidor(${argJsEmAtributo(proj.arquivo)})" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow text-xs">
                                 <i class="fa-solid fa-folder-open"></i> Abrir
                             </button>
-                            <button onclick="excluirProjetoDaPastaServidor('${proj.arquivo}')" class="bg-slate-900 hover:bg-red-950/80 hover:text-red-400 text-slate-400 p-2 rounded-lg border border-slate-800 transition" title="Excluir da pasta">
+                            <button onclick="excluirProjetoDaPastaServidor(${argJsEmAtributo(proj.arquivo)})" class="bg-slate-900 hover:bg-red-950/80 hover:text-red-400 text-slate-400 p-2 rounded-lg border border-slate-800 transition" title="Excluir da pasta">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
                     </div>`;
                 }).join('');
+                container.innerHTML = htmlCardsProjetos;
             } catch (err) {
                 container.innerHTML = `
                     <div class="p-5 bg-slate-950/80 rounded-xl border border-slate-800 space-y-2.5">
@@ -6623,7 +6661,7 @@
                     const estadoParaCarregar = dados.estado || dados;
                     restaurarSnapshotEstado(estadoParaCarregar);
                     if (dados.projeto) {
-                        state.projetoAtual = dados.projeto;
+                        state.projetoAtual = sanitizarTextosProfundo(dados.projeto);
                     }
                     salvarPontoRapido('Carregado da pasta: ' + arquivo);
                     mostrarNotificacaoToast(`Projeto "${arquivo}" aberto com sucesso!`, 'sucesso');
@@ -7756,9 +7794,7 @@
             atualizarIndicadoresPrumada();
             atualizarTudo();
             if (typeof reconstruirCena3D === 'function') reconstruirCena3D();
-            if (typeof mostrarToast === 'function') {
-                mostrarToast(state.prumadaAtiva ? 'Prumada vertical ativada' : 'Prumada vertical desativada (andares com alimentação independente)');
-            }
+            mostrarNotificacaoToast(state.prumadaAtiva ? 'Prumada vertical ativada' : 'Prumada vertical desativada (andares com alimentação independente)', 'sucesso');
         }
 
         // Sugestão de proteção e bitola para um aparelho, calculada pela NBR 5410 com as
@@ -11108,6 +11144,7 @@
         }
 
         function atualizarTudo() {
+            sanitizarNomesEstado();
             renderListaComodosSidebar();
             desenharCAD();
             desenharInstalacoes();
@@ -12240,6 +12277,7 @@
                             y2: offsetY + (dxfH - (c.y2 - minY)) * escalaAjuste
                         });
                     } else if ((ent.tipo === 'TEXT' || ent.tipo === 'MTEXT') && ent.texto) {
+                        ent.texto = textoSeguro(ent.texto);
                         const px = offsetX + ((c.x1 || minX) - minX) * escalaAjuste;
                         const py = offsetY + (dxfH - ((c.y1 || minY) - minY)) * escalaAjuste;
                         underlayLinhas.push({
@@ -12248,7 +12286,7 @@
                             y: py,
                             texto: ent.texto
                         });
-                        textosAmbientes.push({ texto: ent.texto, x: px, y: py });
+                        textosAmbientes.push({ texto: textoSeguro(ent.texto), x: px, y: py });
                     } else if (ent.tipo === 'CIRCLE' && c.x1 !== undefined) {
                         underlayLinhas.push({
                             tipo: 'circulo',
@@ -12291,13 +12329,13 @@
                         const match = l.match(/'([^']+)'/g);
                         if (match && match.length > 0) {
                             const nome = match[0].replace(/'/g, '');
-                            storeys.push(nome);
+                            storeys.push(textoSeguro(nome));
                         }
                     } else if (l.includes('IFCSPACE')) {
                         const match = l.match(/'([^']+)'/g);
                         if (match && match.length > 0) {
                             const nome = match[0].replace(/'/g, '');
-                            spaces.push(nome);
+                            spaces.push(textoSeguro(nome));
                         }
                     }
                 });
@@ -12373,7 +12411,7 @@
                 const data = JSON.parse(content);
                 if (data.estado || data.comodos) {
                     if (data.projeto) {
-                        state.projetoAtual = data.projeto;
+                        state.projetoAtual = sanitizarTextosProfundo(data.projeto);
                     }
                     const estadoParaCarregar = data.estado || data;
                     restaurarSnapshotEstado(estadoParaCarregar);
@@ -17157,16 +17195,13 @@
             const circuitosFinais = [...circsBase, ...circuitos];
             let somaMetragensFinais = 0;
 
-            const fases = ['R', 'S'];
-            if (state.alimentacaoExterna.sistema === 'trifasico') fases.push('T');
+            // Distribuição dos circuitos nas fases equilibrando a carga (js/nbr5410.js)
+            const distFases = NBR5410.distribuirFases(circuitosFinais, state.alimentacaoExterna && state.alimentacaoExterna.sistema);
+            state.cargaPorFaseNBR = distFases;
 
             circuitosFinais.forEach((circ, index) => {
                 circ.num = index + 1;
-                if (circ.polos === '2P') {
-                    circ.fase = 'R + S';
-                } else {
-                    circ.fase = fases[index % fases.length];
-                }
+                circ.fase = distFases.fases[index];
 
                 const compManual = state.comprimentosManuaisCircuitos[circ.num];
                 if (compManual !== undefined) {
@@ -17180,6 +17215,10 @@
 
                 // Dimensionamento normativo (Ib ≤ In ≤ Iz, queda de tensão, eletroduto, IDR) — js/nbr5410.js
                 NBR5410.dimensionarCircuito(circ, obterParametrosNBR());
+                if (distFases.sistema === 'monofasico' && circ.polos === '2P') {
+                    circ.alertas.push('Sistema monofásico não tem duas fases: com rede de 220 V fase-neutro o circuito é monopolar (F+N); com rede de 127 V, use aparelho de 127 V ou altere o sistema para bifásico.');
+                    circ.conforme = false;
+                }
             });
 
             state.circuitosCalculados = circuitosFinais;
@@ -17189,6 +17228,15 @@
             const parNBR = obterParametrosNBR();
             state.trechoAgrupadoNBR = (parNBR.circuitosAgrupados > 1)
                 ? NBR5410.dimensionarTrechoAgrupado(circuitosFinais, parNBR.circuitosAgrupados) : null;
+            const lblFases = document.getElementById('lblCargaFasesNBR');
+            if (lblFases && state.cargaPorFaseNBR) {
+                const d = state.cargaPorFaseNBR;
+                const pct = Math.round(d.desequilibrio * 100);
+                const cor = pct <= 10 ? 'text-emerald-300' : (pct <= 20 ? 'text-amber-300' : 'text-red-300');
+                lblFases.innerHTML = `<i class="fa-solid fa-scale-balanced text-sky-400"></i> Carga por fase: ` +
+                    Object.entries(d.cargaPorFase).map(([f, v]) => `<strong class="font-mono">${f} ${(v / 1000).toFixed(2).replace('.', ',')} kVA</strong>`).join(' • ') +
+                    (Object.keys(d.cargaPorFase).length > 1 ? ` — desequilíbrio <strong class="font-mono ${cor}">${pct}%</strong>` : '');
+            }
             const lblTrecho = document.getElementById('lblTrechoAgrupadoNBR');
             if (lblTrecho) {
                 const t = state.trechoAgrupadoNBR;
