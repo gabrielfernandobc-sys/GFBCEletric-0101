@@ -7325,9 +7325,6 @@
             document.getElementById('numTerrenoRecuoLateral').value = rl;
             document.getElementById('numTerrenoRecuoFundos').value = rfun;
             atualizarPreviewTerreno();
-            if (window.hardwareTelemetry) {
-                window.hardwareTelemetry.cpuBusyTime += (performance.now() - _telemetryStart);
-            }
         }
 
         function atualizarPreviewTerreno() {
@@ -12047,35 +12044,22 @@
                 return;
             }
 
-            // Tecla T: Alternar para inserção de Tomadas (TUG)
-            if (e.key === 't' || e.key === 'T') {
-                trocarAba(1);
-                state.ferramentaInstalacoes = 'ponto_tug';
-                const rad = document.getElementById('radTipoPontoTug');
-                if (rad) rad.checked = true;
-                mostrarNotificacaoToast('Atalho [T]: Inserir Tomada (TUG)', 'sucesso');
+            // Atalhos de inserção: executam a mesma ação dos botões da aba Instalações
+            // (antes colocavam a ferramenta em modos inexistentes e nada acontecia)
+            const _atalhosInsercao = { t: ['TUG', 'Tomada (TUG)'], l: ['ILUM', 'Iluminação'], i: ['INTERRUPTOR', 'Interruptor'] };
+            const _tecla = (e.key || '').toLowerCase();
+            if (!e.ctrlKey && !e.metaKey && !e.altKey && _atalhosInsercao[_tecla]) {
+                e.preventDefault();
+                trocarAba('instalacoes');
+                abrirModalPontoNovo(_atalhosInsercao[_tecla][0]);
+                mostrarNotificacaoToast(`Atalho [${_tecla.toUpperCase()}]: inserir ${_atalhosInsercao[_tecla][1]}`, 'sucesso');
             }
-            // Tecla L: Alternar para Iluminação
-            else if (e.key === 'l' || e.key === 'L') {
-                trocarAba(1);
-                state.ferramentaInstalacoes = 'ponto_ilum';
-                const rad = document.getElementById('radTipoPontoIlum');
-                if (rad) rad.checked = true;
-                mostrarNotificacaoToast('Atalho [L]: Inserir Iluminação', 'sucesso');
-            }
-            // Tecla I: Alternar para Interruptor
-            else if (e.key === 'i' || e.key === 'I') {
-                trocarAba(1);
-                state.ferramentaInstalacoes = 'ponto_interruptor';
-                const rad = document.getElementById('radTipoPontoInt');
-                if (rad) rad.checked = true;
-                mostrarNotificacaoToast('Atalho [I]: Inserir Interruptor', 'sucesso');
-            }
-            // Tecla E: Eletroduto
-            else if (e.key === 'e' || e.key === 'E') {
-                trocarAba(1);
-                state.ferramentaInstalacoes = 'eletroduto';
-                mostrarNotificacaoToast('Atalho [E]: Traçado de Eletrodutos', 'sucesso');
+            // Tecla E: ferramenta de curvas/traçado de eletrodutos
+            else if (!e.ctrlKey && !e.metaKey && !e.altKey && _tecla === 'e') {
+                trocarAba('instalacoes');
+                const btnCurvas = document.getElementById('btnToolCurvasEletroduto');
+                if (btnCurvas) btnCurvas.click();
+                mostrarNotificacaoToast('Atalho [E]: traçado de eletrodutos', 'sucesso');
             }
             // Tecla Delete / Backspace: Excluir ponto elétrico ou cômodo em edição
             else if (e.key === 'Delete' || e.key === 'Backspace') {
