@@ -5763,35 +5763,98 @@
         // =========================================================================
         const _historicoUndo = [];
         const _historicoRedo = [];
+        const HISTORICO_MAXIMO = 50;
 
-        function salvarEstadoParaHistorico() {
-            try {
-                if (typeof exportarSnapshotEstado === 'function') {
-                    const snap = exportarSnapshotEstado();
-                    _historicoUndo.push(JSON.stringify(snap));
-                    if (_historicoUndo.length > 50) _historicoUndo.shift();
-                    _historicoRedo.length = 0;
+        // Campos de navegação/visualização: mudar zoom, aba, filtros etc. não é uma "edição"
+        const _CHAVES_FORA_DO_HISTORICO = new Set([
+            'escala', 'abaAtiva', 'ferramentaAtiva', 'ferramentaInstalacoes', 'pavimentoAtivoId', 'unidadeQdtAtivaId',
+            'exibirCadUnderlay', 'exibirLegendaTransicoes', 'exibirRotulosTransicoesTexto', 'exibirRotulosInstalacoes',
+            'exibirGabaritoFantasma', 'exibirLajesPiso3D', 'exibirLajesTeto3D', 'filtroPavimento3d', 'filtroElemento3d',
+            'raioX3d', 'explodido3d', 'modoVisualQuadro', 'modoFiacaoQuadro', 'modoCanaletasQuadro', 'snapMagnetico',
+            'comodosFixados', 'ultimaModificacao', 'dataExportacao'
+        ]);
+
+        // Assinatura do CONTEÚDO do projeto: posições em metros relativas ao terreno,
+        // para que zoom e pan (que movem todas as coordenadas em pixels) não contem como edição.
+        function assinaturaConteudoProjeto(snap) {
+            const e = snap.escala || 40;
+            const ref = (snap.terreno && typeof snap.terreno.x === 'number') ? snap.terreno
+                : ((snap.comodos && snap.comodos[0]) || { x: 0, y: 0 });
+            const rx = ref.x || 0, ry = ref.y || 0;
+            return JSON.stringify(snap, (k, v) => {
+                if (_CHAVES_FORA_DO_HISTORICO.has(k)) return undefined;
+                if (typeof v === 'number') {
+                    if (/^x\d?$/.test(k)) return Math.round((v - rx) / e * 1000) / 1000;
+                    if (/^y\d?$/.test(k)) return Math.round((v - ry) / e * 1000) / 1000;
                 }
-            } catch (e) {
-                console.warn('Erro ao salvar histórico:', e);
+                return v;
+            });
+        }
+
+        let _assinaturaConfirmada = null;
+        let _snapshotConfirmado = null;
+        let _historicoSuspensoAte = 0;
+        let _timerHistorico = null;
+        let _ponteiroPressionado = false;
+
+        // Compara o projeto atual com o último estado confirmado; se o conteúdo mudou,
+        // o estado anterior vai para a pilha de desfazer.
+        function verificarAlteracaoHistorico() {
+            if (Date.now() < _historicoSuspensoAte || typeof exportarSnapshotEstado !== 'function') return;
+            let snap;
+            try { snap = exportarSnapshotEstado(); } catch (e) { return; }
+            const ass = assinaturaConteudoProjeto(snap);
+            const json = JSON.stringify(snap);
+            if (_assinaturaConfirmada !== null && ass !== _assinaturaConfirmada) {
+                _historicoUndo.push(_snapshotConfirmado);
+                if (_historicoUndo.length > HISTORICO_MAXIMO) _historicoUndo.shift();
+                _historicoRedo.length = 0;
             }
+            _assinaturaConfirmada = ass;
+            _snapshotConfirmado = json;   // mantém também a visualização mais recente
+        }
+
+        function agendarVerificacaoHistorico(atrasoMs = 250) {
+            clearTimeout(_timerHistorico);
+            _timerHistorico = setTimeout(() => {
+                if (_ponteiroPressionado) { agendarVerificacaoHistorico(300); return; }  // arraste em andamento
+                verificarAlteracaoHistorico();
+            }, atrasoMs);
+        }
+
+        // Fim de cada interação do usuário → verifica se houve edição
+        document.addEventListener('pointerdown', () => { _ponteiroPressionado = true; }, true);
+        document.addEventListener('pointerup', () => { _ponteiroPressionado = false; agendarVerificacaoHistorico(); }, true);
+        document.addEventListener('pointercancel', () => { _ponteiroPressionado = false; agendarVerificacaoHistorico(); }, true);
+        ['click', 'change', 'keyup'].forEach(ev => document.addEventListener(ev, () => agendarVerificacaoHistorico()));
+        // operações assíncronas (abrir projeto do servidor, importações) — verificação periódica leve
+        setInterval(() => { if (!_ponteiroPressionado && !document.hidden) verificarAlteracaoHistorico(); }, 1500);
+        // estado inicial (após o app carregar o projeto salvo)
+        window.addEventListener('load', () => setTimeout(verificarAlteracaoHistorico, 1200));
+
+        // Mantida por compatibilidade: confirma alterações pendentes antes de uma ação
+        function salvarEstadoParaHistorico() {
+            verificarAlteracaoHistorico();
+        }
+
+        function restaurarDoHistorico(origem, destino, mensagem) {
+            verificarAlteracaoHistorico();               // confirma o que estiver pendente
+            if (origem.length === 0) return false;
+            destino.push(_snapshotConfirmado);
+            const alvo = JSON.parse(origem.pop());
+            _historicoSuspensoAte = Date.now() + 600;     // a própria restauração não vira edição
+            restaurarSnapshotEstado(alvo);
+            const snap = exportarSnapshotEstado();
+            _assinaturaConfirmada = assinaturaConteudoProjeto(snap);
+            _snapshotConfirmado = JSON.stringify(snap);
+            mostrarNotificacaoToast(mensagem, 'sucesso');
+            return true;
         }
 
         function desfazerAcao() {
             try {
-                if (_historicoUndo.length > 0) {
-                    const atual = exportarSnapshotEstado();
-                    _historicoRedo.push(JSON.stringify(atual));
-                    const anterior = JSON.parse(_historicoUndo.pop());
-                    restaurarSnapshotEstado(anterior);
-                    atualizarTudo();
-                    if (typeof mostrarNotificacaoToast === 'function') {
-                        mostrarNotificacaoToast('Ação desfeita com sucesso! (Ctrl+Z)', 'info');
-                    }
-                } else {
-                    if (typeof mostrarNotificacaoToast === 'function') {
-                        mostrarNotificacaoToast('Nenhuma ação anterior para desfazer.', 'info');
-                    }
+                if (!restaurarDoHistorico(_historicoUndo, _historicoRedo, 'Ação desfeita (Ctrl+Z)')) {
+                    mostrarNotificacaoToast('Nenhuma ação anterior para desfazer.', 'aviso');
                 }
             } catch (e) {
                 console.warn('Erro ao desfazer:', e);
@@ -5800,19 +5863,8 @@
 
         function refazerAcao() {
             try {
-                if (_historicoRedo.length > 0) {
-                    const atual = exportarSnapshotEstado();
-                    _historicoUndo.push(JSON.stringify(atual));
-                    const proximo = JSON.parse(_historicoRedo.pop());
-                    restaurarSnapshotEstado(proximo);
-                    atualizarTudo();
-                    if (typeof mostrarNotificacaoToast === 'function') {
-                        mostrarNotificacaoToast('Ação refeita com sucesso! (Ctrl+Y)', 'info');
-                    }
-                } else {
-                    if (typeof mostrarNotificacaoToast === 'function') {
-                        mostrarNotificacaoToast('Nenhuma ação para refazer.', 'info');
-                    }
+                if (!restaurarDoHistorico(_historicoRedo, _historicoUndo, 'Ação refeita (Ctrl+Y)')) {
+                    mostrarNotificacaoToast('Nenhuma ação para refazer.', 'aviso');
                 }
             } catch (e) {
                 console.warn('Erro ao refazer:', e);
@@ -15699,10 +15751,13 @@
                     const ptsDoComodo = state.pontosEletricos.filter(p => p.comodoId === c.id);
                     let luzesDoComodo = ptsDoComodo.filter(p => p.tipo === 'ILUM');
 
-                    // Se não houver ILUM cadastrado, garante persistência imediata
+                    // Sem ILUM cadastrado: exibe uma luminária padrão apenas na maquete.
+                    // NÃO grava no projeto (desenhar o 3D não pode alterar os dados; o QDT
+                    // já considera a potência de iluminação padrão do cômodo nesse caso).
                     if (luzesDoComodo.length === 0) {
                         const novaLuz = {
-                            id: 'pt_ilum_' + c.id + '_' + Date.now(),
+                            id: 'pt_ilum_virtual_' + c.id,
+                            virtual: true,
                             comodoId: c.id,
                             pavimentoId: pav.id,
                             tipo: 'ILUM',
@@ -15713,7 +15768,6 @@
                             x: c.x + (cw * state.escala) / 2,
                             y: c.y + (ch * state.escala) / 2
                         };
-                        state.pontosEletricos.push(novaLuz);
                         luzesDoComodo = [novaLuz];
                     }
 
