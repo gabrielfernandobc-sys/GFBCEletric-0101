@@ -1,0 +1,15 @@
+{
+  "name": "pro-eletrica-cad",
+  "private": true,
+  "description": "PRO-ELÉTRICA CAD NBR 5410 — scripts de desenvolvimento (o app roda direto do index.html, sem build).",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i css/tailwind.src.css -o css/tailwind.css --minify",
+    "build:icones": "node scripts/copiar-fontawesome.js",
+    "build": "npm run build:css && npm run build:icones",
+    "test": "node --test testes/*.test.js"
+  },
+  "devDependencies": {
+    "@fortawesome/fontawesome-free": "6.4.0",
+    "tailwindcss": "3.4.19"
+  }
+}

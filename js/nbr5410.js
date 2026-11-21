@@ -200,8 +200,17 @@
      * ar-condicionado e forno. Usa palavra inteira "ar" para não pegar "carga", "lavar" etc.
      */
     function tueComNeutro(nome) {
+        return ehArCondicionado(nome) || (nome || '').toLowerCase().includes('forno');
+    }
+
+    /**
+     * Ar-condicionado/climatizador pelo nome do aparelho. "ar" só conta como
+     * palavra inteira ("Ar 12k BTU", "Ar-condicionado"), para "lavar", "secar",
+     * "Lugar" etc. não serem confundidos.
+     */
+    function ehArCondicionado(nome) {
         const n = (nome || '').toLowerCase();
-        return /(^|[^a-zà-ú])ar([^a-zà-ú]|$)/.test(n) || n.includes('condicionado') || n.includes('split') || n.includes('forno');
+        return /(^|[^a-zà-ú])ar([^a-zà-ú]|$)/.test(n) || n.includes('condicionado') || n.includes('climatizador') || n.includes('split');
     }
 
     /**
@@ -841,7 +850,7 @@
                 potAquecKW += kw;
                 qtdAparelhosAquec++;
                 aparelhosAquec.push({ nome: pt.nome, potKW: kw });
-            } else if (nome.includes('ar ') || nome.includes('condicionado') || nome.includes('climatizador') || nome.includes('split')) {
+            } else if (ehArCondicionado(nome)) {
                 potArCondKW += kw;
                 qtdArCond++;
                 aparelhosAr.push({ nome: pt.nome, potKW: kw });
@@ -932,6 +941,7 @@
         taxaMaximaOcupacao,
         areaExternaCondutor,
         tueComNeutro,
+        ehArCondicionado,
         condutoresDoCircuito,
         dimensionarEletrodutoPorOcupacao,
         dimensionarTrechoAgrupado,

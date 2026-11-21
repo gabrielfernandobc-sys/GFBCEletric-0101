@@ -1,7 +1,7 @@
 // =========================================================================
 // SERVICE WORKER - PRO-ELÉTRICA CAD NBR 5410 (PWA OFFLINE / CACHE)
 // =========================================================================
-const CACHE_NAME = 'pro-eletrica-cad-v2.6';
+const CACHE_NAME = 'pro-eletrica-cad-v2.7';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -10,34 +10,44 @@ const STATIC_ASSETS = [
   './libs/OrbitControls.js',
   './js/nbr5410.js',
   './js/importador-dxf.js',
+  './css/tailwind.css',
+  './css/app.css',
+  './js/pwa.js',
+  './js/app/01-dados-estado.js',
+  './js/app/02-projetos-historico.js',
+  './js/app/03-editor-planta.js',
+  './js/app/04-memorial-impressao.js',
+  './js/app/05-instalacoes-pontos.js',
+  './js/app/06-auto-lancamento.js',
+  './js/app/07-importacao-cad-bim.js',
+  './js/app/08-desenho-2d.js',
+  './js/app/09-maquete-3d.js',
+  './js/app/10-demanda.js',
+  './js/app/11-circuitos.js',
+  './js/app/12-quadro-qdt.js',
+  './js/app/13-materiais-orcamento.js',
+  './libs/fontawesome/css/all.min.css',
+  './libs/fontawesome/webfonts/fa-solid-900.woff2',
+  './libs/fontawesome/webfonts/fa-regular-400.woff2',
+  './libs/fontawesome/webfonts/fa-brands-400.woff2',
   './icon.svg',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png'
 ];
 
-// Bibliotecas externas usadas pela página. Scripts e CSS são carregados pela página
-// em modo no-cors (resposta "opaca"); as fontes de ícones são pedidas pelo CSS em
-// modo CORS — por isso cada uma é pré-carregada no modo em que será usada.
+// Única biblioteca externa (SheetJS, exportação Excel): scripts de outro domínio chegam
+// como resposta "opaca" (status 0), por isso é pré-carregada em modo no-cors.
+// Tailwind e Font Awesome agora são arquivos locais (STATIC_ASSETS).
 const CDN_NO_CORS = [
-  'https://cdn.tailwindcss.com',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
   'https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js'
-];
-const CDN_CORS = [
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2',
-  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2'
 ];
 
 function preCarregarCdn(cache) {
   const pedir = (url, mode) => fetch(new Request(url, { mode }))
     .then(resp => (resp.ok || resp.type === 'opaque') ? cache.put(url, resp) : null)
     .catch(err => console.warn('[PWA SW] Sem cache para', url, err));
-  return Promise.all([
-    ...CDN_NO_CORS.map(u => pedir(u, 'no-cors')),
-    ...CDN_CORS.map(u => pedir(u, 'cors'))
-  ]);
+  return Promise.all(CDN_NO_CORS.map(u => pedir(u, 'no-cors')));
 }
 
 // Instalação: Pré-armazena em cache os arquivos essenciais locais
