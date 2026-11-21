@@ -731,6 +731,62 @@
     };
 
     // =========================================================================
+    // 4b. DISTRIBUIÇÃO DOS CIRCUITOS NAS FASES (BALANCEAMENTO DE CARGAS)
+    // =========================================================================
+
+    /**
+     * Distribui os circuitos nas fases disponíveis equilibrando a carga (VA).
+     * Heurística "maior primeiro": circuitos ordenados por potência decrescente;
+     * 1P vai para a fase menos carregada; 2P (220 V entre fases) vai para o par de
+     * fases que resulta na menor carga máxima (no trifásico: R+S, S+T ou R+T),
+     * desempatando pela menor soma dos quadrados das cargas.
+     * Um circuito 2P soma metade da potência em cada fase do par.
+     *
+     * @param {Array<{potVal:number, polos:string}>} circuitos
+     * @param {string} sistema 'monofasico' | 'bifasico' | 'trifasico'
+     * @returns {{fases: string[], cargaPorFase: Object, desequilibrio: number, sistema: string}}
+     *          fases[i] é a fase do circuito i ('R', 'S', 'T', 'R + S', 'S + T', 'R + T');
+     *          desequilibrio = (maior − menor) / maior carga de fase (0 a 1).
+     */
+    function distribuirFases(circuitos, sistema) {
+        const sist = normalizarSistema(sistema);
+        const fases = sist === 'trifasico' ? ['R', 'S', 'T'] : (sist === 'monofasico' ? ['R'] : ['R', 'S']);
+        const pares = sist === 'trifasico' ? [['R', 'S'], ['S', 'T'], ['R', 'T']] : [['R', 'S']];
+        const carga = {};
+        fases.forEach(f => { carga[f] = 0; });
+        const lista = circuitos || [];
+        const ordem = lista.map((c, i) => i).sort((a, b) => ((Number(lista[b].potVal) || 0) - (Number(lista[a].potVal) || 0)) || (a - b));
+        const resultado = new Array(lista.length);
+
+        ordem.forEach(i => {
+            const c = lista[i];
+            const pot = Number(c.potVal) || 0;
+            if (c.polos === '2P' && fases.length >= 2) {
+                // critério: menor carga máxima; empate → menor soma dos quadrados (mais equilibrado)
+                let melhor = pares[0], melhorMax = Infinity, melhorQuad = Infinity;
+                pares.forEach(par => {
+                    const novas = fases.map(f => carga[f] + (par.includes(f) ? pot / 2 : 0));
+                    const maxCarga = Math.max(...novas);
+                    const quad = novas.reduce((soma, v) => soma + v * v, 0);
+                    if (maxCarga < melhorMax - 1e-9 || (Math.abs(maxCarga - melhorMax) <= 1e-9 && quad < melhorQuad - 1e-9)) {
+                        melhorMax = maxCarga; melhorQuad = quad; melhor = par;
+                    }
+                });
+                melhor.forEach(f => { carga[f] += pot / 2; });
+                resultado[i] = melhor.join(' + ');
+            } else {
+                const f = fases.reduce((a, b) => (carga[b] < carga[a] - 1e-9 ? b : a));
+                carga[f] += pot;
+                resultado[i] = f;
+            }
+        });
+
+        const valores = fases.map(f => carga[f]);
+        const maior = Math.max(...valores), menor = Math.min(...valores);
+        return { fases: resultado, cargaPorFase: carga, desequilibrio: maior > 0 ? (maior - menor) / maior : 0, sistema: sist };
+    }
+
+    // =========================================================================
     // 5. CÁLCULO DE DEMANDA DA EDIFICAÇÃO (PADRÃO DE ENTRADA)
     // =========================================================================
 
@@ -882,6 +938,7 @@
         ehAreaMolhadaOuPotencia,
         dimensionarCircuito,
         normalizarSistema,
+        distribuirFases,
         calcularDemanda
     });
 });
