@@ -244,7 +244,7 @@ def executar_suite_testes():
                 ("Legenda Lateral Interativa", "(function(){ const l = document.getElementById('listaPontosLegendaLateral'); return l ? l.children.length + ' pontos listados' : 'Sem container'; })()"),
                 ("Inserção de Ponto Elétrico", "(function(){ const antes = state.pontosEletricos.length; state.pontosEletricos.push({id: 'pt_teste_' + Date.now(), tipo: 'TUG', subTipo: 'baixa', pot: 100, x: 200, y: 200, comodoId: state.comodos[0].id, pavimentoId: state.comodos[0].pavimentoId}); atualizarTudo(); return 'Antes: ' + antes + ', Depois: ' + state.pontosEletricos.length; })()"),
                 ("Auto-Lançamento NBR 5410 (1 Cômodo)", "(function(){ const c = state.comodos[0]; const antes = state.pontosEletricos.filter(p => p.comodoId === c.id).length; autoLancarPontosNBR5410(c.id); const depois = state.pontosEletricos.filter(p => p.comodoId === c.id).length; return 'Pontos no cômodo antes: ' + antes + ', após NBR 5410: ' + depois; })()"),
-                ("Auto-Lançamento em Todos os Cômodos", "(function(){ autoLancarPontosTodosComodos(); return 'Lançamento NBR 5410 concluído. Total de pontos: ' + state.pontosEletricos.length; })()"),
+                ("Auto-Lançamento em Todos os Cômodos", "(function(){ abrirModalAutoLancamentoPontos(); executarAutoLancamentoCompleto(); return 'Lançamento NBR 5410 concluído. Total de pontos: ' + state.pontosEletricos.length; })()"),
                 ("Indicador de Salvamento no Cabeçalho", "(function(){ atualizarIndicadorSalvamento('Sincronizado'); const el = document.getElementById('txtStatusSalvamento'); return el ? el.textContent : 'Ausente'; })()"),
             ]),
             ("4. QUADRO DE CARGAS & CIRCUITOS (QDT)", [
