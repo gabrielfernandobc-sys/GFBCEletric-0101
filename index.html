@@ -680,6 +680,9 @@
                                     <span id="lblStatusPrumadaMobile">Ativa</span>
                                 </button>
                             </div>
+                            <button onclick="abrirModalConfigPavimento(); fecharDrawerMobile();" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold p-1.5 rounded-lg border border-slate-700 transition text-[10px] flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-gear text-[9px]"></i> Configurar / Excluir Andar
+                            </button>
                             <button onclick="abrirModalNovoPavimento(); fecharDrawerMobile();" class="w-full bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold p-1.5 rounded-lg border border-slate-700 transition text-[10px] flex items-center justify-center gap-1">
                                 <i class="fa-solid fa-plus text-[9px]"></i> Criar Novo Andar
                             </button>
@@ -914,6 +917,9 @@
                                 </span>
                                 <div id="containerBotoesPavimentos" class="flex gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800"></div>
                                 <button onclick="abrirModalNovoPavimento()" class="px-2 py-1 text-xs font-bold text-sky-400 hover:text-sky-300 bg-sky-950/60 rounded-lg border border-sky-500/40" title="Novo Andar">+ Andar</button>
+                                <button id="btnConfigPavimentoAtivo" onclick="abrirModalConfigPavimento()" class="px-2 py-1 text-xs font-bold text-slate-300 hover:text-white bg-slate-950 rounded-lg border border-slate-800 flex items-center gap-1" title="Configurar o andar ativo: nome, pé-direito, lajes, passagem de eletrodutos, prumada e excluir andar">
+                                    <i class="fa-solid fa-gear"></i> Andar
+                                </button>
                                 <button id="btnTogglePrumada" onclick="alternarPrumada()" class="px-2 py-1 text-xs font-bold rounded-lg border flex items-center gap-1" title="Ativar/desativar a prumada vertical (shaft) que interliga os andares ao quadro">
                                     <i class="fa-solid fa-arrow-up-from-ground-water"></i> Prumada: <span id="lblStatusPrumada">Ativa</span>
                                 </button>
@@ -3480,107 +3486,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE ACESSO WEB / DISPOSITIVOS EXTERNOS -->
-    <div id="modalAcessoWeb" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-cyan-500 text-white flex items-center justify-center text-sm shadow">
-                        <i class="fa-solid fa-globe"></i>
-                    </span>
-                    <div>
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <span>Acessar Software de Qualquer Navegador Fora Desta Máquina</span>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase">100% Web</span>
-                        </h3>
-                        <p class="text-[11px] text-slate-400">Abra no celular, tablet, notebook ou envie para clientes em qualquer lugar do mundo</p>
-                    </div>
-                </div>
-                <button onclick="fecharModalAcessoWeb()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
-                    <i class="fa-solid fa-xmark text-base"></i>
-                </button>
-            </div>
-
-            <div class="p-5 space-y-4 text-xs overflow-y-auto">
-                <!-- MÉTODO 1: NA MESMA REDE (WI-FI / LAN) -->
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-cyan-400 text-sm flex items-center gap-2">
-                            <i class="fa-solid fa-wifi"></i> Método 1: No mesmo Wi-Fi (Celular, Tablet ou outro PC)
-                        </span>
-                        <span class="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/30">
-                            Pronto para Usar
-                        </span>
-                    </div>
-                    <p class="text-slate-300 leading-relaxed">
-                        Execute o servidor local na pasta do projeto dando 2 cliques no arquivo <strong class="text-amber-400 font-mono">iniciar_servidor.bat</strong>. Em seguida, acesse no navegador do seu smartphone ou de outro computador:
-                    </p>
-                    <div class="flex flex-col sm:flex-row items-center gap-3 bg-slate-900 p-3 rounded-xl border border-slate-800">
-                        <div class="flex-1 w-full">
-                            <label class="text-[10px] text-slate-400 uppercase font-bold block mb-1">Endereço de Acesso na Rede Local:</label>
-                            <div class="flex items-center gap-2">
-                                <input id="txtUrlRedeLocal" type="text" readonly value="http://192.168.15.2:8080" class="w-full bg-slate-950 border border-cyan-500/50 text-cyan-300 font-mono font-bold text-sm rounded-lg p-2 outline-none select-all">
-                                <button onclick="copiarUrlRedeLocal()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-3 py-2 rounded-lg transition whitespace-nowrap flex items-center gap-1.5">
-                                    <i class="fa-solid fa-copy"></i> Copiar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="text-[11px] text-slate-400 flex items-center gap-2">
-                        <i class="fa-solid fa-circle-info text-cyan-400"></i>
-                        <span>O terminal do servidor exibirá também o endereço pronto e instruções para navegar instantaneamente!</span>
-                    </div>
-                </div>
-
-                <!-- MÉTODO 2: PELA INTERNET (QUALQUER LUGAR DO MUNDO - 100% GRATUITO) -->
-                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-amber-400 text-sm flex items-center gap-2">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Método 2: Pela Internet (Acesse de Qualquer Lugar do Mundo)
-                        </span>
-                        <span class="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/30">
-                            Grátis & Permanente 24h
-                        </span>
-                    </div>
-                    <p class="text-slate-300 leading-relaxed">
-                        Como este software é um aplicativo Web Client-Side de alta performance (não necessita de banco de dados instalado no servidor), você pode colocá-lo online em 30 segundos em plataformas gratuitas:
-                    </p>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
-                            <span class="font-bold text-white flex items-center gap-2">
-                                <i class="fa-solid fa-bolt text-teal-400"></i> Netlify Drop (Mais Fácil - 10 segundos)
-                            </span>
-                            <p class="text-[11px] text-slate-400">
-                                Abra <a href="https://app.netlify.com/drop" target="_blank" class="text-teal-400 underline font-bold">app.netlify.com/drop</a> e simplesmente arraste a pasta deste projeto para lá. Você ganha na hora um link público HTTPS como <em>https://seu-projeto.netlify.app</em> para abrir em qualquer lugar!
-                            </p>
-                        </div>
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
-                            <span class="font-bold text-white flex items-center gap-2">
-                                <i class="fa-brands fa-github text-purple-400"></i> GitHub Pages / Vercel
-                            </span>
-                            <p class="text-[11px] text-slate-400">
-                                Crie um repositório no GitHub ou importe na <a href="https://vercel.com" target="_blank" class="text-purple-400 underline font-bold">Vercel</a>. O arquivo <strong class="text-slate-200">index.html</strong> já está preparado na raiz para implantação automática!
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- INFORMAÇÃO TÉCNICA -->
-                <div class="p-3 bg-slate-900/60 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                    <p><strong class="text-slate-300">Arquivos Gerados na Pasta do Projeto:</strong></p>
-                    <p>• <strong class="text-amber-400 font-mono">iniciar_servidor.bat</strong>: Dê 2 cliques para iniciar o servidor web no Windows.</p>
-                    <p>• <strong class="text-sky-400 font-mono">servidor_local.py</strong>: Servidor HTTP Python com auto-detecção de IP.</p>
-                    <p>• <strong class="text-emerald-400 font-mono">index.html</strong>: Versão web padrão para carregamento universal.</p>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-slate-800 flex justify-end bg-slate-950/60 text-xs">
-                <button onclick="fecharModalAcessoWeb()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-2 rounded-xl transition">
-                    Fechar
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL DE EDIÇÃO / INSERÇÃO DE CÔMODO (SOB DEMANDA) -->
     <div id="modalComodo" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
@@ -3895,85 +3800,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE CONFIGURAÇÃO DE REGIME DE IMÓVEIS & MEDIÇÕES (NBR 5410) -->
-    <div id="modalConfigImoveis" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
-                <div class="flex items-center gap-2.5">
-                    <span class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-sm">
-                        <i class="fa-solid fa-building-user"></i>
-                    </span>
-                    <div>
-                        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-                            <span>Regime de Pavimentos & Unidades Consumidoras</span>
-                        </h3>
-                        <p class="text-[11px] text-slate-400">Mesmo Imóvel (Unifamiliar) vs Imóveis Separados (Multifamiliar com Medições Individuais)</p>
-                    </div>
-                </div>
-                <button onclick="fecharModalConfigImoveis()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition">
-                    <i class="fa-solid fa-xmark text-base"></i>
-                </button>
-            </div>
-
-            <div class="p-5 overflow-y-auto space-y-4 text-xs">
-                <!-- SELETOR PRINCIPAL DE REGIME -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div onclick="selecionarRegimeModal('mesmo_imovel')" id="cardRegimeMesmo" class="border-2 border-amber-500 bg-slate-950 p-3.5 rounded-xl cursor-pointer transition space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-white text-xs flex items-center gap-1.5">
-                                <i class="fa-solid fa-house text-amber-400"></i> Mesmo Imóvel (Unifamiliar)
-                            </span>
-                            <span id="chkBadgeMesmo" class="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[10px] text-slate-950 font-bold"><i class="fa-solid fa-check"></i></span>
-                        </div>
-                        <p class="text-[11px] text-slate-400">Sobrado ou residência única. Ramal de entrada unificado, QDT principal no térreo e QDT parcial nos andares superiores via prumada.</p>
-                    </div>
-
-                    <div onclick="selecionarRegimeModal('imoveis_separados')" id="cardRegimeSeparados" class="border-2 border-slate-800 bg-slate-950 p-3.5 rounded-xl cursor-pointer transition space-y-1">
-                        <div class="flex items-center justify-between">
-                            <span class="font-bold text-white text-xs flex items-center gap-1.5">
-                                <i class="fa-solid fa-building-circle-check text-sky-400"></i> Imóveis Separados (Multifamiliar)
-                            </span>
-                            <span id="chkBadgeSeparados" class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-slate-400"><i class="fa-solid fa-check"></i></span>
-                        </div>
-                        <p class="text-[11px] text-slate-400">Casas geminadas, kitnets ou apartamentos. Cada unidade possui medição individual e QDT independente, agrupados em Centro de Medição.</p>
-                    </div>
-                </div>
-
-                <!-- CONFIGURAÇÃO DETALHADA DAS UNIDADES CONSUMIDORAS (QUANDO REGIME SEPARADO) -->
-                <div id="painelDetalheImoveisSeparados" class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span class="font-bold text-white uppercase text-[11px] flex items-center gap-1.5">
-                            <i class="fa-solid fa-list-check text-sky-400"></i> Unidades Consumidoras / Imóveis Cadastrados:
-                        </span>
-                        <button onclick="adicionarNovaUnidadeImovel()" class="bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold px-3 py-1.5 rounded-lg border border-slate-700 text-xs transition flex items-center gap-1">
-                            <i class="fa-solid fa-plus"></i> Nova Unidade
-                        </button>
-                    </div>
-
-                    <div id="listaUnidadesImoveis" class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                        <!-- Injetado dinamicamente -->
-                    </div>
-
-                    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-[11px]">
-                        <span class="font-bold text-amber-400 uppercase text-[10px] block">Vínculo dos Pavimentos às Unidades:</span>
-                        <div id="listaVinculoPavimentosImoveis" class="space-y-1.5">
-                            <!-- Injetado dinamicamente -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BOTÕES -->
-                <div class="pt-2 border-t border-slate-800 flex justify-end gap-2">
-                    <button type="button" onclick="fecharModalConfigImoveis()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-4 rounded-xl transition text-xs">
-                        Fechar
-                    </button>
-                    <button type="button" onclick="salvarConfigImoveis()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 px-5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-amber-500/20 text-xs">
-                        <i class="fa-solid fa-check"></i> Salvar Configuração
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- MODAL DE TRANSIÇÃO (PORTA / CORREDOR / VÃO LIVRE) -->
     <div id="modalTransicao" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
@@ -5420,39 +5246,8 @@
             reconstruirCena3D();
         }
 
-        // MODAL DE ACESSO WEB REMOTO
-        function abrirModalAcessoWeb() {
-            const modal = document.getElementById('modalAcessoWeb');
-            if (modal) modal.classList.remove('hidden');
 
-            const txt = document.getElementById('txtUrlRedeLocal');
-            if (txt) {
-                const host = window.location.hostname;
-                if (host && host !== '' && host !== 'localhost' && host !== '127.0.0.1') {
-                    txt.value = `http://${host}:${window.location.port || '8080'}`;
-                } else {
-                    txt.value = 'http://192.168.15.2:8080';
-                }
-            }
-        }
 
-        function fecharModalAcessoWeb() {
-            const modal = document.getElementById('modalAcessoWeb');
-            if (modal) modal.classList.add('hidden');
-        }
-
-        function copiarUrlRedeLocal() {
-            const txt = document.getElementById('txtUrlRedeLocal');
-            if (txt) {
-                navigator.clipboard.writeText(txt.value).then(() => {
-                    alert('URL copiada para a área de transferência:\n' + txt.value + '\n\nAbra no navegador de qualquer dispositivo no mesmo Wi-Fi!');
-                }).catch(() => {
-                    txt.select();
-                    document.execCommand('copy');
-                    alert('URL copiada:\n' + txt.value);
-                });
-            }
-        }
 
         
         // =========================================================================
@@ -5940,11 +5735,6 @@
             }
         }
 
-        function fecharModalPontoEletrico() {
-            if (typeof fecharModalPonto === 'function') {
-                fecharModalPonto();
-            }
-        }
 
         function abrirModalAnotacao() {
             const texto = prompt('Digite a anotação para inserir no CAD:');
@@ -7485,13 +7275,6 @@
             mostrarNotificacaoToast(`Dimensões enquadradas aos cômodos: ${novaLargura}m × ${novoComprimento}m`, 'sucesso');
         }
 
-        function toggleExibirTerreno() {
-            if (!state.terreno) state.terreno = { ativo: true, largura: 12, comprimento: 25, recuoFrontal: 4, recuoLateral: 1.5, recuoFundos: 3, x: 40, y: 40 };
-            state.terreno.ativo = !state.terreno.ativo;
-            desenharCAD();
-            desenharInstalacoes();
-            reconstruirCena3D();
-        }
 
         // =====================================================================
         // CONTROLE DE ESPESSURA DE PAREDES (NORMAS TÉCNICAS NBR 15575 / 15270 / 16868)
@@ -11543,16 +11326,6 @@
             mostrarNotificacaoToast(`NBR 5410: "${c.nome}" configurado com ${qtdTugsMin} TUGs e luz de ${ilumPot} VA!`, 'sucesso');
         }
 
-        function autoLancarPontosTodosComodos(opcoes = {}) {
-            const comodosAndar = (state.comodos || []).filter(c => c.pavimentoId === state.pavimentoAtivoId);
-            if (comodosAndar.length === 0) {
-                mostrarNotificacaoToast('Nenhum cômodo encontrado no pavimento ativo', 'aviso');
-                return;
-            }
-            comodosAndar.forEach(c => autoLancarPontosNBR5410(c.id, opcoes));
-            mostrarNotificacaoToast(`Auto-lançamento NBR 5410 concluído em ${comodosAndar.length} cômodos!`, 'sucesso');
-        }
-
         // =========================================================================
         // GESTÃO INTERATIVA DO MODAL DE AUTO-LANÇAMENTO COM SUGESTÕES DE TUES
         // =========================================================================
@@ -12792,60 +12565,8 @@
             atualizarTudo();
         }
 
-        function abrirModalConfigImoveis() {
-            const m = document.getElementById('modalConfigImoveis');
-            if (!m) return;
-            m.classList.remove('hidden');
-            selecionarRegimeModal(state.regimeImovel);
-            renderizarListaConfigUnidades();
-        }
 
-        function fecharModalConfigImoveis() {
-            const m = document.getElementById('modalConfigImoveis');
-            if (m) m.classList.add('hidden');
-        }
 
-        function selecionarRegimeModal(regime) {
-            const cardMesmo = document.getElementById('cardRegimeMesmo');
-            const cardSeparados = document.getElementById('cardRegimeSeparados');
-            const badgeMesmo = document.getElementById('chkBadgeMesmo');
-            const badgeSeparados = document.getElementById('chkBadgeSeparados');
-            const painel = document.getElementById('painelDetalheImoveisSeparados');
-
-            if (regime === 'mesmo_imovel') {
-                if (cardMesmo) {
-                    cardMesmo.className = 'border-2 border-amber-500 bg-slate-950 p-3.5 rounded-xl cursor-pointer transition space-y-1';
-                    cardMesmo.setAttribute('data-selecionado', '1');
-                }
-                if (cardSeparados) {
-                    cardSeparados.className = 'border-2 border-slate-800 bg-slate-950 p-3.5 rounded-xl cursor-pointer transition space-y-1';
-                    cardSeparados.setAttribute('data-selecionado', '0');
-                }
-                if (badgeMesmo) {
-                    badgeMesmo.className = 'w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[10px] text-slate-950 font-bold';
-                }
-                if (badgeSeparados) {
-                    badgeSeparados.className = 'w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-slate-400';
-                }
-                if (painel) painel.classList.add('opacity-50', 'pointer-events-none');
-            } else {
-                if (cardMesmo) {
-                    cardMesmo.className = 'border-2 border-slate-800 bg-slate-950 p-3.5 rounded-xl cursor-pointer transition space-y-1';
-                    cardMesmo.setAttribute('data-selecionado', '0');
-                }
-                if (cardSeparados) {
-                    cardSeparados.className = 'border-2 border-amber-500 bg-slate-950 p-3.5 rounded-xl cursor-pointer transition space-y-1';
-                    cardSeparados.setAttribute('data-selecionado', '1');
-                }
-                if (badgeMesmo) {
-                    badgeMesmo.className = 'w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px] text-slate-400';
-                }
-                if (badgeSeparados) {
-                    badgeSeparados.className = 'w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[10px] text-slate-950 font-bold';
-                }
-                if (painel) painel.classList.remove('opacity-50', 'pointer-events-none');
-            }
-        }
 
         function renderizarListaConfigUnidades() {
             const container = document.getElementById('listaUnidadesImoveis');
@@ -12940,18 +12661,6 @@
             renderizarListaConfigUnidades();
         }
 
-        function adicionarNovaUnidadeImovel() {
-            const num = state.imoveis.length + 1;
-            state.imoveis.push({
-                id: 'imovel_' + Date.now(),
-                nome: `Imóvel ${num} (Unidade ${num})`,
-                tipo: 'residencial',
-                pavimentos: [],
-                sistema: 'bifasico',
-                distancia: 15
-            });
-            renderizarListaConfigUnidades();
-        }
 
         function removerUnidadeImovel(id) {
             if (state.imoveis.length <= 1) {
@@ -12962,12 +12671,6 @@
             renderizarListaConfigUnidades();
         }
 
-        function salvarConfigImoveis() {
-            const cardMesmo = document.getElementById('cardRegimeMesmo');
-            const selecionadoMesmo = cardMesmo ? cardMesmo.getAttribute('data-selecionado') === '1' : true;
-            alterarRegimeImovel(selecionadoMesmo ? 'mesmo_imovel' : 'imoveis_separados');
-            fecharModalConfigImoveis();
-        }
 
         function renderizarBotoesUnidadesQDT() {
             const cont = document.getElementById('containerBotoesUnidadesQDT');
@@ -13147,171 +12850,7 @@
         }
 
         
-        // =========================================================================
-        // MOTOR DE VISUALIZAÇÃO E FUNÇÕES WOCA CAD (NBR 5410 / NBR 5444)
-        // =========================================================================
-        function desenharDiagramaUnifilarNoCanvas(ctx) {
-            if (!state.camadas || state.camadas.qgbtUnifilar === false) return;
-            
-            ctx.save();
-            const isLight = document.body.classList.contains('theme-woca-light');
-            const corLinha = isLight ? '#334155' : '#94a3b8';
-            const corTexto = isLight ? '#0f172a' : '#f8fafc';
-            const corSubTexto = isLight ? '#64748b' : '#cbd5e1';
-            const corFundo = isLight ? '#ffffff' : '#0f172a';
-            
-            // Posição base do QGBT no canto esquerdo superior da área de desenho
-            const startX = 25;
-            const startY = 35;
-            
-            // Título QGBT
-            ctx.fillStyle = corTexto;
-            ctx.font = 'bold 10px sans-serif';
-            ctx.fillText('QGBT', startX + 50, startY + 12);
-            
-            // Linha do Alimentador de Entrada (Vem da esquerda)
-            const yAlim = startY + 70;
-            ctx.strokeStyle = corLinha;
-            ctx.lineWidth = 1.8;
-            
-            // Linha de chegada
-            ctx.beginPath();
-            ctx.moveTo(startX, yAlim);
-            ctx.lineTo(startX + 115, yAlim);
-            ctx.stroke();
-            
-            // Rótulo da Fiação de Entrada: 2#16(16)
-            ctx.fillStyle = corTexto;
-            ctx.font = 'bold 9px monospace';
-            ctx.fillText('2#16(16)', startX + 2, yAlim - 6);
-            
-            // Disjuntor Geral 63A
-            const disjX = startX + 62;
-            ctx.fillStyle = corFundo;
-            ctx.fillRect(disjX - 6, yAlim - 6, 12, 12);
-            ctx.strokeStyle = corLinha;
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(disjX - 6, yAlim - 6, 12, 12);
-            ctx.fillStyle = corTexto;
-            ctx.font = 'bold 8px sans-serif';
-            ctx.fillText('63 A', disjX - 10, yAlim - 9);
-            
-            // DR Geral 63A
-            const drX = startX + 96;
-            ctx.fillStyle = corFundo;
-            ctx.fillRect(drX - 7, yAlim - 6, 14, 12);
-            ctx.strokeStyle = corLinha;
-            ctx.strokeRect(drX - 7, yAlim - 6, 14, 12);
-            ctx.fillStyle = corTexto;
-            ctx.font = 'bold 8px sans-serif';
-            ctx.fillText('63 A', drX - 10, yAlim - 9);
-            ctx.fillText('DR', drX - 6, yAlim + 18);
-            
-            // Linha vertical do Barramento de Distribuição
-            const busX = startX + 125;
-            const circs = (state.circuitosCalculados && state.circuitosCalculados.length > 0)
-                ? state.circuitosCalculados.slice(0, 10)
-                : [
-                    { num: 1, nome: 'TUG', fase: 'A', disjuntor: 10, secaoMm2: 2.5 },
-                    { num: 2, nome: 'Chuveiro', fase: 'AB', disjuntor: 25, secaoMm2: 10 },
-                    { num: 3, nome: 'Chuveiro', fase: 'AB', disjuntor: 25, secaoMm2: 10 },
-                    { num: 4, nome: 'Iluminação', fase: 'A', disjuntor: 10, secaoMm2: 1.5 },
-                    { num: 5, nome: 'TUG', fase: 'A', disjuntor: 20, secaoMm2: 6 },
-                    { num: 6, nome: 'Iluminação', fase: 'A', disjuntor: 10, secaoMm2: 1.5 },
-                    { num: 7, nome: 'TUG', fase: 'B', disjuntor: 10, secaoMm2: 2.5 },
-                    { num: 8, nome: 'Iluminação', fase: 'A', disjuntor: 10, secaoMm2: 1.5 },
-                    { num: 9, nome: 'Micro-ondas', fase: 'B', disjuntor: 20, secaoMm2: 6 }
-                ];
-                
-            const rowH = 22;
-            const totalH = circs.length * rowH;
-            const busTop = startY + 25;
-            const busBottom = busTop + totalH;
-            
-            // Conexão da entrada com o barramento
-            ctx.beginPath();
-            ctx.moveTo(startX + 103, yAlim);
-            ctx.lineTo(busX, yAlim);
-            ctx.stroke();
-            
-            // Linha do barramento
-            ctx.beginPath();
-            ctx.moveTo(busX, busTop);
-            ctx.lineTo(busX, busBottom);
-            ctx.stroke();
-            
-            // Tabela e ramos de circuitos
-            circs.forEach((c, idx) => {
-                const rowY = busTop + (idx * rowH);
-                
-                // Caixa de fase e disjuntor
-                const boxX = busX;
-                const boxW = 54;
-                ctx.fillStyle = corFundo;
-                ctx.fillRect(boxX, rowY, boxW, rowH);
-                ctx.strokeStyle = corLinha;
-                ctx.lineWidth = 1;
-                ctx.strokeRect(boxX, rowY, boxW, rowH);
-                
-                // Divisão Fase / Disjuntor
-                ctx.beginPath();
-                ctx.moveTo(boxX + 22, rowY);
-                ctx.lineTo(boxX + 22, rowY + rowH);
-                ctx.stroke();
-                
-                // Fase
-                ctx.fillStyle = corTexto;
-                ctx.font = 'bold 9px sans-serif';
-                const faseStr = c.fase || (idx % 2 === 0 ? 'A' : (idx === 1 || idx === 2 ? 'AB' : 'B'));
-                ctx.fillText(faseStr, boxX + 4, rowY + 14);
-                
-                // Disjuntor
-                const disjVal = c.disjuntor || 10;
-                ctx.fillText(`${disjVal} A`, boxX + 25, rowY + 14);
-                
-                // Linha do ramo do circuito
-                const branchX = boxX + boxW;
-                const branchY = rowY + (rowH / 2);
-                const endBranchX = branchX + 30;
-                
-                ctx.beginPath();
-                ctx.moveTo(branchX, branchY);
-                ctx.lineTo(endBranchX, branchY);
-                ctx.stroke();
-                
-                // Rótulos do Circuito: Nome e Bitola
-                const caboCount = (c.fase === 'AB' || c.fase === '220V') ? '2#' : '1#';
-                const bitolaStr = `${caboCount}${c.secaoMm2 || 2.5}mm²`;
-                const nomeStr = `CIRC ${c.num || idx + 1} - ${c.nome || c.tipo || 'Carga'}`;
-                
-                ctx.font = 'bold 8px sans-serif';
-                ctx.fillStyle = corTexto;
-                ctx.fillText(nomeStr, endBranchX + 4, branchY - 2);
-                
-                ctx.font = '8px monospace';
-                ctx.fillStyle = corSubTexto;
-                ctx.fillText(bitolaStr, endBranchX + 4, branchY + 9);
-            });
-            
-            ctx.restore();
-        }
 
-        function regerarProjetoComIA() {
-            mostrarNotificacaoToast('✨ Regerando projeto completo com IA segundo NBR 5410...', 'info');
-            if (typeof autoLancarPontosTodosComodos === 'function') {
-                autoLancarPontosTodosComodos();
-            }
-            if (typeof atualizarTabelas === 'function') {
-                atualizarTabelas();
-            }
-            if (typeof desenharCAD === 'function') desenharCAD();
-            if (typeof desenharInstalacoes === 'function') desenharInstalacoes();
-            if (typeof reconstruirCena3D === 'function') reconstruirCena3D();
-            if (typeof atualizarIndicadorSalvamento === 'function') {
-                atualizarIndicadorSalvamento('Projeto regerado com IA');
-            }
-            mostrarNotificacaoToast('✅ Projeto regerado com IA com sucesso! Iluminação, tomadas e circuitos otimizados.', 'sucesso');
-        }
 
         function toggleTemaWoca() {
             const isCurrentlyLight = document.body.classList.contains('theme-woca-light');
@@ -13410,10 +12949,6 @@
             salvarProjetoSilencioso();
         }
 
-        function posicionarQGBT() {
-            trocarAba('instalacoes');
-            mostrarNotificacaoToast('Quadro de Distribuição (QGBT) posicionado e ativo!', 'info');
-        }
 
         function toggleGradeCotas() {
             if (!state.camadas) state.camadas = {};
@@ -13425,50 +12960,9 @@
             mostrarNotificacaoToast(state.camadas.cotas ? 'Cotas e medições visíveis' : 'Cotas ocultadas', 'info');
         }
 
-        function abrirModalAssistenteIA() {
-            const modal = document.getElementById('modalAssistenteIA');
-            if (modal) modal.classList.remove('hidden');
-        }
 
-        function fecharModalAssistenteIA() {
-            const modal = document.getElementById('modalAssistenteIA');
-            if (modal) modal.classList.add('hidden');
-        }
 
-        function executarPromptIA(tipo) {
-            const statusBox = document.getElementById('statusExecucaoIA');
-            const txtStatus = document.getElementById('txtStatusExecucaoIA');
-            if (tipo === 'auto_nbr') {
-                regerarProjetoComIA();
-                if (txtStatus) txtStatus.textContent = 'Auto-lançamento NBR 5410 concluído em todos os cômodos!';
-            } else if (tipo === 'balancear_fases') {
-                atualizarTabelas();
-                desenharCAD();
-                desenharInstalacoes();
-                if (txtStatus) txtStatus.textContent = 'Fases A/B/C balanceadas no QGBT com simetria máxima!';
-            } else if (tipo === 'otimizar_cabos') {
-                atualizarTabelas();
-                if (txtStatus) txtStatus.textContent = 'Bitolas de condutores otimizadas para queda terminal ΔV ≤ 4%!';
-            } else if (tipo === 'gerar_relatorio') {
-                trocarAba('alimentador');
-                fecharModalAssistenteIA();
-                return;
-            }
-            if (statusBox) statusBox.classList.remove('hidden');
-            setTimeout(() => {
-                if (statusBox) statusBox.classList.add('hidden');
-                fecharModalAssistenteIA();
-            }, 1800);
-        }
 
-        function enviarMensagemIACustomizada() {
-            const inp = document.getElementById('inputPromptIA');
-            const msg = inp ? inp.value.trim() : '';
-            if (!msg) return;
-            executarPromptIA('auto_nbr');
-            mostrarNotificacaoToast(`Comando IA executado: "${msg}"`, 'sucesso');
-            if (inp) inp.value = '';
-        }
     
         function desenharCAD() {
             const _telemetryStart = performance.now();
@@ -23076,75 +22570,6 @@
         </div>
     </div>
 
-    <!-- MODAL ASSISTENTE IA (WOCA COPILOT NBR 5410) -->
-    <div id="modalAssistenteIA" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl p-5 space-y-4 text-xs">
-            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-                <div class="flex items-center gap-2">
-                    <span class="w-8 h-8 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-400 text-white flex items-center justify-center text-sm shadow">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    </span>
-                    <div>
-                        <h3 class="font-black text-sm text-slate-900 dark:text-white">Assistente de Engenharia Elétrica IA</h3>
-                        <p class="text-[10px] text-slate-500">Otimização automática segundo NBR 5410 & NBR 5444</p>
-                    </div>
-                </div>
-                <button onclick="fecharModalAssistenteIA()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1">
-                    <i class="fa-solid fa-xmark text-sm"></i>
-                </button>
-            </div>
-            
-            <div class="space-y-2">
-                <p class="text-slate-600 dark:text-slate-300 text-[11px]">Selecione uma ação rápida ou digite um comando para o projeto:</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="executarPromptIA('auto_nbr')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-amber-500 bg-slate-50 dark:bg-slate-850 text-left transition flex items-center gap-2">
-                        <i class="fa-solid fa-bolt text-amber-500 text-base"></i>
-                        <div>
-                            <b class="text-slate-800 dark:text-slate-200 block">Distribuir NBR 5410</b>
-                            <span class="text-[10px] text-slate-500">Lança Ilum, TUGs e TUEs</span>
-                        </div>
-                    </button>
-                    <button onclick="executarPromptIA('balancear_fases')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-emerald-500 bg-slate-50 dark:bg-slate-850 text-left transition flex items-center gap-2">
-                        <i class="fa-solid fa-scale-balanced text-emerald-500 text-base"></i>
-                        <div>
-                            <b class="text-slate-800 dark:text-slate-200 block">Balancear Fases</b>
-                            <span class="text-[10px] text-slate-500">Equilibra cargas no QGBT</span>
-                        </div>
-                    </button>
-                    <button onclick="executarPromptIA('otimizar_cabos')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-sky-500 bg-slate-50 dark:bg-slate-850 text-left transition flex items-center gap-2">
-                        <i class="fa-solid fa-ruler-combined text-sky-500 text-base"></i>
-                        <div>
-                            <b class="text-slate-800 dark:text-slate-200 block">Queda de Tensão &lt; 4%</b>
-                            <span class="text-[10px] text-slate-500">Eleva bitolas críticas</span>
-                        </div>
-                    </button>
-                    <button onclick="executarPromptIA('gerar_relatorio')" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-purple-500 bg-slate-50 dark:bg-slate-850 text-left transition flex items-center gap-2">
-                        <i class="fa-solid fa-file-invoice text-purple-500 text-base"></i>
-                        <div>
-                            <b class="text-slate-800 dark:text-slate-200 block">Memorial Completo</b>
-                            <span class="text-[10px] text-slate-500">Demanda & lista materiais</span>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            <div class="space-y-1.5">
-                <label class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Instrução para a IA:</label>
-                <div class="flex gap-2">
-                    <input type="text" id="inputPromptIA" placeholder="Ex: Distribuir pontos e recalcular quadro..." class="flex-1 border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white outline-none focus:border-amber-500">
-                    <button onclick="enviarMensagemIACustomizada()" class="bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-500 hover:to-amber-400 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow">
-                        <i class="fa-solid fa-paper-plane"></i>
-                        <span>Enviar</span>
-                    </button>
-                </div>
-            </div>
-
-            <div id="statusExecucaoIA" class="hidden p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 text-[11px] flex items-center gap-2">
-                <i class="fa-solid fa-circle-check text-emerald-500"></i>
-                <span id="txtStatusExecucaoIA">Projeto otimizado com sucesso!</span>
-            </div>
-        </div>
-    </div>
 
 </body>
-</html>
+</html>
