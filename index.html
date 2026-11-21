@@ -36,6 +36,8 @@
     </script>
     <!-- Núcleo de cálculo NBR 5410 (dimensionamento de circuitos e demanda) -->
     <script src="js/nbr5410.js"></script>
+    <!-- Importador de plantas DXF (geometria em metros e reconhecimento de cômodos) -->
+    <script src="js/importador-dxf.js"></script>
     <style>
         canvas { touch-action: none; }
         .tab-content { display: none; }
@@ -3748,9 +3750,10 @@
                         <div>
                             <label class="block text-slate-400 mb-1">Escala da Planta:</label>
                             <select id="selEscalaImport" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-2 text-xs outline-none">
-                                <option value="1">1:1 (Metros)</option>
-                                <option value="0.01">1:100 (Centímetros)</option>
-                                <option value="0.001">1:1000 (Milímetros)</option>
+                                <option value="auto" selected>Automático (unidade do arquivo)</option>
+                                <option value="1">Metros</option>
+                                <option value="0.01">Centímetros</option>
+                                <option value="0.001">Milímetros</option>
                             </select>
                         </div>
                     </div>
@@ -6837,6 +6840,19 @@
                 state.escadas.forEach(esc => {
                     esc.x = (pivotX + (esc.x - pivotX) * ratio);
                     esc.y = (pivotY + (esc.y - pivotY) * ratio);
+                });
+            }
+
+            // 6c. AJUSTA A PLANTA DXF DE FUNDO (UNDERLAY) — antes não acompanhava o zoom
+            if (Array.isArray(state.cadUnderlay)) {
+                state.cadUnderlay.forEach(item => {
+                    if (item.tipo === 'linha') {
+                        item.x1 = pivotX + (item.x1 - pivotX) * ratio; item.y1 = pivotY + (item.y1 - pivotY) * ratio;
+                        item.x2 = pivotX + (item.x2 - pivotX) * ratio; item.y2 = pivotY + (item.y2 - pivotY) * ratio;
+                    } else if (item.x !== undefined && item.y !== undefined) {
+                        item.x = pivotX + (item.x - pivotX) * ratio; item.y = pivotY + (item.y - pivotY) * ratio;
+                        if (item.r !== undefined) item.r = item.r * ratio;
+                    }
                 });
             }
 
@@ -12004,14 +12020,21 @@
             }
 
             if (nome.endsWith('.dwg')) {
-                state.arquivoImportadoCache = { nome: file.name, tipo: 'dwg', conteudo: null };
-                alert('O arquivo selecionado é do tipo AutoCAD .DWG (formato binário).\n\nPara importação com máxima fidelidade geométrica no navegador, salve seu arquivo como AutoCAD DXF (.dxf) no AutoCAD ou no DWG TrueView gratuito.\n\nO sistema irá processar este projeto utilizando o traçado vetorial DXF compatível!');
+                // DWG é um formato binário fechado: não dá para lê-lo no navegador
+                state.arquivoImportadoCache = null;
+                if (lbl) lbl.innerText = `Arquivo: ${file.name} — formato DWG não suportado`;
+                alert('Arquivos .DWG (formato binário do AutoCAD) não podem ser lidos diretamente.\n\n' +
+                      'Salve a planta como DXF e importe o arquivo .dxf:\n' +
+                      '• AutoCAD: Arquivo › Salvar como › AutoCAD DXF (*.dxf)\n' +
+                      '• Sem AutoCAD: DWG TrueView ou ODA File Converter (gratuitos) convertem DWG em DXF.');
                 return;
             }
 
             const reader = new FileReader();
             reader.onload = (e) => {
-                const text = e.target.result;
+                let text;
+                try { text = new TextDecoder('utf-8', { fatal: true }).decode(e.target.result); }
+                catch (erroUtf8) { text = new TextDecoder('windows-1252').decode(e.target.result); }
                 let tipo = 'dxf';
                 if (nome.endsWith('.ifc')) tipo = 'ifc';
                 else if (nome.endsWith('.obj')) tipo = 'obj';
@@ -12024,7 +12047,7 @@
                     conteudo: text
                 };
             };
-            reader.readAsText(file);
+            reader.readAsArrayBuffer(file);
         }
 
         function processarArquivoImportado() {
@@ -12037,14 +12060,13 @@
                 criarComodos: document.getElementById('chkExtrairComodos') ? document.getElementById('chkExtrairComodos').checked : true,
                 projetarUnderlay: document.getElementById('chkProjetarUnderlay') ? document.getElementById('chkProjetarUnderlay').checked : true,
                 destino: document.getElementById('selDestinoImport') ? document.getElementById('selDestinoImport').value : 'ativo',
-                escala: document.getElementById('selEscalaImport') ? parseFloat(document.getElementById('selEscalaImport').value) : 1
+                escala: document.getElementById('selEscalaImport') ? parseFloat(document.getElementById('selEscalaImport').value) : NaN   // NaN = automático
             };
 
             const cache = state.arquivoImportadoCache;
-            if (cache.tipo === 'dxf' || cache.tipo === 'dwg') {
+            if (cache.tipo === 'dxf') {
                 if (!cache.conteudo) {
-                    carregarExemploDxf();
-                    fecharModalImportar();
+                    alert('O conteúdo do arquivo DXF não pôde ser lido. Selecione o arquivo novamente.');
                     return;
                 }
                 executarParseDXF(cache.conteudo, opcoes);
@@ -12062,123 +12084,107 @@
             fecharModalImportar();
         }
 
+        // Tipo do ambiente pelo nome (áreas molhadas/serviço usam regras próprias de TUG na NBR 5410)
+        function tipoAmbientePorNome(nome) {
+            const n = (nome || '').toLowerCase();
+            return /cozinha|copa|banh|bwc|wc\b|lavabo|lavand|servi[çc]o|a\.?\s*s\.?$|gourmet|churrasq/.test(n) ? 'servico' : 'geral';
+        }
+
         function executarParseDXF(dxfContent, opcoes) {
+            let r;
             try {
-                const lines = dxfContent.split(/\r\n|\r|\n/);
-                const entidades = [];
-                let i = 0;
-                let inEntities = false;
-                let currentEntity = null;
-
-                let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-                while (i < lines.length) {
-                    const code = lines[i].trim();
-                    const val = lines[i+1] ? lines[i+1].trim() : '';
-
-                    if (code === '0' && val === 'SECTION') {
-                    } else if (code === '2' && val === 'ENTITIES') {
-                        inEntities = true;
-                    } else if (code === '0' && val === 'ENDSEC') {
-                        inEntities = false;
-                    }
-
-                    if (inEntities) {
-                        if (code === '0') {
-                            if (currentEntity) entidades.push(currentEntity);
-                            currentEntity = { tipo: val, coords: {} };
-                        } else if (currentEntity) {
-                            if (code === '10') currentEntity.coords.x1 = parseFloat(val) * opcoes.escala;
-                            else if (code === '20') currentEntity.coords.y1 = parseFloat(val) * opcoes.escala;
-                            else if (code === '11') currentEntity.coords.x2 = parseFloat(val) * opcoes.escala;
-                            else if (code === '21') currentEntity.coords.y2 = parseFloat(val) * opcoes.escala;
-                            else if (code === '40') currentEntity.coords.raio = parseFloat(val) * opcoes.escala;
-                            else if (code === '1') currentEntity.texto = val;
-                        }
-                    }
-                    i += 2;
-                }
-                if (currentEntity) entidades.push(currentEntity);
-
-                entidades.forEach(ent => {
-                    const c = ent.coords;
-                    if (c.x1 !== undefined && !isNaN(c.x1)) {
-                        minX = Math.min(minX, c.x1); maxX = Math.max(maxX, c.x1);
-                    }
-                    if (c.y1 !== undefined && !isNaN(c.y1)) {
-                        minY = Math.min(minY, c.y1); maxY = Math.max(maxY, c.y1);
-                    }
-                    if (c.x2 !== undefined && !isNaN(c.x2)) {
-                        minX = Math.min(minX, c.x2); maxX = Math.max(maxX, c.x2);
-                    }
-                    if (c.y2 !== undefined && !isNaN(c.y2)) {
-                        minY = Math.min(minY, c.y2); maxY = Math.max(maxY, c.y2);
-                    }
-                });
-
-                if (minX === Infinity || maxX === -Infinity) {
-                    carregarExemploDxf();
-                    return;
-                }
-
-                const dxfW = Math.max(1, maxX - minX);
-                const dxfH = Math.max(1, maxY - minY);
-                const escalaAjuste = Math.min(580 / dxfW, 380 / dxfH);
-                const offsetX = 80;
-                const offsetY = 60;
-
-                const underlayLinhas = [];
-                const textosAmbientes = [];
-
-                entidades.forEach(ent => {
-                    const c = ent.coords;
-                    if (ent.tipo === 'LINE' && c.x1 !== undefined && c.x2 !== undefined) {
-                        underlayLinhas.push({
-                            tipo: 'linha',
-                            x1: offsetX + (c.x1 - minX) * escalaAjuste,
-                            y1: offsetY + (dxfH - (c.y1 - minY)) * escalaAjuste,
-                            x2: offsetX + (c.x2 - minX) * escalaAjuste,
-                            y2: offsetY + (dxfH - (c.y2 - minY)) * escalaAjuste
-                        });
-                    } else if ((ent.tipo === 'TEXT' || ent.tipo === 'MTEXT') && ent.texto) {
-                        ent.texto = textoSeguro(ent.texto);
-                        const px = offsetX + ((c.x1 || minX) - minX) * escalaAjuste;
-                        const py = offsetY + (dxfH - ((c.y1 || minY) - minY)) * escalaAjuste;
-                        underlayLinhas.push({
-                            tipo: 'texto',
-                            x: px,
-                            y: py,
-                            texto: ent.texto
-                        });
-                        textosAmbientes.push({ texto: textoSeguro(ent.texto), x: px, y: py });
-                    } else if (ent.tipo === 'CIRCLE' && c.x1 !== undefined) {
-                        underlayLinhas.push({
-                            tipo: 'circulo',
-                            x: offsetX + (c.x1 - minX) * escalaAjuste,
-                            y: offsetY + (dxfH - (c.y1 - minY)) * escalaAjuste,
-                            r: Math.max(2, (c.raio || 2) * escalaAjuste)
-                        });
-                    }
-                });
-
-                if (opcoes.projetarUnderlay) {
-                    state.cadUnderlay = underlayLinhas;
-                    state.exibirCadUnderlay = true;
-                    const chk = document.getElementById('chkCadUnderlay');
-                    if (chk) chk.checked = true;
-                }
-
-                if (opcoes.criarComodos) {
-                    criarComodosDeImportacao(textosAmbientes, underlayLinhas, opcoes.destino);
-                }
-
-                atualizarTudo();
-                reconstruirCena3D();
-                alert(`Importação AutoCAD concluída com sucesso!\n• Elementos no Underlay CAD: ${underlayLinhas.length}\n• Cômodos sincronizados para edição: ${state.comodos.filter(c => c.pavimentoId === state.pavimentoAtivoId).length}`);
+                r = ImportadorDXF.analisar(dxfContent, { fatorMetros: isFinite(opcoes.escala) ? opcoes.escala : undefined });
             } catch (err) {
                 console.error('Erro no parse DXF:', err);
-                carregarExemploDxf();
+                alert('Não foi possível ler o arquivo DXF: ' + err.message);
+                return;
             }
+            if (!r.totalEntidades) {
+                alert('Nenhum desenho encontrado no arquivo DXF (a seção ENTITIES está vazia ou o arquivo é um DXF binário).\nSalve como "DXF ASCII" e tente novamente.');
+                return;
+            }
+
+            // Escala real: 1 m do desenho = state.escala pixels (mesma escala dos cômodos)
+            const E = state.escala || 40;
+            const baseX = (state.terreno && isFinite(state.terreno.x)) ? state.terreno.x + E : 80;
+            const baseY = (state.terreno && isFinite(state.terreno.y)) ? state.terreno.y + E : 60;
+            const px = X => baseX + (X - r.ext.minX) * E;
+            const py = Y => baseY + (r.ext.maxY - Y) * E;       // DXF tem Y para cima; o canvas, para baixo
+
+            // Desenho de fundo (underlay)
+            const underlay = [];
+            r.segmentos.forEach(sg => underlay.push({ tipo: 'linha', x1: px(sg.x1), y1: py(sg.y1), x2: px(sg.x2), y2: py(sg.y2) }));
+            r.circulos.forEach(c => underlay.push({ tipo: 'circulo', x: px(c.x), y: py(c.y), r: Math.max(1, c.r * E) }));
+            r.arcos.forEach(ar => {
+                let a1 = ar.a1, a2 = ar.a2; if (a2 < a1) a2 += 360;
+                const passos = Math.max(4, Math.ceil((a2 - a1) / 15));
+                for (let k = 0; k < passos; k++) {
+                    const t1 = (a1 + (a2 - a1) * k / passos) * Math.PI / 180, t2 = (a1 + (a2 - a1) * (k + 1) / passos) * Math.PI / 180;
+                    underlay.push({ tipo: 'linha', x1: px(ar.x + ar.r * Math.cos(t1)), y1: py(ar.y + ar.r * Math.sin(t1)), x2: px(ar.x + ar.r * Math.cos(t2)), y2: py(ar.y + ar.r * Math.sin(t2)) });
+                }
+            });
+            r.textos.forEach(t => underlay.push({ tipo: 'texto', x: px(t.x), y: py(t.y), texto: textoSeguro(t.texto) }));
+            if (opcoes.projetarUnderlay) {
+                state.cadUnderlay = underlay;
+                state.exibirCadUnderlay = true;
+                const chk = document.getElementById('chkCadUnderlay');
+                if (chk) chk.checked = true;
+            }
+
+            // Cômodos com as medidas reais da planta
+            let criados = [];
+            if (opcoes.criarComodos && r.comodos.length > 0) {
+                let pavId = state.pavimentoAtivoId;
+                if (opcoes.destino === 'novo') {
+                    const base = obterPavimentoAtivo() || state.pavimentos[0] || {};
+                    const nivel = Math.max(0, ...state.pavimentos.map(pv => pv.nivel || 0)) + 1;
+                    const novoPav = Object.assign({}, base, { id: 'pav_' + Date.now(), nome: `Pavimento Importado ${nivel}`, nivel });
+                    state.pavimentos.push(novoPav);
+                    pavId = novoPav.id;
+                    state.pavimentoAtivoId = pavId;
+                }
+                const agora = Date.now();
+                criados = r.comodos.map((cm, i) => {
+                    const cmd = {
+                        id: agora + i,
+                        pavimentoId: pavId,
+                        nome: textoSeguro(cm.nome),
+                        tipo: tipoAmbientePorNome(cm.nome),
+                        largura: cm.largura,
+                        comprimento: cm.comprimento,
+                        area: Math.round(cm.largura * cm.comprimento * 100) / 100,
+                        perimetro: Math.round((cm.largura + cm.comprimento) * 2 * 100) / 100,
+                        x: px(cm.xMin),
+                        y: py(cm.yMin + cm.comprimento),
+                        cargas: []
+                    };
+                    gerarPontosEletricosParaComodo(cmd);
+                    return cmd;
+                });
+                // substitui os cômodos do pavimento de destino (e os pontos que eram deles)
+                const removidos = new Set(state.comodos.filter(c => c.pavimentoId === pavId).map(c => c.id));
+                state.comodos = state.comodos.filter(c => c.pavimentoId !== pavId).concat(criados);
+                state.pontosEletricos = state.pontosEletricos.filter(p => !removidos.has(p.comodoId));
+            }
+
+            renderizarSeletorPavimentos();
+            atualizarTudo();
+            reconstruirCena3D();
+
+            const resumo = [
+                `Unidade do desenho: ${r.unidade} (${r.unidadeDetectadaPor})`,
+                `Elementos lidos: ${r.segmentos.length} trechos de linha, ${r.circulos.length + r.arcos.length} círculos/arcos, ${r.textos.length} textos`
+            ];
+            if (!opcoes.criarComodos) {
+                resumo.push('Reconhecimento de cômodos desativado: a planta foi projetada só como desenho de fundo.');
+            } else if (criados.length) {
+                resumo.push(`Cômodos criados (${criados.length}):`);
+                criados.forEach(c => resumo.push(`  • ${c.nome}: ${c.largura.toFixed(2).replace('.', ',')} × ${c.comprimento.toFixed(2).replace('.', ',')} m`));
+            } else {
+                resumo.push('Nenhum cômodo foi reconhecido: o arquivo não tem polilinhas fechadas com tamanho de ambiente nem nomes de ambientes (ex.: "SALA") cercados por paredes.');
+                resumo.push('A planta foi mantida como desenho de fundo para você traçar os cômodos por cima.');
+            }
+            alert('Importação DXF concluída\n\n' + resumo.join('\n'));
         }
 
         function executarParseIFC(ifcContent, opcoes) {
@@ -12284,53 +12290,9 @@
                     return;
                 }
             } catch(e) {}
-            carregarExemploDxf();
+            alert('Arquivo não reconhecido. Importe um projeto (.proeletrica / .json do PRO-ELÉTRICA), uma planta DXF ou um modelo IFC.');
         }
 
-        function criarComodosDeImportacao(textos, linhas, modoDestino) {
-            const pavId = state.pavimentoAtivoId;
-            const palavrasAmbientes = [
-                { match: 'SALA', nome: 'Sala de Estar', w: 4.5, h: 4.0, tipo: 'geral' },
-                { match: 'COZINHA', nome: 'Cozinha', w: 3.5, h: 4.0, tipo: 'servico' },
-                { match: 'BANHO', nome: 'Banheiro Social', w: 2.0, h: 3.0, tipo: 'servico' },
-                { match: 'WC', nome: 'Banheiro', w: 2.0, h: 2.5, tipo: 'servico' },
-                { match: 'QUARTO', nome: 'Dormitório', w: 3.5, h: 3.5, tipo: 'geral' },
-                { match: 'DORM', nome: 'Dormitório', w: 3.5, h: 3.5, tipo: 'geral' },
-                { match: 'SUITE', nome: 'Suíte Master', w: 4.5, h: 4.0, tipo: 'geral' },
-                { match: 'LAVAND', nome: 'Lavanderia / Serviço', w: 2.5, h: 3.0, tipo: 'servico' }
-            ];
-
-            const comodosCriados = [];
-
-            textos.forEach(t => {
-                const upper = t.texto.toUpperCase();
-                const found = palavrasAmbientes.find(p => upper.includes(p.match));
-                if (found) {
-                    const id = Date.now() + Math.floor(Math.random() * 1000);
-                    const cmd = {
-                        id: id,
-                        pavimentoId: pavId,
-                        nome: t.texto.trim() || found.nome,
-                        tipo: found.tipo,
-                        largura: found.w,
-                        comprimento: found.h,
-                        area: found.w * found.h,
-                        perimetro: (found.w + found.h) * 2,
-                        x: Math.max(100, Math.min(500, Math.round(t.x - (found.w * state.escala) / 2))),
-                        y: Math.max(70, Math.min(380, Math.round(t.y - (found.h * state.escala) / 2))),
-                        cargas: []
-                    };
-                    gerarPontosEletricosParaComodo(cmd);
-                    comodosCriados.push(cmd);
-                }
-            });
-
-            if (comodosCriados.length > 0) {
-                state.comodos = state.comodos.filter(c => c.pavimentoId !== pavId).concat(comodosCriados);
-            } else {
-                carregarExemploDxf();
-            }
-        }
 
         // PRESETS DEMONSTRATIVOS 1-CLIQUE (DXF & IFC)
         function carregarExemploDxf() {
