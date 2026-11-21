@@ -553,6 +553,17 @@
             padding: 14px;
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
+
+        /* ===== IMPRESSÃO (declarado por último para prevalecer sobre as regras de tela pequena:
+           uma folha A4 tem ~794 px de largura e ativaria o layout de celular) ===== */
+        @media print {
+            #wocaAppWrapper, #toastNotificacao, .mobile-top-header, .mobile-bottom-nav, .mobile-fab,
+            #drawerMenuMobile, div.fixed.inset-0 { display: none !important; }
+            html, html body, html body.theme-woca-dark, html body.theme-woca-light { background: #ffffff !important; }
+            .folha-prancha-abnt:last-child { page-break-after: auto !important; break-after: auto !important; }
+            #containerPranchasImpressaoCompleta.so-folha-atual .folha-prancha-abnt:not(.folha-atual) { display: none !important; }
+            #containerPranchasImpressaoCompleta.so-folha-atual .folha-atual { page-break-after: auto !important; break-after: auto !important; }
+        }
     </style>
 </head>
 <body data-aba="planta" class="theme-woca-dark bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
@@ -9344,23 +9355,71 @@
             if (modal) modal.classList.add('hidden');
         }
 
-        function imprimirApenasFolhaAtual() {
+        // Justificativa das bitolas para a prancha 6, gerada a partir dos circuitos calculados
+        function htmlJustificativaBitolasImpressao() {
+            const p = obterParametrosNBR();
+            const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
+            const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
+            const fmt = (v, d = 1) => Number(v).toFixed(d).replace('.', ',');
+            const circs = state.circuitosCalculados || [];
+            const secoes = [...new Set(circs.map(c => c.secaoMm2))].sort((a, b) => a - b);
+            const td = 'style="border: 1px solid #cbd5e1; padding: 3px 5px;"';
+            const linhas = secoes.map(sec => {
+                const usam = circs.filter(c => c.secaoMm2 === sec);
+                const lista = usam.map(c => `C${c.num} (${c.disjuntor} A)`).join(', ');
+                return `<tr><td ${td}><strong>${fmt(sec, sec % 1 ? 1 : 0)} mm²</strong></td><td ${td}>${fmt(NBR5410.izMetodoB1(sec))} A</td>` +
+                       `<td ${td}>${fmt(NBR5410.izCorrigida(sec, fca, fct))} A</td><td ${td}>${fmt(NBR5410.secaoProtecao(sec), NBR5410.secaoProtecao(sec) % 1 ? 1 : 0)} mm²</td><td ${td}>${lista}</td></tr>`;
+            }).join('');
+            const alertas = circs.filter(c => c.alertas && c.alertas.length).map(c => `C${c.num}: ${c.alertas.join(' ')}`);
+            return `<p style="margin: 0 0 4px 0;">Critérios: seção mínima da Tabela 47 (1,5 mm² iluminação; 2,5 mm² força); disjuntor = menor corrente nominal comercial ≥ I<sub>b</sub>;
+                    seção = menor que atende I<sub>n</sub> ≤ I<sub>z</sub> × FCA × FCT (Tabela 36, método B1, cobre/PVC 70 °C, 2 condutores carregados) e queda de tensão ≤ 4% (item 6.2.7).
+                    Premissas deste projeto: ${p.circuitosAgrupados} circuito(s) por eletroduto → FCA ${fmt(fca, 2)} (Tabela 42); ${p.temperaturaAmbiente} °C → FCT ${fmt(fct, 2)} (Tabela 40).
+                    Condutor de proteção (PE) pela Tabela 58.</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin: 4px 0 6px 0;">
+                    <thead><tr style="background: #f1f5f9;"><th ${td}>Bitola</th><th ${td}>I<sub>z</sub> Tab. 36</th><th ${td}>I<sub>z</sub> corrigida</th><th ${td}>PE</th><th ${td}>Circuitos (disjuntor)</th></tr></thead>
+                    <tbody>${linhas}</tbody>
+                </table>
+                ${alertas.length ? `<p style="margin: 0 0 6px 0; color: #b91c1c;"><strong>Atenção:</strong> ${alertas.join(' • ')}</p>` : ''}`;
+        }
+
+        // Prancha correspondente à aba aberta (Planta → 01 ... Guia NBR → 06)
+        const _PRANCHA_POR_ABA = { planta: 0, instalacoes: 1, visualizacao3d: 2, alimentador: 3, materiais: 4, duvidas: 5 };
+
+        function imprimirPranchas(somenteIndice) {
             fecharModalImpressaoPDF();
-            window.print();
+            if (!gerarPranchasImpressao()) { window.print(); return; }
+            const container = document.getElementById('containerPranchasImpressaoCompleta');
+            const folhas = container.querySelectorAll('.folha-prancha-abnt');
+            folhas.forEach((f, i) => f.classList.toggle('folha-atual', somenteIndice === i));
+            container.classList.toggle('so-folha-atual', somenteIndice !== null && somenteIndice !== undefined);
+            const limpar = () => {
+                container.classList.remove('so-folha-atual');
+                folhas.forEach(f => f.classList.remove('folha-atual'));
+                window.removeEventListener('afterprint', limpar);
+            };
+            window.addEventListener('afterprint', limpar);
+            setTimeout(() => window.print(), 300);
+        }
+
+        function imprimirApenasFolhaAtual() {
+            const idx = _PRANCHA_POR_ABA[state.abaAtiva];
+            imprimirPranchas(idx === undefined ? null : idx);   // aba sem prancha própria (Arquivos) → todas
         }
 
         function imprimirTodasFolhasProjeto() {
+            imprimirPranchas(null);
+        }
+
+        // Monta as 6 pranchas ABNT no container de impressão (não imprime)
+        function gerarPranchasImpressao() {
             const modal = document.getElementById('modalImpressaoPDF');
             if (modal) modal.classList.add('hidden');
 
             const container = document.getElementById('containerPranchasImpressaoCompleta');
-            if (!container) {
-                window.print();
-                return;
-            }
+            if (!container) return false;
 
-            const nomeObra = (document.getElementById('txtPdfNomeObra') && document.getElementById('txtPdfNomeObra').value) ? document.getElementById('txtPdfNomeObra').value : 'Projeto Elétrico Residencial NBR 5410';
-            const projetista = (document.getElementById('txtPdfProjetista') && document.getElementById('txtPdfProjetista').value) ? document.getElementById('txtPdfProjetista').value : 'Eng. Eletricista Responsável';
+            const nomeObra = textoSeguro((document.getElementById('txtPdfNomeObra') && document.getElementById('txtPdfNomeObra').value) ? document.getElementById('txtPdfNomeObra').value : 'Projeto Elétrico Residencial NBR 5410');
+            const projetista = textoSeguro((document.getElementById('txtPdfProjetista') && document.getElementById('txtPdfProjetista').value) ? document.getElementById('txtPdfProjetista').value : 'Eng. Eletricista Responsável');
             const dataHoje = new Date().toLocaleDateString('pt-BR');
 
             // Captura imagens dos canvas ativos
@@ -9372,13 +9431,19 @@
             let dataUrl3d = '';
             if (state.renderer3d && state.renderer3d.domElement) {
                 try {
+                    // A cena só é montada quando a aba 3D é aberta; garante que exista e
+                    // renderiza um quadro antes da captura (senão a prancha sai vazia)
+                    if (typeof reconstruirCena3D === 'function') reconstruirCena3D(true);
+                    if (state.scene3d && state.camera3d) state.renderer3d.render(state.scene3d, state.camera3d);
                     dataUrl3d = state.renderer3d.domElement.toDataURL('image/png');
                 } catch(e) {
                     console.log("3D snapshot catch:", e);
                 }
             }
 
-            const totalPot = state.comodos.reduce((s, c) => s + (c.area * 30), 0) + state.pontosEletricos.reduce((s, p) => s + (p.pot || 0), 0);
+            if (!state.circuitosCalculados || state.circuitosCalculados.length === 0) atualizarTabelas();
+            // Carga instalada = soma das potências dos circuitos do QDT (mesmo valor da aba QDT)
+            const totalPot = (state.circuitosCalculados || []).reduce((s, c) => s + (Number(c.potVal) || 0), 0);
 
             // GERA AS 6 PRANCHAS ABNT
             container.innerHTML = `
@@ -9473,7 +9538,7 @@
                             <p style="font-size: 9pt; margin: 0; color: #d97706;">PRANCHA 04/06 — QUADRO DE CARGAS & DIAGRAMA DE DISJUNTORES (QDT DIN)</p>
                         </div>
                         <div style="text-align: right; font-size: 8pt; font-family: monospace;">
-                            <span>POTÊNCIA TOTAL: ${(totalPot/1000).toFixed(1)} kVA</span>
+                            <span>CARGA INSTALADA: ${(totalPot/1000).toFixed(2).replace('.', ',')} kVA</span>
                         </div>
                     </div>
 
@@ -9557,14 +9622,7 @@
 
                     <div style="font-size: 8pt; line-height: 1.5; color: #1e293b; space-y-2;">
                         <h4 style="font-size: 9pt; font-weight: bold; margin: 8px 0 4px 0; color: #0f172a;">1. JUSTIFICATIVA TÉCNICA DAS BITOLAS ADOTADAS</h4>
-                        <p style="margin: 0 0 6px 0;">
-                            • <strong>1,5 mm² (Iluminação)</strong>: Adotado estritamente por exigência da <em>Tabela 47 do item 6.2.6.1.1 da NBR 5410</em> (seção mínima admissível em cobre). Capacidade de 17,5A (Método B1, 70°C), protegido por disjuntor de 10A.<br>
-                            • <strong>2,5 mm² (Tomadas TUG)</strong>: Seção mínima obrigatória pela <em>Tabela 47</em> para circuitos de força e tomadas. Capacidade de 24A (B1), coordenada com disjuntor de 16A/20A.<br>
-                            • <strong>4,0 mm² (Cargas Médias e Áreas Molhadas)</strong>: Capacidade de condução de 32A (Tabela 36, Método B1). Com aplicação de FCA de 0,70 para prumadas agrupadas, assegura proteção térmica sem risco com disjuntor de 25A.<br>
-                            • <strong>6,0 mm² (Chuveiros 5500W a 6800W em 220V)</strong>: Corrente de projeto de 25A a 30,9A. O cabo de 6 mm² suporta 41A, garantindo limite de queda de tensão inferior a 2% e margem contra sobrecarga com disjuntor de 32A.<br>
-                            • <strong>10,0 mm² (Chuveiros 7500W+ / Prumada de Sub-Quadro)</strong>: Corrente contínua de 34,1A. O cabo de 10 mm² suporta 57A (Método B1), protegido por disjuntor de 40A ou 50A.<br>
-                            • <strong>16,0 a 25,0 mm² (Alimentador Principal)</strong>: Calculado pela demanda total com fator de simultaneidade NBR 5410.
-                        </p>
+                        ${htmlJustificativaBitolasImpressao()}
 
                         <h4 style="font-size: 9pt; font-weight: bold; margin: 8px 0 4px 0; color: #0f172a;">2. PADRÃO OBRIGATÓRIO DE CORES DOS CONDUTORES (ITEM 6.1.5.3)</h4>
                         <p style="margin: 0 0 6px 0;">
@@ -9576,7 +9634,7 @@
 
                         <h4 style="font-size: 9pt; font-weight: bold; margin: 8px 0 4px 0; color: #0f172a;">3. OCUPAÇÃO DE ELETRODUTOS & PROTEÇÃO DR</h4>
                         <p style="margin: 0 0 6px 0;">
-                            • <strong>Taxa de Ocupação (Item 6.2.11)</strong>: Máximo de 40% para 3 ou mais condutores no mesmo duto flexível.<br>
+                            • <strong>Taxa de Ocupação (Item 6.2.11.1.6)</strong>: soma das áreas externas dos condutores ≤ 53% (1 condutor), 31% (2) ou 40% (3 ou mais) da área interna do eletroduto; diâmetro calculado por circuito${state.trechoAgrupadoNBR ? ` e no trecho com os circuitos agrupados (${state.trechoAgrupadoNBR.rotulo})` : ''}.<br>
                             • <strong>Dispositivo DR 30mA (Item 5.1.3.2)</strong>: Obrigatório em todos os circuitos de áreas molhadas e tomadas externas.
                         </p>
                     </div>
@@ -9590,10 +9648,7 @@
                 </div>
             `;
 
-            // Executa a impressão
-            setTimeout(() => {
-                window.print();
-            }, 300);
+            return true;
         }
 
         function gerarLinhasTabelaPdfCircuitos() {
