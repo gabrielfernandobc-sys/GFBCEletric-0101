@@ -164,6 +164,8 @@
         const s = limparTexto(t);
         if (!s || s.length > 40) return false;
         if (/m²|m2\b|^\s*(á|a)rea\s*[:=]?\s*\d|^\s*(a|pd|p\.d\.?|h|nv|n\.v\.?|cota|esc(ala)?)\s*[=:.]/i.test(s)) return false;
+        // títulos de prancha e legendas: "PLANTA BAIXA ESC 1:50", "CORTE AA", "FACHADA"...
+        if (/\b1\s*:\s*\d+|^\s*(planta|corte|fachada|situa[cç][aã]o|implanta[cç][aã]o|prancha|legenda|escala|detalhe|cobertura)\b/i.test(s)) return false;
         const letras = (s.match(/[A-Za-zÀ-ÿ]/g) || []).length;
         const digitos = (s.match(/\d/g) || []).length;
         return letras >= 2 && letras >= digitos;

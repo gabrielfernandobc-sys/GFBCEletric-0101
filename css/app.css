@@ -1,0 +1,528 @@
+/* PRO-ELÉTRICA CAD — estilos próprios do app (além do Tailwind) */
+        canvas { touch-action: none; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            body { background: #ffffff !important; color: #000000 !important; }
+            .tab-content { display: none !important; }
+            #containerPranchasImpressaoCompleta { display: block !important; }
+            .folha-prancha-abnt {
+                page-break-after: always !important;
+                break-after: page !important;
+                width: 100% !important;
+                min-height: 200mm !important;
+                box-sizing: border-box !important;
+                border: 2px solid #0f172a !important;
+                padding: 8mm !important;
+                margin-bottom: 20mm !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+            }
+        }
+        .folha-prancha-abnt {
+            background: #ffffff;
+            color: #0f172a;
+            border: 2px solid #334155;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .carimbo-tecnico {
+            border: 1.5px solid #0f172a;
+            background: #f8fafc;
+        }
+        .din-rail-bg {
+            background: linear-gradient(180deg, #1e293b 0%, #334155 35%, #475569 50%, #334155 65%, #1e293b 100%);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+        }
+
+        /* SIMULAÇÃO DE QUADRO REAL NBR 5410 & FIAÇÃO VIRTUAL */
+        .quadro-chassi-outer {
+            background: linear-gradient(145deg, #0b1120 0%, #0f172a 50%, #020617 100%);
+            border: 3px solid #334155;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), inset 0 2px 4px rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+
+        .trilho-omega-din {
+            background: linear-gradient(180deg, #475569 0%, #94a3b8 20%, #cbd5e1 50%, #94a3b8 80%, #334155 100%);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 3px 6px rgba(0,0,0,0.4);
+            border-top: 1px solid #cbd5e1;
+            border-bottom: 1px solid #1e293b;
+            position: relative;
+        }
+        .trilho-omega-din::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 6px;
+            transform: translateY(-50%);
+            background: repeating-linear-gradient(90deg, #1e293b 0px, #1e293b 14px, transparent 14px, transparent 28px);
+            opacity: 0.6;
+        }
+
+        .canaleta-ranhurada {
+            background: #1e293b;
+            border: 1px solid #334155;
+            position: relative;
+            background-image: repeating-linear-gradient(0deg, #1e293b 0px, #1e293b 10px, #0f172a 10px, #0f172a 14px);
+        }
+
+        .canaleta-ranhurada-h {
+            background: #1e293b;
+            border: 1px solid #334155;
+            position: relative;
+            background-image: repeating-linear-gradient(90deg, #1e293b 0px, #1e293b 10px, #0f172a 10px, #0f172a 14px);
+        }
+
+        .canaleta-tampa-fechada {
+            background: linear-gradient(180deg, #334155 0%, #1e293b 100%) !important;
+            border: 1px solid #475569 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+        }
+
+        .disjuntor-modular-real {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .disjuntor-modular-real:hover {
+            filter: brightness(1.15);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.7), 0 0 12px rgba(245, 158, 11, 0.3);
+        }
+
+        .svg-cabo-fiacao {
+            pointer-events: stroke !important;
+            cursor: pointer;
+            transition: stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+        }
+        .svg-cabo-fiacao path {
+            pointer-events: stroke !important;
+            cursor: pointer;
+        }
+        .svg-cabo-fiacao:hover {
+            opacity: 1 !important;
+            filter: drop-shadow(0 0 8px #f59e0b) drop-shadow(0 0 14px #38bdf8) brightness(1.4) !important;
+        }
+        .svg-cabo-fiacao:hover path {
+            stroke-width: 4.8px !important;
+        }
+        .cabo-dimmed {
+            opacity: 0.12 !important;
+        }
+        .cabo-ativo {
+            opacity: 1 !important;
+            stroke-width: 4.5px !important;
+            filter: drop-shadow(0 0 8px currentColor) brightness(1.3) !important;
+        }
+
+        .barramento-pente-spine {
+            background: linear-gradient(90deg, #b45309 0%, #d97706 50%, #b45309 100%);
+            border: 1px solid #f59e0b;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* CELULAR E TABLET (< 1024px): MODAIS MAIS ALTOS QUE A TELA
+           O fundo rola e o modal começa no topo. Quando o modal cabe, as margens
+           automáticas o mantêm centralizado. No computador nada muda. */
+        @media (max-width: 1023px) {
+            div.fixed.inset-0.flex.items-center[id^="modal"] {
+                overflow-y: auto;
+                align-items: flex-start;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+            }
+            div.fixed.inset-0.flex.items-center[id^="modal"] > * {
+                margin-top: auto;
+                margin-bottom: auto;
+                flex-shrink: 0;
+            }
+            /* Gavetas que abrem por baixo: continuam embaixo quando cabem */
+            div.fixed.inset-0.flex.items-end[id^="modal"] {
+                overflow-y: auto;
+                align-items: flex-start;
+                overscroll-behavior: contain;
+            }
+            div.fixed.inset-0.flex.items-end[id^="modal"] > * {
+                margin-top: auto;
+                flex-shrink: 0;
+            }
+        }
+        @media (min-width: 640px) and (max-width: 1023px) {
+            div.fixed.inset-0.flex.items-end[id^="modal"] > * { margin-bottom: auto; }
+        }
+
+        /* OTIMIZAÇÕES MOBILE & TABLET (TOUCH & RESPONSIVIDADE) */
+        @media (max-width: 1023px) {
+            body {
+                overflow-x: hidden;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: pan-y;
+            }
+            .mobile-bottom-nav {
+                display: flex !important;
+            }
+            .desktop-only-header {
+                display: none !important;
+            }
+            .desktop-only-subbar {
+                display: none !important;
+            }
+            .desktop-only-tabs {
+                display: none !important;
+            }
+            .mobile-top-header {
+                display: flex !important;
+            }
+            .canvas-container-responsive {
+                height: 400px !important;
+            }
+            canvas {
+                touch-action: none;
+            }
+
+            /* Nada pode alargar a página além da tela (o navegador do celular
+               "afasta" a página inteira quando um elemento fica mais largo) */
+            html { overflow-x: hidden; }
+            #wocaAppWrapper { overflow-x: clip; max-width: 100vw; }
+            select { max-width: 100%; }
+            .mob-wrap { flex-wrap: wrap; }
+            .mob-wrap > *, .mob-encolher { min-width: 0; max-width: 100%; }
+            #listaBotoesTransicoes > div { max-width: 100%; flex-wrap: wrap; }
+            /* Seletores com opções longas ocupam a linha inteira e encolhem o texto */
+            .mob-linha, .mob-encolher { flex: 1 1 100%; }
+            .mob-linha > select, .mob-encolher > select { flex: 1 1 0%; min-width: 0; width: 100%; }
+
+            /* Área de desenho da Planta antes dos painéis laterais */
+            .mob-primeiro { order: -1; }
+
+            /* Barra inferior e botão "+" respeitam a área do gesto/home do iPhone */
+            .mobile-bottom-nav { padding-bottom: calc(0.375rem + env(safe-area-inset-bottom)); }
+            .mobile-fab { bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }
+            #wocaAppWrapper { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+
+            /* ===== REDESENHO DAS BARRAS DE FERRAMENTAS (CELULAR/TABLET) ===== */
+            /* Cada barra vira uma faixa de uma linha com rolagem lateral */
+            .mob-trilho {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                align-items: center;
+                justify-content: flex-start !important;
+                gap: 6px !important;
+                overflow-x: auto;
+                overflow-y: hidden;
+                overscroll-behavior-x: contain;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                /* degradê na borda direita indica que há mais botões */
+                -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+                mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+                padding-right: 28px !important;
+                /* a faixa ocupa a largura disponível (mesmo em pais com items-start) */
+                align-self: stretch;
+                max-width: 100%;
+                min-width: 0;
+            }
+            .mob-trilho::-webkit-scrollbar { display: none; }
+            .mob-trilho > *, .mob-trilho .mob-conteudo > * { flex-shrink: 0; white-space: nowrap; }
+            .mob-conteudo { display: contents !important; }
+            .mob-trilho .w-px { display: none; }
+            .mob-trilho .mob-encolher { flex: 0 0 auto; max-width: 230px; }
+            .mob-trilho .mob-encolher > select { width: 230px; }
+            .mob-ocultar { display: none !important; }
+
+            /* Alvos de toque: mínimo de 40 px (botões, campos, seletores) */
+            .tab-content button, .tab-content select,
+            .tab-content input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+            .mobile-top-header button,
+            div.fixed.inset-0[id^="modal"] button,
+            div.fixed.inset-0[id^="modal"] select,
+            div.fixed.inset-0[id^="modal"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]) {
+                min-height: 40px;
+            }
+            .tab-content button, .mobile-top-header button { min-width: 40px; }
+            input[type="checkbox"], input[type="radio"] { width: 20px; height: 20px; }
+            .tab-content label:has(> input[type="checkbox"]),
+            .tab-content label:has(> input[type="radio"]) { min-height: 40px; }
+
+            /* Botão "+" (inserir pontos/cômodos) só nas abas de desenho */
+            body[data-aba="alimentador"] .mobile-fab,
+            body[data-aba="materiais"] .mobile-fab,
+            body[data-aba="arquivos"] .mobile-fab,
+            body[data-aba="duvidas"] .mobile-fab { display: none !important; }
+        }
+        /* Celulares comuns: subtítulo do cabeçalho não cabe ao lado dos botões */
+        @media (max-width: 419px) {
+            /* o ícone do raio fica como logotipo; o nome não cabe ao lado dos botões */
+            .mobile-header-sub, .mobile-top-header h1 { display: none !important; }
+        }
+        /* Celulares estreitos (iPhone SE, Galaxy compactos) */
+        @media (max-width: 380px) {
+            /* imprimir continua no menu lateral; nome do app cede espaço ao ícone */
+            .mobile-header-imprimir { display: none !important; }
+            .mobile-header-acoes { gap: 4px; }
+            .mobile-header-acoes > button { padding-left: 7px; padding-right: 7px; }
+        }
+        @media (min-width: 1024px) {
+            .mobile-bottom-nav {
+                display: none !important;
+            }
+            .mobile-top-header {
+                display: none !important;
+            }
+            .mobile-fab {
+                display: none !important;
+            }
+        }
+
+        /* Telemetria de Hardware (GPU & CPU) */
+        .hardware-telemetry-badge {
+            transition: all 0.25s ease;
+        }
+        .hardware-telemetry-badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+        }
+
+        /* Botão Flutuante (FAB) Mobile */
+        .mobile-fab-btn {
+            box-shadow: 0 8px 24px -2px rgba(245, 158, 11, 0.45);
+        }
+        /* Drawer Sheet */
+        .mobile-drawer-sheet {
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* MODO EXPANDIDO EM TELA CHEIA (VIEWPORT FULLSCREEN) */
+        .viewport-fullscreen-mode {
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            border: none !important;
+            background-color: #020617 !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+        }
+        .viewport-fullscreen-mode canvas {
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+        .viewport-fullscreen-mode #viewport3d {
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+        /* ========================================================================= */
+        /* SISTEMA DE TEMAS PROFISSIONAL UNIFICADO (CLARO / ESCURO)                 */
+        /* ========================================================================= */
+        body.theme-woca-dark {
+            background-color: #020617 !important;
+            color: #f8fafc !important;
+        }
+        .theme-woca-dark .desktop-only-header,
+        .theme-woca-dark .desktop-only-tabs {
+            background-color: #0f172a !important;
+            border-color: #1e293b !important;
+            color: #f8fafc !important;
+        }
+        .theme-woca-dark .tab-btn {
+            color: #94a3b8 !important;
+        }
+        .theme-woca-dark .tab-btn:hover {
+            color: #ffffff !important;
+            background-color: rgba(30, 41, 59, 0.7) !important;
+        }
+        .theme-woca-dark .tab-btn.border-amber-400,
+        .theme-woca-dark .tab-btn[class*="border-amber"] {
+            color: #fbbf24 !important;
+            border-color: #f59e0b !important;
+            background-color: rgba(15, 23, 42, 0.9) !important;
+        }
+        .theme-woca-dark #containerCad2D,
+        .theme-woca-dark #containerInstalacoes2D {
+            background-color: #020617 !important;
+            border-color: #1e293b !important;
+        }
+        .theme-woca-dark .woca-floating-hud {
+            background: rgba(15, 23, 42, 0.92);
+            border-color: #334155;
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+            color: #f8fafc;
+        }
+        .theme-woca-dark .woca-flyout-drawer {
+            background: rgba(15, 23, 42, 0.96);
+            border-color: #334155;
+            color: #f8fafc;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6);
+        }
+
+        /* TEMA CLARO UNIFICADO COMPLETO */
+        body.theme-woca-light {
+            background-color: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        .theme-woca-light .desktop-only-header,
+        .theme-woca-light .desktop-only-tabs {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+        }
+        .theme-woca-light .tab-btn {
+            color: #64748b !important;
+        }
+        .theme-woca-light .tab-btn:hover {
+            color: #0f172a !important;
+            background-color: #f8fafc !important;
+        }
+        .theme-woca-light .tab-btn.border-amber-400,
+        .theme-woca-light .tab-btn[class*="border-amber"] {
+            color: #b45309 !important;
+            border-color: #d97706 !important;
+            background-color: #fef3c7 !important;
+        }
+        .theme-woca-light #containerCad2D,
+        .theme-woca-light #containerInstalacoes2D {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05) !important;
+        }
+        .theme-woca-light .woca-floating-hud {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: #e2e8f0;
+            color: #0f172a;
+        }
+        .theme-woca-light .woca-flyout-drawer {
+            background: rgba(255, 255, 255, 0.98);
+            border-color: #e2e8f0;
+            color: #0f172a;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.15);
+        }
+        /* Ajuste de todos os cartões, sidebars e tabelas no Modo Claro */
+        .theme-woca-light .bg-slate-900,
+        .theme-woca-light .bg-slate-950,
+        .theme-woca-light .bg-slate-900\/95,
+        .theme-woca-light .bg-slate-900\/90,
+        .theme-woca-light .bg-slate-900\/80,
+        .theme-woca-light .bg-slate-900\/70,
+        .theme-woca-light .bg-slate-900\/60,
+        .theme-woca-light .bg-slate-950\/80,
+        .theme-woca-light .bg-slate-950\/90 {
+            background-color: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        .theme-woca-light .text-white {
+            color: #0f172a !important;
+        }
+        .theme-woca-light .text-slate-100,
+        .theme-woca-light .text-slate-200 {
+            color: #1e293b !important;
+        }
+        .theme-woca-light .text-slate-300,
+        .theme-woca-light .text-slate-400 {
+            color: #475569 !important;
+        }
+        .theme-woca-light .border-slate-800,
+        .theme-woca-light .border-slate-850,
+        .theme-woca-light .border-slate-700 {
+            border-color: #e2e8f0 !important;
+        }
+        .theme-woca-light .divide-slate-800,
+        .theme-woca-light .divide-slate-850 {
+            border-color: #e2e8f0 !important;
+        }
+        .theme-woca-light input,
+        .theme-woca-light select,
+        .theme-woca-light textarea {
+            background-color: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        .theme-woca-light th {
+            background-color: #f1f5f9 !important;
+            color: #334155 !important;
+        }
+        .theme-woca-light tr:hover {
+            background-color: #f8fafc !important;
+        }
+
+        .woca-hdr-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background-color: #0f172a;
+            color: #cbd5e1;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .theme-woca-light .woca-hdr-icon-btn {
+            border-color: #e2e8f0;
+            background-color: #ffffff;
+            color: #475569;
+        }
+        .woca-hdr-icon-btn:hover {
+            background-color: #1e293b;
+            color: #ffffff;
+            border-color: #475569;
+            transform: translateY(-1px);
+        }
+        .theme-woca-light .woca-hdr-icon-btn:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border-color: #cbd5e1;
+        }
+        .woca-hdr-icon-btn:active {
+            transform: scale(0.95);
+        }
+        .woca-floating-hud {
+            position: absolute;
+            z-index: 25;
+            backdrop-filter: blur(8px);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.4);
+            padding: 4px 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .woca-flyout-drawer {
+            position: absolute;
+            top: 10px;
+            right: 16px;
+            z-index: 30;
+            width: 290px;
+            max-height: calc(100% - 20px);
+            overflow-y: auto;
+            backdrop-filter: blur(12px);
+            border-radius: 14px;
+            padding: 14px;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* ===== IMPRESSÃO (declarado por último para prevalecer sobre as regras de tela pequena:
+           uma folha A4 tem ~794 px de largura e ativaria o layout de celular) ===== */
+        @media print {
+            #wocaAppWrapper, #toastNotificacao, .mobile-top-header, .mobile-bottom-nav, .mobile-fab,
+            #drawerMenuMobile, div.fixed.inset-0 { display: none !important; }
+            html, html body, html body.theme-woca-dark, html body.theme-woca-light { background: #ffffff !important; }
+            .folha-prancha-abnt:last-child { page-break-after: auto !important; break-after: auto !important; }
+            #containerPranchasImpressaoCompleta.so-folha-atual .folha-prancha-abnt:not(.folha-atual) { display: none !important; }
+            #containerPranchasImpressaoCompleta.so-folha-atual .folha-atual { page-break-after: auto !important; break-after: auto !important; }
+        }
