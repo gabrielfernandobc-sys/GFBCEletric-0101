@@ -571,9 +571,9 @@
         function gerarPontosEletricosParaComodo(c) {
             const w = c.largura * state.escala;
             const h = c.comprimento * state.escala;
-            // NBR 5410 item 9.5.2.2.1: Cômodos com área igual ou inferior a 6m² devem ter pelo menos 1 tomada (TUG)
-            const minTugs = (c.area <= 6.0) ? 1 : 2;
-            const qtdTugs = c.tipo === 'servico' ? Math.max(minTugs, Math.ceil(c.perimetro / 3.5)) : Math.max(minTugs, Math.ceil(c.perimetro / 5.0));
+            // NBR 5410 item 9.5.2.2.1: quantidade mínima de tomadas pela função do ambiente (js/nbr5410.js)
+            const qtdTugs = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
+            const potsTugs = NBR5410.potenciasTomadas(c.nome, qtdTugs, 0);
             const margem = Math.max(4, Math.min(14, Math.min(w, h) * 0.25));
 
             // 1. PONTO DE ILUMINAÇÃO CENTRAL NBR 5410 (PERSISTENTE EM state.pontosEletricos)
@@ -612,17 +612,23 @@
                 });
             }
 
-            // 2. TOMADAS TUG DISTRIBUÍDAS NAS PAREDES
-            const posicoesParede = [
-                { x: c.x + margem, y: c.y + h - margem },
-                { x: c.x + w - margem, y: c.y + h - margem },
-                { x: c.x + w - margem, y: c.y + margem },
-                { x: c.x + margem, y: c.y + Math.min(h - margem, margem + 20) },
-                { x: c.x + w / 2, y: c.y + h - margem },
-                { x: c.x + w / 2, y: c.y + margem }
-            ];
+            // 2. TOMADAS TUG DISTRIBUÍDAS UNIFORMEMENTE PELO PERÍMETRO (item 9.5.2.2.1: "espaçados
+            // tão uniformemente quanto possível"; antes havia só 6 posições fixas e cozinhas
+            // grandes ficavam abaixo do mínimo)
+            const posicoesParede = [];
+            const wi = Math.max(1, w - 2 * margem), hi = Math.max(1, h - 2 * margem);
+            const perPx = 2 * (wi + hi);
+            for (let k = 0; k < qtdTugs; k++) {
+                let d = ((k + 0.5) / qtdTugs) * perPx;
+                let x, y;
+                if (d < wi) { x = c.x + margem + d; y = c.y + h - margem; }
+                else if ((d -= wi) < hi) { x = c.x + w - margem; y = c.y + h - margem - d; }
+                else if ((d -= hi) < wi) { x = c.x + w - margem - d; y = c.y + margem; }
+                else { d -= wi; x = c.x + margem; y = c.y + margem + d; }
+                posicoesParede.push({ x, y });
+            }
 
-            for (let i = 0; i < Math.min(qtdTugs, posicoesParede.length); i++) {
+            for (let i = 0; i < posicoesParede.length; i++) {
                 const pt = posicoesParede[i];
                 state.pontosEletricos.push({
                     id: 'pt_' + Date.now() + '_' + Math.floor(Math.random() * 10000) + '_' + i,
@@ -630,7 +636,7 @@
                     pavimentoId: c.pavimentoId || 'terreo',
                     tipo: 'TUG',
                     nome: `TUG ${c.nome} ${i + 1}`,
-                    pot: (c.tipo === 'servico' && i < 3) ? 600 : 100,
+                    pot: potsTugs[i] || 100,                 // item 9.5.2.2.2
                     tensao: 127,
                     altura: c.tipo === 'servico' ? 'media' : 'baixa',
                     x: pt.x,

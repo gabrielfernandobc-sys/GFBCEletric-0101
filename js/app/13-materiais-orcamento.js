@@ -1002,7 +1002,10 @@
 
             // 1. DADOS DE ENTRADA & PARÂMETROS GERAIS
             const catAtend = (calculoDemanda && calculoDemanda.categoriaAtend) ? calculoDemanda.categoriaAtend : {};
-            const caboGeral = catAtend.cabo || '10.0 mm²';
+            // alimentador dimensionado pela NBR 5410 (11-circuitos.js); a seção da concessionária é o mínimo
+            const fmtSecao = sec => `${Number(sec).toFixed(1)} mm²`;
+            const caboGeral = state.alimentadorNBR ? fmtSecao(state.alimentadorNBR.secao) : (catAtend.cabo || '10.0 mm²');
+            const caboPEGeral = state.alimentadorNBR ? fmtSecao(state.alimentadorNBR.secaoPE) : caboGeral;
             const disjGeral = catAtend.disj || '50 A';
             const tuboGeral = catAtend.tubo || 'DN 32 mm (1")';
 
@@ -1189,16 +1192,16 @@
                 registrarCaboCor(caboGeral, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Fase 2 da Concessionária');
                 registrarCaboCor(caboGeral, 'Condutor Fase 3 (T)', 'Branco / Cinza', '#94a3b8', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Fase 3 da Concessionária');
                 registrarCaboCor(caboGeral, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Neutro da Concessionária');
-                registrarCaboCor(caboGeral, 'Condutor de Proteção (PE)', 'Verde', '#10b981', distAlimUsada, 'Alimentador Geral', prcAlim, 'Condutor de aterramento da malha / BEP');
+                registrarCaboCor(caboPEGeral, 'Condutor de Proteção (PE)', 'Verde', '#10b981', distAlimUsada, 'Alimentador Geral', prcAlim, 'Condutor de aterramento da malha / BEP');
             } else if (sistemaUsado === 'bifasico') {
                 registrarCaboCor(caboGeral, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Fase 1 da Concessionária');
                 registrarCaboCor(caboGeral, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Fase 2 da Concessionária');
                 registrarCaboCor(caboGeral, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Neutro da Concessionária');
-                registrarCaboCor(caboGeral, 'Condutor de Proteção (PE)', 'Verde', '#10b981', distAlimUsada, 'Alimentador Geral', prcAlim, 'Condutor de aterramento da malha / BEP');
+                registrarCaboCor(caboPEGeral, 'Condutor de Proteção (PE)', 'Verde', '#10b981', distAlimUsada, 'Alimentador Geral', prcAlim, 'Condutor de aterramento da malha / BEP');
             } else {
                 registrarCaboCor(caboGeral, 'Condutor Fase (F)', 'Preto', '#1e293b', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Fase Monofásica da Concessionária');
                 registrarCaboCor(caboGeral, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', distAlimUsada, 'Alimentador Geral', prcAlim, 'Entrada Neutro da Concessionária');
-                registrarCaboCor(caboGeral, 'Condutor de Proteção (PE)', 'Verde', '#10b981', distAlimUsada, 'Alimentador Geral', prcAlim, 'Condutor de aterramento da malha / BEP');
+                registrarCaboCor(caboPEGeral, 'Condutor de Proteção (PE)', 'Verde', '#10b981', distAlimUsada, 'Alimentador Geral', prcAlim, 'Condutor de aterramento da malha / BEP');
             }
 
             // Prumada Vertical (se houver)

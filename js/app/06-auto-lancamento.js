@@ -57,19 +57,13 @@
                 });
             }
 
-            // 2. TOMADAS MÍNIMAS NBR 5410 (item 9.5.2.2.1)
-            const tipo = (c.tipo || '').toLowerCase();
-            const ehAreaServicoOuCozinha = tipo.includes('cozinha') || tipo.includes('servi') || tipo.includes('copa') || tipo.includes('lavand');
-            const ehBanheiro = tipo.includes('banh') || tipo.includes('lavabo');
-            
-            let qtdTugsMin = 1;
-            if (ehBanheiro) {
-                qtdTugsMin = 1;
-            } else if (ehAreaServicoOuCozinha) {
-                qtdTugsMin = Math.max(1, Math.ceil(c.perimetro / 3.5));
-            } else {
-                qtdTugsMin = Math.max(1, Math.ceil(c.perimetro / 5.0));
-            }
+            // 2. TOMADAS MÍNIMAS NBR 5410 (item 9.5.2.2.1) — regra pelo NOME do ambiente
+            // (o campo tipo só distingue "servico"/"geral"; antes banheiros recebiam a regra
+            // da cozinha e varandas/cômodos pequenos não tinham regra própria)
+            const classeAmb = NBR5410.classificarAmbiente(c.nome);
+            const ehAreaServicoOuCozinha = classeAmb === 'cozinha_servico';
+            const ehBanheiro = classeAmb === 'banheiro';
+            const qtdTugsMin = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
 
             const tugsExistentes = state.pontosEletricos.filter(p => String(p.comodoId) === String(c.id) && p.tipo === 'TUG');
             const qtdAdicionar = Math.max(0, qtdTugsMin - tugsExistentes.length);
@@ -81,10 +75,9 @@
 
                 for (let i = 0; i < qtdAdicionar; i++) {
                     const idxGlobal = tugsExistentes.length + i;
-                    let potTug = 100;
-                    if (ehBanheiro || (ehAreaServicoOuCozinha && idxGlobal < 3)) {
-                        potTug = 600;
-                    }
+                    // potência mínima do ponto (item 9.5.2.2.2): 600 VA até 3 pontos em banheiros,
+                    // cozinhas e áreas de serviço; 100 VA nos demais
+                    const potTug = NBR5410.potenciasTomadas(c.nome, idxGlobal + 1, 0)[idxGlobal];
 
                     const frac = (i + 1) / (qtdAdicionar + 1);
                     let px = c.x + cw / 2;
@@ -242,10 +235,10 @@
 
             comodosParaExibir.forEach(c => {
                 const ilumPot = 100 + (c.area >= 6 ? Math.floor((c.area - 6) / 4) * 60 : 0);
-                const tipo = (c.tipo || '').toLowerCase();
-                const ehServico = tipo.includes('cozinha') || tipo.includes('servi') || tipo.includes('copa') || tipo.includes('lavand');
-                const ehBanheiro = tipo.includes('banh') || tipo.includes('lavabo');
-                const qtdTugsMin = ehBanheiro ? 1 : (ehServico ? Math.max(1, Math.ceil(c.perimetro / 3.5)) : Math.max(1, Math.ceil(c.perimetro / 5.0)));
+                const classeAmb = NBR5410.classificarAmbiente(c.nome);
+                const ehServico = classeAmb === 'cozinha_servico';
+                const ehBanheiro = classeAmb === 'banheiro';
+                const qtdTugsMin = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
 
                 const sugeridas = obterTuesSugeridasPorComodo(c);
                 const ptsExistentes = (state.pontosEletricos || []).filter(p => p.comodoId === c.id);
