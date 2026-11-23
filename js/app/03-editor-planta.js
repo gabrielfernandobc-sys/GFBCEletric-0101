@@ -877,13 +877,18 @@
             document.body.dataset.aba = tabTarget;
             const btns = document.querySelectorAll('.tab-btn');
             btns.forEach(b => {
-                if (b.getAttribute('data-tab') === tabTarget) {
-                    b.classList.add('border-amber-400', 'text-amber-400', 'bg-slate-900');
-                    b.classList.remove('border-transparent', 'text-slate-400');
-                } else {
-                    b.classList.remove('border-amber-400', 'text-amber-400', 'bg-slate-900');
-                    b.classList.add('border-transparent', 'text-slate-400');
-                }
+                // a aba inicial vem do HTML com bg-slate-950/font-bold/shadow-sm: limpa tudo
+                const ativa = b.getAttribute('data-tab') === tabTarget;
+                b.classList.toggle('border-amber-400', ativa);
+                b.classList.toggle('text-amber-400', ativa);
+                b.classList.toggle('bg-slate-950', ativa);
+                b.classList.toggle('shadow-sm', ativa);
+                b.classList.toggle('font-bold', ativa);
+                b.classList.toggle('font-medium', !ativa);
+                b.classList.toggle('border-transparent', !ativa);
+                b.classList.toggle('text-slate-400', !ativa);
+                b.classList.remove('bg-slate-900');
+                b.setAttribute('aria-selected', ativa ? 'true' : 'false');
             });
 
             const btnsMobile = document.querySelectorAll('.tab-btn-mobile');

@@ -526,3 +526,14 @@
             #containerPranchasImpressaoCompleta.so-folha-atual .folha-prancha-abnt:not(.folha-atual) { display: none !important; }
             #containerPranchasImpressaoCompleta.so-folha-atual .folha-atual { page-break-after: auto !important; break-after: auto !important; }
         }
+
+/* Foco visível para navegação pelo teclado (sem afetar cliques de mouse/toque) */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [tabindex]:focus-visible, summary:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+}
+
+/* Barras com rolagem horizontal (abas, seletores): sem barra visível no celular */
+#subTabsMateriais { scrollbar-width: none; }
+#subTabsMateriais::-webkit-scrollbar { display: none; }

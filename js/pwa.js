@@ -298,24 +298,20 @@
         }
 
         function atualizarTelemetriaUI() {
-            const gpuText = (hardwareTelemetry.gpuUsage === 0) ? '0% (Idle)' : `${hardwareTelemetry.gpuUsage}%`;
-            const cpuText = (hardwareTelemetry.cpuUsage === 0) ? '0% (Idle)' : `${hardwareTelemetry.cpuUsage}%`;
-            const fpsText = `${hardwareTelemetry.fps || 60} FPS`;
+            // O navegador não informa o uso real da GPU: mostra só se a cena 3D está sendo desenhada.
+            const render3d = hardwareTelemetry.gpuUsage > 0;
+            const estado3d = render3d ? 'desenhando' : 'em repouso';
+            const cpuText = `${hardwareTelemetry.cpuUsage}%`;
+            const fps = hardwareTelemetry.fps || 60;
+            const fpsText = `${fps} FPS`;
 
-            // Badges na Barra Superior 3D
             const elGpu = document.getElementById('valGpuUso');
             const elCpu = document.getElementById('valCpuUso');
             const elFps = document.getElementById('valFpsUso');
-            if (elGpu) elGpu.innerText = gpuText;
+            if (elGpu) elGpu.innerText = estado3d;
             if (elCpu) elCpu.innerText = cpuText;
             if (elFps) elFps.innerText = fpsText;
 
-            // Mini badges em canvas
-            document.querySelectorAll('.val-telemetry-gpu').forEach(el => el.innerText = gpuText);
-            document.querySelectorAll('.val-telemetry-cpu').forEach(el => el.innerText = cpuText);
-            document.querySelectorAll('.val-telemetry-fps').forEach(el => el.innerText = fpsText);
-
-            // Modal de Telemetria
             const mGpu = document.getElementById('modalValGpu');
             const mCpu = document.getElementById('modalValCpu');
             const mFps = document.getElementById('modalValFps');
@@ -325,16 +321,14 @@
             const dGpu = document.getElementById('modalDescGpu');
             const dCpu = document.getElementById('modalDescCpu');
 
-            if (mGpu) mGpu.innerText = `${hardwareTelemetry.gpuUsage}%`;
-            if (mCpu) mCpu.innerText = `${hardwareTelemetry.cpuUsage}%`;
-            if (mFps) mFps.innerText = `${hardwareTelemetry.fps || 60} FPS (${(1000 / Math.max(1, hardwareTelemetry.fps)).toFixed(1)} ms)`;
+            if (mGpu) mGpu.innerText = render3d ? 'Ativa' : 'Repouso';
+            if (mCpu) mCpu.innerText = cpuText;
+            if (mFps) mFps.innerText = `${fps} FPS (${(1000 / Math.max(1, fps)).toFixed(1)} ms)`;
             if (mFt) mFt.innerText = `${Math.max(0.2, hardwareTelemetry.frameTimeMs).toFixed(1)} ms / quadro`;
-
-            if (bGpu) bGpu.style.width = `${Math.max(4, hardwareTelemetry.gpuUsage)}%`;
+            if (bGpu) bGpu.style.width = render3d ? '100%' : '4%';
             if (bCpu) bCpu.style.width = `${Math.max(4, hardwareTelemetry.cpuUsage)}%`;
-
-            if (dGpu) dGpu.innerText = (hardwareTelemetry.gpuUsage === 0) ? 'Em repouso (Eco-Mode)' : 'Renderizando WebGL 3D';
-            if (dCpu) dCpu.innerText = (hardwareTelemetry.cpuUsage < 5) ? 'Repouso / Leve' : 'Processamento ativo';
+            if (dGpu) dGpu.innerText = render3d ? 'Desenhando a cena 3D' : 'Nada mudou na cena';
+            if (dCpu) dCpu.innerText = (hardwareTelemetry.cpuUsage < 5) ? 'Leve' : 'Desenhando';
         }
 
         function abrirModalTelemetria() {
