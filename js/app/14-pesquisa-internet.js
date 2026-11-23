@@ -311,3 +311,110 @@
             if (fechar) fechar.click(); else modal.classList.add('hidden');
             e.preventDefault();
         });
+
+        // ---------------------------------------------------------------
+        // MENU "ARQUIVO" DO CABEÇALHO
+        // ---------------------------------------------------------------
+        function alternarMenuArquivo(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('menuArquivo');
+            if (!menu) return;
+            const abrir = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden', !abrir);
+            document.getElementById('btnMenuArquivo')?.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+            if (abrir) menu.querySelector('[role=menuitem]')?.focus();
+        }
+
+        function fecharMenuArquivo() {
+            const menu = document.getElementById('menuArquivo');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+                document.getElementById('btnMenuArquivo')?.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest || !e.target.closest('#menuArquivoWrapper')) fecharMenuArquivo();
+        });
+        document.addEventListener('keydown', (e) => {
+            const menu = document.getElementById('menuArquivo');
+            if (!menu || menu.classList.contains('hidden')) return;
+            if (e.key === 'Escape') { fecharMenuArquivo(); document.getElementById('btnMenuArquivo')?.focus(); e.preventDefault(); return; }
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                const itens = [...menu.querySelectorAll('[role=menuitem]')];
+                const i = itens.indexOf(document.activeElement);
+                const prox = e.key === 'ArrowDown' ? (i + 1) % itens.length : (i - 1 + itens.length) % itens.length;
+                itens[prox].focus();
+                e.preventDefault();
+            }
+        }, true);
+
+        // ---------------------------------------------------------------
+        // PAINEL LATERAL DA PLANTA RECOLHÍVEL (preferência guardada no navegador)
+        // ---------------------------------------------------------------
+        function aplicarPainelLateralPlanta(recolhido) {
+            const grid = document.getElementById('gridPlanta');
+            const btn = document.getElementById('btnRecolherPainelPlanta');
+            if (!grid) return;
+            grid.classList.toggle('lateral-recolhida', recolhido);
+            if (btn) {
+                btn.setAttribute('aria-expanded', recolhido ? 'false' : 'true');
+                btn.querySelector('i').className = `fa-solid ${recolhido ? 'fa-angles-right' : 'fa-angles-left'} text-[10px]`;
+            }
+        }
+
+        function alternarPainelLateralPlanta() {
+            const recolhido = !document.getElementById('gridPlanta')?.classList.contains('lateral-recolhida');
+            aplicarPainelLateralPlanta(recolhido);
+            try { localStorage.setItem('proeletrica_painel_planta', recolhido ? 'recolhido' : 'aberto'); } catch (e) {}
+            if (typeof desenharCAD === 'function') requestAnimationFrame(() => desenharCAD());
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let pref = null;
+            try { pref = localStorage.getItem('proeletrica_painel_planta'); } catch (e) {}
+            if (pref === 'recolhido') aplicarPainelLateralPlanta(true);
+        });
+
+        // ---------------------------------------------------------------
+        // BARRAS COM ROLAGEM LATERAL (celular): degradê só do lado em que há
+        // mais botões e uma "espiada" na primeira vez que a barra aparece
+        // ---------------------------------------------------------------
+        function atualizarIndicadoresRolagem(el) {
+            const max = el.scrollWidth - el.clientWidth;
+            el.dataset.rolaEsq = el.scrollLeft > 4 ? '1' : '0';
+            el.dataset.rolaDir = (max > 4 && el.scrollLeft < max - 4) ? '1' : '0';
+        }
+
+        function configurarTrilhosRolagem() {
+            const trilhos = document.querySelectorAll('.mob-trilho');
+            let espiou = false;
+            try { espiou = sessionStorage.getItem('proeletrica_espiada') === '1'; } catch (e) {}
+            const observador = ('IntersectionObserver' in window) ? new IntersectionObserver(entradas => {
+                entradas.forEach(en => {
+                    if (!en.isIntersecting) return;
+                    const el = en.target;
+                    // espiada interrompida (a aba mudou no meio): volta ao início ao reaparecer
+                    if (el.dataset.espiando === '1') { el.scrollLeft = 0; delete el.dataset.espiando; }
+                    atualizarIndicadoresRolagem(el);
+                    if (!espiou && el.scrollWidth - el.clientWidth > 24 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                        espiou = true;
+                        try { sessionStorage.setItem('proeletrica_espiada', '1'); } catch (e) {}
+                        el.dataset.espiando = '1';
+                        setTimeout(() => {
+                            el.scrollLeft = 56;
+                            setTimeout(() => { el.scrollLeft = 0; if (el.offsetParent) delete el.dataset.espiando; }, 650);
+                        }, 500);
+                    }
+                });
+            }, { threshold: 0.6 }) : null;
+            trilhos.forEach(el => {
+                el.addEventListener('scroll', () => atualizarIndicadoresRolagem(el), { passive: true });
+                atualizarIndicadoresRolagem(el);
+                if (observador) observador.observe(el);
+                // botões criados depois (andares, ferramentas) mudam a largura do conteúdo
+                if ('MutationObserver' in window) new MutationObserver(() => atualizarIndicadoresRolagem(el)).observe(el, { childList: true, subtree: true });
+            });
+            window.addEventListener('resize', () => trilhos.forEach(atualizarIndicadoresRolagem));
+        }
+        document.addEventListener('DOMContentLoaded', configurarTrilhosRolagem);

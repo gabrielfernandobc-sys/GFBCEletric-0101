@@ -904,7 +904,14 @@
 
             document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
             const targetEl = document.getElementById('tab-' + tabTarget);
-            if (targetEl) targetEl.classList.add('active');
+            if (targetEl) {
+                targetEl.classList.add('active');
+                // barras com rolagem lateral (celular) começam do início ao entrar na aba
+                targetEl.querySelectorAll('.mob-trilho').forEach(t => {
+                    t.scrollLeft = 0;
+                    if (typeof atualizarIndicadoresRolagem === 'function') atualizarIndicadoresRolagem(t);
+                });
+            }
 
             state.abaAtiva = tabTarget;
 

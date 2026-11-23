@@ -203,9 +203,11 @@
                     </div>
                 </div>
                 <div class="h-6 w-px bg-slate-800 mx-1"></div>
-                <div class="flex items-center gap-1.5">
-                    <input type="text" id="inputNomeProjetoHeader" value="chácara" title="Clique para editar o nome do projeto" class="border border-slate-700 hover:border-slate-600 focus:border-amber-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-100 bg-slate-950 shadow-inner w-36 sm:w-48 outline-none transition focus:ring-1 focus:ring-amber-400" onchange="atualizarNomeProjeto(this.value)">
-                </div>
+                <label class="group relative flex items-center gap-1.5" title="Clique para editar o nome do projeto">
+                    <span class="sr-only">Nome do projeto</span>
+                    <input type="text" id="inputNomeProjetoHeader" value="chácara" class="border border-transparent group-hover:border-slate-700 focus:border-amber-500 rounded-lg pl-2 pr-7 py-1 text-base font-black tracking-tight text-white bg-transparent focus:bg-slate-950 w-44 lg:w-64 outline-none transition focus:ring-1 focus:ring-amber-400 truncate" onchange="atualizarNomeProjeto(this.value)">
+                    <i class="fa-solid fa-pen absolute right-2 text-[10px] text-slate-500 group-hover:text-amber-400 pointer-events-none"></i>
+                </label>
                 <span id="indicadorStatusSalvamento" class="hidden xl:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
                     <i class="fa-solid fa-circle-check text-emerald-400"></i> <span id="txtStatusSalvamento">Sincronizado na pasta</span>
                 </span>
@@ -213,35 +215,55 @@
 
             <!-- AÇÕES GLOBAIS DO PROJETO (SEM REPETIÇÃO) -->
             <div class="flex items-center gap-1.5">
-                <!-- GRUPO: ARQUIVOS & DOCUMENTAÇÃO -->
-                <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                    <button onclick="salvarPontoRapido(); salvarProjetoNaPastaServidor();" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5" title="Salvar Projeto (Ctrl+S)">
-                        <i class="fa-solid fa-floppy-disk text-amber-400"></i> <span class="hidden md:inline">Salvar</span>
+                <!-- AÇÃO PRINCIPAL + MENU ARQUIVO -->
+                <button onclick="salvarPontoRapido(); salvarProjetoNaPastaServidor();" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 transition flex items-center gap-1.5 active:scale-95" title="Salvar Projeto (Ctrl+S)">
+                    <i class="fa-solid fa-floppy-disk"></i> <span>Salvar</span>
+                </button>
+                <div class="relative" id="menuArquivoWrapper">
+                    <button type="button" id="btnMenuArquivo" onclick="alternarMenuArquivo(event)" aria-haspopup="menu" aria-expanded="false" aria-controls="menuArquivo" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-950 border border-slate-800 text-slate-200 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-folder text-sky-400"></i> <span>Arquivo</span> <i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>
                     </button>
-                    <button onclick="abrirModalImpressaoPDF()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5" title="Exportar Pranchas ABNT em PDF">
-                        <i class="fa-solid fa-file-pdf text-rose-500"></i> <span class="hidden md:inline">PDF</span>
-                    </button>
-                    <button onclick="abrirModalImportar()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5" title="Importar ou Exportar DWG/DXF/JSON">
-                        <i class="fa-solid fa-file-import text-sky-400"></i> <span class="hidden md:inline">Importar/Exportar</span>
-                    </button>
-                    <button onclick="duplicarProjetoAtual()" class="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Duplicar Projeto">
-                        <i class="fa-solid fa-clone"></i>
-                    </button>
-                    <button onclick="abrirModalMemoriaDemanda()" class="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Memória de Demanda NBR 5410">
-                        <i class="fa-solid fa-calculator text-amber-400"></i>
-                    </button>
+                    <div id="menuArquivo" role="menu" aria-labelledby="btnMenuArquivo" class="hidden absolute right-0 top-full mt-1.5 w-64 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5">
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalNovoProjeto()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-circle-plus text-emerald-400 w-4 text-center"></i><span class="flex-1">Novo projeto</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalGerenciarProjetos()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-folder-open text-amber-400 w-4 text-center"></i><span class="flex-1">Abrir / histórico de versões</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); duplicarProjetoAtual()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-clone text-slate-400 w-4 text-center"></i><span class="flex-1">Duplicar projeto</span>
+                        </button>
+                        <div class="my-1 border-t border-slate-800" role="separator"></div>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalImportar()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-import text-sky-400 w-4 text-center"></i><span class="flex-1">Importar planta (DXF / IFC / JSON)</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); trocarAba('arquivos')" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-box-archive text-sky-400 w-4 text-center"></i><span class="flex-1">Central de arquivos</span>
+                        </button>
+                        <div class="my-1 border-t border-slate-800" role="separator"></div>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalImpressaoPDF()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-pdf text-rose-400 w-4 text-center"></i><span class="flex-1">Imprimir pranchas / PDF</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); exportarParaExcel()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-excel text-emerald-400 w-4 text-center"></i><span class="flex-1">Exportar lista Excel (.xlsx)</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalMemoriaDemanda()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-calculator text-amber-400 w-4 text-center"></i><span class="flex-1">Memória de cálculo da demanda</span>
+                        </button>
+                        <div class="my-1 border-t border-slate-800" role="separator"></div>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); limparProjetoConfirmacao()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-trash-can text-rose-400 w-4 text-center"></i><span class="flex-1">Limpar projeto...</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- GRUPO: HISTÓRICO (DESFAZER / REFAZER / LIMPAR) -->
+                <!-- GRUPO: DESFAZER / REFAZER -->
                 <div class="flex items-center gap-0.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
                     <button onclick="desfazerAcao()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs" title="Desfazer (Ctrl+Z)">
                         <i class="fa-solid fa-arrow-rotate-left"></i>
                     </button>
                     <button onclick="refazerAcao()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs" title="Refazer (Ctrl+Y)">
                         <i class="fa-solid fa-arrow-rotate-right"></i>
-                    </button>
-                    <button onclick="limparProjetoConfirmacao()" class="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-slate-800 transition text-xs" title="Limpar Projeto">
-                        <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
 
@@ -293,10 +315,10 @@
 
         <!-- ABA 1: PLANTA BAIXA & CAD 2D -->
         <div id="tab-planta" class="tab-content active space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div id="gridPlanta" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 
                 <!-- PAINEL DE CONTROLE DE CÔMODOS / GESTÃO DO ANDAR -->
-                <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-1 space-y-4 text-xs">
+                <div id="painelLateralPlanta" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-1 space-y-4 text-xs">
                     <!-- BOTÕES DE AÇÃO PRINCIPAIS -->
                     <div class="space-y-2">
                         <button onclick="abrirModalNovoComodo()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-amber-500/20 text-xs">
@@ -383,11 +405,14 @@
                 </div>
 
                 <!-- ÁREA DO CANVAS CAD 2D -->
-                <div class="mob-primeiro bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-3 space-y-3">
+                <div id="painelPrincipalPlanta" class="mob-primeiro bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-3 space-y-3">
                     <div class="flex flex-col gap-2.5 text-xs pb-1">
                         <!-- BARRA SUPERIOR: INDICADOR DE PAVIMENTO E SELETOR -->
                         <div class="mob-trilho flex flex-wrap items-center justify-between gap-2">
                             <div class="mob-conteudo mob-wrap flex items-center gap-2">
+                                <button type="button" id="btnRecolherPainelPlanta" onclick="alternarPainelLateralPlanta()" aria-controls="painelLateralPlanta" aria-expanded="true" class="hidden lg:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition" title="Recolher / mostrar o painel lateral (cômodos e terreno)">
+                                    <i class="fa-solid fa-angles-left text-[10px]"></i><span class="text-[11px] font-bold">Painel</span>
+                                </button>
                                 <span id="badgeIndicadorPavimento" class="mob-ocultar bg-sky-500/20 text-sky-400 border border-sky-500/40 px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5">
                                     🏢 PAVIMENTO TÉRREO
                                 </span>
@@ -422,10 +447,11 @@
                             </div>
                         </div>
 
-                        <!-- BARRA DE FERRAMENTAS CAD DA PLANTA BAIXA -->
-                        <div class="mob-trilho flex flex-wrap items-center justify-between gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
-                            <!-- FERRAMENTAS DE INTERAÇÃO -->
-                            <div class="mob-conteudo flex flex-wrap items-center gap-1.5">
+                        <!-- BARRA DE FERRAMENTAS CAD DA PLANTA BAIXA: Desenhar | Inserir | Exibir — cor só na ação principal -->
+                        <div class="mob-trilho flex flex-wrap items-center justify-between gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                          <div class="mob-conteudo flex flex-wrap items-center gap-2">
+                            <div class="mob-conteudo flex items-center gap-1" role="group" aria-label="Desenhar">
+                                <span class="mob-ocultar text-[9px] font-black uppercase tracking-wider text-slate-500 px-1">Desenhar</span>
                                 <button id="btnToolSelect" class="px-3 py-1.5 rounded-lg font-bold text-[11px] bg-amber-500 text-slate-950 flex items-center gap-1.5 shadow-sm" title="Mover & Redimensionar Cômodo">
                                     <i class="fa-solid fa-up-down-left-right"></i> Mover Cômodo
                                 </button>
@@ -435,36 +461,39 @@
                                 <button id="btnClearFreehand" class="px-2.5 py-1.5 rounded-lg text-rose-400 hover:text-rose-300 font-bold text-[11px]" title="Limpar riscos">
                                     <i class="fa-solid fa-eraser"></i> Limpar
                                 </button>
-
-                                <div class="w-px h-5 bg-slate-800 mx-1"></div>
-
-                                <!-- INSERÇÃO ARQUITETÔNICA -->
-                                <button onclick="abrirModalTransicaoTipo('porta')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-amber-400 border border-slate-800 hover:border-amber-500/40 flex items-center gap-1.5 transition" title="Inserir Porta Arquitetônica">
-                                    <i class="fa-solid fa-door-open"></i> + Porta
+                            </div>
+                            <div class="w-px h-6 bg-slate-800"></div>
+                            <div class="mob-conteudo flex items-center gap-1" role="group" aria-label="Inserir">
+                                <span class="mob-ocultar text-[9px] font-black uppercase tracking-wider text-slate-500 px-1">Inserir</span>
+                                <button onclick="abrirModalTransicaoTipo('porta')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Inserir Porta Arquitetônica">
+                                    <i class="fa-solid fa-door-open text-amber-400"></i> + Porta
                                 </button>
-                                <button onclick="abrirModalTransicaoTipo('janela')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-sky-400 border border-slate-800 hover:border-sky-500/40 flex items-center gap-1.5 transition" title="Inserir Janela">
-                                    <i class="fa-regular fa-window-maximize"></i> + Janela
+                                <button onclick="abrirModalTransicaoTipo('janela')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Inserir Janela">
+                                    <i class="fa-regular fa-window-maximize text-sky-400"></i> + Janela
                                 </button>
-                                <button onclick="toggleCotasExibicao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition" title="Exibir / Ocultar Cotas e Medições">
-                                    <i class="fa-solid fa-ruler"></i> Cotas
-                                </button>
-                                <button onclick="abrirModalAnotacao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition" title="Texto e Anotações CAD">
-                                    <i class="fa-solid fa-font"></i> Texto
+                                <button onclick="abrirModalAnotacao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Texto e Anotações CAD">
+                                    <i class="fa-solid fa-font text-slate-400"></i> Texto
                                 </button>
                             </div>
-
-                            <!-- AÇÕES INTELIGENTES -->
-                            <div class="mob-conteudo flex flex-wrap items-center gap-1.5">
-                                <button onclick="autoUnirEAlinharComodos()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 transition" title="Unir e alinhar todos os cômodos adjacentes como um ímã">
+                            <div class="w-px h-6 bg-slate-800"></div>
+                            <div class="mob-conteudo flex items-center gap-1" role="group" aria-label="Exibir">
+                                <span class="mob-ocultar text-[9px] font-black uppercase tracking-wider text-slate-500 px-1">Exibir</span>
+                                <button onclick="toggleCotasExibicao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Exibir / Ocultar Cotas e Medições">
+                                    <i class="fa-solid fa-ruler text-slate-400"></i> Cotas
+                                </button>
+                                <button id="btnToggleLayersHUD" onclick="togglePainelLayersHUD()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Camadas / Layers">
+                                    <i class="fa-solid fa-layer-group text-sky-400"></i> Camadas
+                                </button>
+                            </div>
+                          </div>
+                          <div class="mob-conteudo flex items-center gap-1.5">
+                                <button onclick="autoUnirEAlinharComodos()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Unir e alinhar todos os cômodos adjacentes como um ímã">
                                     <i class="fa-solid fa-object-group text-amber-400"></i> Unir & Alinhar
                                 </button>
                                 <button id="btnAutoLancarTodosComodos" onclick="abrirModalAutoLancamentoPontos()" class="px-3 py-1.5 rounded-lg font-bold text-[11px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/25 transition active:scale-95" title="Auto-Lançamento NBR 5410 com Sugestão Completa de TUEs por Ambiente">
                                     <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Auto NBR 5410
                                 </button>
-                                <button id="btnToggleLayersHUD" onclick="togglePainelLayersHUD()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-sky-400 border border-slate-800 hover:border-sky-500/40 flex items-center gap-1.5 transition" title="Camadas / Layers">
-                                    <i class="fa-solid fa-layer-group"></i> Camadas
-                                </button>
-                            </div>
+                          </div>
                         </div>
                     </div>
 <div id="containerCad2D" class="relative w-full overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-inner transition-all">
@@ -1647,7 +1676,7 @@
 
                 <!-- SUB-TABS / SELETOR DE VISÕES DA ABA DE MATERIAIS -->
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3" id="seletorVisoesMateriais">
-                    <div class="flex flex-nowrap sm:flex-wrap items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 max-w-full overflow-x-auto" id="subTabsMateriais">
+                    <div class="flex flex-nowrap sm:flex-wrap items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 max-w-full overflow-x-auto mob-trilho" id="subTabsMateriais">
                         <button onclick="trocarVisaoMateriais('completo')" id="btnVisaoCompleto" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat active px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
                             <i class="fa-solid fa-table-list"></i> Lista Geral Completa (BOM)
                         </button>
@@ -1781,7 +1810,7 @@
 
                 <!-- TABELA TÉCNICA PRINCIPAL DETALHADA -->
                 <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950">
-                    <div class="overflow-x-auto max-h-[620px]">
+                    <div class="overflow-x-auto sm:max-h-[620px]">
                         <table class="w-full text-left text-xs border-collapse" id="tabelaMateriaisDetalhada">
                             <thead class="bg-slate-900 text-slate-300 font-bold sticky top-0 z-10 border-b border-slate-800 shadow-sm">
                                 <tr>

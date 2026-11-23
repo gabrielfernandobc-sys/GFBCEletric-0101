@@ -2292,31 +2292,31 @@
                 const badgeClass = badgesCat[m.categoriaId] || 'bg-slate-800 text-slate-300 border-slate-700';
 
                 tr.innerHTML = `
-                    <td class="p-3 align-top">
+                    <td class="cel-categoria p-3 align-top">
                         <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">
                             ${m.categoria}
                         </span>
                     </td>
-                    <td class="p-3 align-top">
+                    <td class="cel-item p-3 align-top">
                         <strong class="text-white block font-semibold text-xs">${m.item}</strong>
                         <span class="text-[11px] text-slate-400 block mt-0.5 leading-snug">${m.aplicacao}</span>
                     </td>
-                    <td class="p-3 align-top text-slate-400 text-[11px] leading-snug font-mono">
+                    <td class="cel-espec p-3 align-top text-slate-400 text-[11px] leading-snug font-mono">
                         ${m.especificacao}
                     </td>
-                    <td class="p-3 align-top text-right font-mono text-slate-300">
+                    <td data-rotulo="Projeto" class="cel-num p-3 align-top text-right font-mono text-slate-300">
                         ${m.qtdCalculada.toLocaleString('pt-BR')}
                     </td>
-                    <td class="p-3 align-top text-right font-mono text-amber-400/90 text-[11px]">
+                    <td data-rotulo="Sobra" class="cel-num p-3 align-top text-right font-mono text-amber-400/90 text-[11px]">
                         +${m.margemSobras.toLocaleString('pt-BR')}
                     </td>
-                    <td class="p-3 align-top text-right font-mono font-bold text-emerald-400 text-xs">
+                    <td data-rotulo="Comprar" class="cel-num p-3 align-top text-right font-mono font-bold text-emerald-400 text-xs">
                         ${m.qtdTotal.toLocaleString('pt-BR')}
                     </td>
-                    <td class="p-3 align-top text-center text-slate-400 font-mono text-xs">
+                    <td data-rotulo="Unid." class="cel-num p-3 align-top text-center text-slate-400 font-mono text-xs">
                         ${m.unidade}
                     </td>
-                    <td class="p-3 align-top text-right text-xs">
+                    <td data-rotulo="Preço unit." class="cel-preco p-3 align-top text-right text-xs">
                         <div class="flex flex-col items-end gap-0.5">
                             <span class="font-mono font-bold text-emerald-400 whitespace-nowrap">R$ ${m.precoUnit.toFixed(2).replace('.', ',')}<span class="text-slate-500 font-normal">/${escHtml(m.unidade)}</span></span>
                             ${m.categoriaId === 'condutores' ? `<span class="font-mono text-[10px] text-amber-400/90 whitespace-nowrap">R$ ${(m.precoUnit * 100).toFixed(2).replace('.', ',')}/rolo 100m</span>` : (m.categoriaId === 'eletrodutos' && m.unidade === 'm' ? `<span class="font-mono text-[10px] text-amber-400/90 whitespace-nowrap">R$ ${(m.precoUnit * 50).toFixed(2).replace('.', ',')}/rolo 50m</span>` : '')}
@@ -2331,7 +2331,7 @@
                             </div>
                         </div>
                     </td>
-                    <td class="p-3 align-top text-right font-mono font-bold text-white text-xs">
+                    <td data-rotulo="Subtotal" class="cel-subtotal p-3 align-top text-right font-mono font-bold text-white text-xs">
                         R$ ${m.subtotal.toFixed(2).replace('.', ',')}
                     </td>
                 `;
