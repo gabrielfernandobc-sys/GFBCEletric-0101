@@ -765,8 +765,8 @@
             sanitizarNomesEstado();
             renderListaComodosSidebar();
             desenharCAD();
+            atualizarTabelas();      // antes do desenho: o diagrama unifilar usa o circuito de cada ponto
             desenharInstalacoes();
-            atualizarTabelas();
             renderizarMemorialAba6(); // depois do cálculo, para refletir os circuitos atuais
         }
 

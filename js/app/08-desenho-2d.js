@@ -662,9 +662,11 @@
             let maisProximo = null;
             let minDist = 11; // raio de detecção confortável para uso do mouse no computador
 
+            const unifilar = typeof ajustarCaboParaUnifilar === 'function';
             for (let cabo of cabos) {
                 if (!cabo.pts || cabo.pts.length < 2) continue;
-                const d = distPontoParaPolyline(mx, my, cabo.pts);
+                const pts = unifilar ? ajustarCaboParaUnifilar(cabo).pts : cabo.pts;   // no unifilar o eletroduto é curvo
+                const d = distPontoParaPolyline(mx, my, pts);
                 if (d < minDist) {
                     minDist = d;
                     maisProximo = cabo;
@@ -693,9 +695,12 @@
             }
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Diagrama unifilar NBR 5444 (padrão) ou representação colorida por tipo
+            const usarUnifilar = typeof Unifilar !== 'undefined' && typeof usarDiagramaUnifilar === 'function' && usarDiagramaUnifilar();
+            const claroUni = usarUnifilar && document.body.classList.contains('theme-woca-light');
 
             // Grid
-            ctx.strokeStyle = '#1e293b';
+            ctx.strokeStyle = claroUni ? '#e2e8f0' : '#1e293b';
             ctx.lineWidth = 1;
             for (let x = 0; x < canvas.width; x += 40) {
                 ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
@@ -772,14 +777,14 @@
                 const h = c.comprimento * state.escala;
                 const isEditing = (String(state.comodoEmEdicaoId) === String(c.id));
 
-                ctx.fillStyle = isEditing ? 'rgba(51, 65, 85, 0.9)' : 'rgba(15, 23, 42, 0.75)';
+                ctx.fillStyle = claroUni ? (isEditing ? '#fef3c7' : '#ffffff') : (isEditing ? 'rgba(51, 65, 85, 0.9)' : 'rgba(15, 23, 42, 0.75)');
                 ctx.fillRect(c.x, c.y, w, h);
 
-                ctx.strokeStyle = isEditing ? '#f59e0b' : '#475569';
+                ctx.strokeStyle = isEditing ? '#f59e0b' : (claroUni ? '#334155' : '#475569');
                 ctx.lineWidth = isEditing ? 3.5 : 3;
                 ctx.strokeRect(c.x, c.y, w, h);
 
-                ctx.fillStyle = isEditing ? '#fef08a' : '#64748b';
+                ctx.fillStyle = isEditing ? (claroUni ? '#b45309' : '#fef08a') : (claroUni ? '#334155' : '#64748b');
                 ctx.font = 'bold 12px sans-serif';
                 ctx.fillText(c.nome.toUpperCase(), c.x + 10, c.y + 20);
 
@@ -847,6 +852,9 @@
             const ehPassagemChao = (pavAtivoObj && pavAtivoObj.tipoPassagemCabos === 'chao');
             const ehMultiPavMesclado = (ehPassagemChao && state.pavimentos.length > 1);
 
+            if (usarUnifilar) {
+                desenharUnifilarInstalacoes(ctx, comodosAndar, ehPassagemChao);
+            } else {
             comodosAndar.forEach((c, idx) => {
                 const w = c.largura * state.escala;
                 const h = c.comprimento * state.escala;
@@ -1163,9 +1171,11 @@
                 }
             });
 
+            } // fim da representação colorida
+
             // DESTAQUE DE CABO VIRTUAL AO PASSAR O MOUSE (HOVER NO COMPUTADOR / DESKTOP)
             if (state.caboHoverInstalacoes && state.caboHoverInstalacoes.pts && state.caboHoverInstalacoes.pts.length >= 2) {
-                const ch = state.caboHoverInstalacoes;
+                const ch = usarUnifilar ? ajustarCaboParaUnifilar(state.caboHoverInstalacoes) : state.caboHoverInstalacoes;
                 ctx.save();
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
@@ -1203,6 +1213,8 @@
             }
 
             // Pontos Elétricos (ILUM, TUG, TUE, INTERRUPTOR) do andar ativo com escala visual proporcional ao zoom
+            // (no unifilar os símbolos NBR 5444 já foram desenhados)
+            if (!usarUnifilar) {
             const scaleVisual = Math.min(1.5, Math.max(0.75, (state.escala || 35.0) / 35.0));
             const pontosAndar = state.pontosEletricos.filter(p => p.pavimentoId === state.pavimentoAtivoId);
             pontosAndar.forEach(pt => {
@@ -1347,7 +1359,10 @@
                 }
             });
 
-            // QDT e Prumada
+            } // fim dos símbolos da representação colorida
+
+            // QDT e Prumada (no unifilar o quadro é desenhado com o símbolo NBR 5444)
+            if (!usarUnifilar) {
             ctx.fillStyle = '#ef4444';
             ctx.fillRect(state.qdtPos.x, state.qdtPos.y, state.qdtPos.w, state.qdtPos.h);
             ctx.strokeStyle = '#ffffff';
@@ -1356,6 +1371,7 @@
             ctx.fillStyle = '#ffffff';
             ctx.font = 'bold 10px sans-serif';
             ctx.fillText(state.pavimentoAtivoId === 'terreo' ? 'QDT-G' : 'QDT-P', state.qdtPos.x + 4, state.qdtPos.y + 17);
+            }
 
             // Prumada
             if (state.prumadaAtiva !== false) {

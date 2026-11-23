@@ -368,6 +368,13 @@
             const qdtCx = state.qdtPos.x + state.qdtPos.w / 2;
             const qdtCy = state.qdtPos.y + state.qdtPos.h / 2;
 
+            // Escopo de cada circuito (quais cômodos/pontos ele atende) para o diagrama
+            // unifilar: circuitos divididos por potência compartilham o mesmo "grupo" e
+            // os pontos são repartidos depois (js/unifilar.js)
+            const idsTug = lista => lista.flatMap(ci => state.pontosEletricos
+                .filter(p => p.comodoId === ci.comodo.id && p.tipo === 'TUG').map(p => p.id));
+            const idsComodos = lista => lista.map(ci => ci.comodo.id);
+
             // Coletores para divisão normativa de circuitos (NBR 5410)
             const infoComodosIlum = [];
             const infoComodosTugGeral = [];
@@ -450,6 +457,7 @@
                         num: 0,
                         andar: ehUnidadeEspecifica ? `${imovelAtivo.nome} • ${nomeAndar}` : nomeAndar,
                         nome: `TUE - ${tue.nome} (${c.nome})`,
+                        escopo: { tipo: 'pontos', grupo: 'tue:' + tue.id, ids: [tue.id] },
                         tipo: 'TUE',
                         tensao: tensao,
                         potVal: tue.pot,
@@ -478,6 +486,7 @@
                     circsBase.push({
                         andar: ehUnidadeEspecifica ? `${imovelAtivo.nome} • Iluminação` : (state.regimeImovel === 'imoveis_separados' ? 'Geral Coletivo' : 'Geral (Todos os Andares)'),
                         nome: 'Iluminação Social e Serviços',
+                        escopo: { tipo: 'ilum', grupo: 'ilum:todos', ids: idsComodos(infoComodosIlum) },
                         tipo: 'Iluminação',
                         tensao: tensaoCircBase,
                         potVal: totIlum,
@@ -495,7 +504,8 @@
                     const pavsIlum = {};
                     infoComodosIlum.forEach(ci => {
                         const pId = ci.comodo.pavimentoId || 'terreo';
-                        if (!pavsIlum[pId]) pavsIlum[pId] = { nome: ci.andar, pot: 0, rota: ci.rota };
+                        if (!pavsIlum[pId]) pavsIlum[pId] = { nome: ci.andar, pot: 0, rota: ci.rota, ids: [] };
+                        pavsIlum[pId].ids.push(ci.comodo.id);
                         pavsIlum[pId].pot += ci.ilumPot;
                         pavsIlum[pId].rota = Math.max(pavsIlum[pId].rota, ci.rota);
                     });
@@ -508,6 +518,7 @@
                             circsBase.push({
                                 andar: pData.nome,
                                 nome: `Iluminação - ${pData.nome}`,
+                                escopo: { tipo: 'ilum', grupo: 'ilum:' + pId, ids: pData.ids },
                                 tipo: 'Iluminação',
                                 tensao: tensaoCircBase,
                                 potVal: pData.pot,
@@ -531,6 +542,7 @@
                                 circsBase.push({
                                     andar: pData.nome,
                                     nome: `Iluminação - ${pData.nome} (Circuito ${s})`,
+                                    escopo: { tipo: 'ilum', grupo: 'ilum:' + pId, ids: pData.ids },
                                     tipo: 'Iluminação',
                                     tensao: tensaoCircBase,
                                     potVal: pAtual,
@@ -556,6 +568,7 @@
                     circsBase.push({
                         andar: ehUnidadeEspecifica ? `${imovelAtivo.nome} • TUGs` : 'Térreo & Superior',
                         nome: 'TUG - Tomadas Gerais (Salas, Quartos, Circulação)',
+                        escopo: { tipo: 'pontos', grupo: 'tug:geral', ids: idsTug(infoComodosTugGeral) },
                         tipo: 'TUG',
                         tensao: tensaoCircBase,
                         potVal: totTugGeral,
@@ -579,6 +592,7 @@
                         circsBase.push({
                             andar: ehUnidadeEspecifica ? `${imovelAtivo.nome} • TUGs` : 'Térreo & Superior',
                             nome: `TUG - Tomadas Gerais (Circuito ${s})`,
+                            escopo: { tipo: 'pontos', grupo: 'tug:geral', ids: idsTug(infoComodosTugGeral) },
                             tipo: 'TUG',
                             tensao: tensaoCircBase,
                             potVal: pAtual,
@@ -607,6 +621,7 @@
                         circsBase.push({
                             andar: andarCozinha,
                             nome: 'TUG - Cozinha e Copa (Bancadas e Eletrodomésticos)',
+                            escopo: { tipo: 'pontos', grupo: 'tug:cozinha', ids: idsTug(infoComodosTugCozinha) },
                             tipo: 'TUG',
                             tensao: tensaoCircBase,
                             potVal: totCozinha,
@@ -632,6 +647,7 @@
                             circsBase.push({
                                 andar: andarCozinha,
                                 nome: `TUG - Cozinha (${descNome})`,
+                                escopo: { tipo: 'pontos', grupo: 'tug:cozinha', ids: idsTug(infoComodosTugCozinha) },
                                 tipo: 'TUG',
                                 tensao: tensaoCircBase,
                                 potVal: pAtual,
@@ -657,6 +673,7 @@
                         circsBase.push({
                             andar: infoComodosTugBanheiro.length === 1 ? ci0.andar : 'Térreo & Superior',
                             nome: infoComodosTugBanheiro.length === 1 ? `TUG - Tomadas ${ci0.nome}` : 'TUG - Tomadas Banheiros e Lavabos',
+                            escopo: { tipo: 'pontos', grupo: 'tug:banheiros', ids: idsTug(infoComodosTugBanheiro) },
                             tipo: 'TUG',
                             tensao: tensaoCircBase,
                             potVal: totBanheiros,
@@ -675,6 +692,7 @@
                             circsBase.push({
                                 andar: ci.andar,
                                 nome: `TUG - Tomadas ${ci.nome}`,
+                                escopo: { tipo: 'pontos', grupo: 'tug:comodo:' + ci.comodo.id, ids: idsTug([ci]) },
                                 tipo: 'TUG',
                                 tensao: tensaoCircBase,
                                 potVal: ci.tugPot,
@@ -699,6 +717,7 @@
                         circsBase.push({
                             andar: ci.andar,
                             nome: `TUG - Tomadas ${ci.nome}`,
+                            escopo: { tipo: 'pontos', grupo: 'tug:comodo:' + ci.comodo.id, ids: idsTug([ci]) },
                             tipo: 'TUG',
                             tensao: tensaoCircBase,
                             potVal: ci.tugPot,
@@ -724,6 +743,7 @@
                         circsBase.push({
                             andar: ehUnidadeEspecifica ? `${imovelAtivo.nome} • TUG Serviço` : 'Térreo & Serviço',
                             nome: `TUG - Tomadas de Serviço (Circuito ${circCountServ++})`,
+                            escopo: { tipo: 'pontos', grupo: 'tug:servico', ids: state.pontosEletricos.filter(p => p.tipo === 'TUG' && comodosParaCalcular.some(c => c.id === p.comodoId && c.tipo === 'servico')).map(p => p.id) },
                             tipo: 'TUG',
                             tensao: tensaoCircBase,
                             potVal: pPart,
@@ -773,6 +793,18 @@
 
             state.circuitosCalculados = circuitosFinais;
             state.circuitos = circuitosFinais;
+
+            // Circuito de cada ponto para o diagrama unifilar da aba Instalações (js/unifilar.js)
+            if (typeof Unifilar !== 'undefined') {
+                const potIlum = {};
+                infoComodosIlum.forEach(ci => { potIlum[ci.comodo.id] = ci.ilumPot; });
+                const potPonto = {};
+                state.pontosEletricos.forEach(pt => { potPonto[pt.id] = Number(pt.pot) || 0; });
+                const mapa = Unifilar.atribuirCircuitos(circuitosFinais, potIlum, potPonto);
+                mapa.polos = {};
+                circuitosFinais.forEach(c => { mapa.polos[c.num] = c.polos; });
+                state.unifilar = mapa;
+            }
 
             // Eletroduto do trecho compartilhado pelos circuitos agrupados (premissa do FCA)
             const parNBR = obterParametrosNBR();
