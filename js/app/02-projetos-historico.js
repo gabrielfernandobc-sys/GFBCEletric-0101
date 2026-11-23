@@ -115,6 +115,8 @@
                 // Parâmetros do Quadro Real de Distribuição (NBR 5410)
                 esquemaAterramento: state.esquemaAterramento || 'TN-S',
                 tipoConfigIdr: state.tipoConfigIdr || 'idr_geral',
+                modeloIdr: state.modeloIdr || null,
+                estiloInstalacoes: state.estiloInstalacoes || 'unifilar',
                 modoFiacaoQuadro: state.modoFiacaoQuadro !== false,
                 modoCanaletasQuadro: state.modoCanaletasQuadro || 'abertas',
                 modoVisualQuadro: state.modoVisualQuadro || 'interno',
@@ -166,6 +168,13 @@
             if (snapshot.prumadaAtiva !== undefined) state.prumadaAtiva = snapshot.prumadaAtiva;
             if (snapshot.esquemaAterramento) state.esquemaAterramento = snapshot.esquemaAterramento;
             if (snapshot.tipoConfigIdr) state.tipoConfigIdr = snapshot.tipoConfigIdr;
+            state.modeloIdr = (snapshot.modeloIdr && typeof snapshot.modeloIdr === 'object') ? {
+                polos: ['auto', '2P', '4P'].includes(snapshot.modeloIdr.polos) ? snapshot.modeloIdr.polos : 'auto',
+                corrente: Number(snapshot.modeloIdr.corrente) > 0 ? Number(snapshot.modeloIdr.corrente) : 'auto',
+                sensibilidade: Number(snapshot.modeloIdr.sensibilidade) === 300 ? 300 : 30,
+                tipo: snapshot.modeloIdr.tipo === 'A' ? 'A' : 'AC'
+            } : null;
+            if (snapshot.estiloInstalacoes === 'colorido' || snapshot.estiloInstalacoes === 'unifilar') state.estiloInstalacoes = snapshot.estiloInstalacoes;
             if (snapshot.modoFiacaoQuadro !== undefined) state.modoFiacaoQuadro = snapshot.modoFiacaoQuadro;
             if (snapshot.modoCanaletasQuadro) state.modoCanaletasQuadro = snapshot.modoCanaletasQuadro;
             if (snapshot.modoVisualQuadro) state.modoVisualQuadro = snapshot.modoVisualQuadro;

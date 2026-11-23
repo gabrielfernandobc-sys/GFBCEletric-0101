@@ -37,6 +37,17 @@
         25.0: 101, 35.0: 125, 50.0: 151, 70.0: 192, 95.0: 232, 120.0: 269
     };
 
+    // Mesmo método B1 (PVC 70 °C, 30 °C), 3 condutores carregados — alimentadores
+    // bifásicos (F+F+N) e trifásicos (F+F+F) — NBR 5410 Tabela 36, coluna 3.
+    const IZ_METODO_B1_3C = {
+        1.5: 15.5, 2.5: 21, 4.0: 28, 6.0: 36, 10.0: 50, 16.0: 68,
+        25.0: 89, 35.0: 110, 50.0: 134, 70.0: 171, 95.0: 207, 120.0: 239
+    };
+
+    // Queda de tensão máxima desde o ponto de entrega da rede pública de BT até
+    // qualquer ponto de utilização (alimentador + circuito terminal) — item 6.2.7.1 c).
+    const QUEDA_TENSAO_TOTAL_MAX_PCT = 5.0;
+
     // Correntes nominais comerciais de disjuntores termomagnéticos (A) — NBR NM 60898.
     const DISJUNTORES_PADRONIZADOS = [10, 16, 20, 25, 32, 40, 50, 63, 70, 80, 100, 125];
 
@@ -908,6 +919,215 @@
     }
 
     // =========================================================================
+    // 5b. PREVISÃO MÍNIMA DE TOMADAS (ITEM 9.5.2.2) E ALIMENTADOR
+    // =========================================================================
+
+    /**
+     * Classe do ambiente pelo nome, para as regras de 9.5.2.2.1 / 9.5.2.2.2.
+     * 'banheiro' | 'cozinha_servico' | 'varanda' | 'sala_dormitorio' | 'outro'
+     */
+    function classificarAmbiente(nome) {
+        const n = String(nome || '').toLowerCase();
+        if (/banh|lavabo|\bwc\b|bwc|sanit/.test(n)) return 'banheiro';
+        if (/cozinha|copa|servi[çc]o|lavand|gourmet|churrasq|\ba\.?\s*s\.?$/.test(n)) return 'cozinha_servico';
+        if (/varanda|sacada|terra[çc]o|alpendre|varand/.test(n)) return 'varanda';
+        if (/sala|dormit|quarto|su[íi]te|escrit|estar|jantar|home|living|tv/.test(n)) return 'sala_dormitorio';
+        return 'outro';
+    }
+
+    /**
+     * Quantidade mínima de pontos de tomada (TUG) — NBR 5410 item 9.5.2.2.1.
+     * @param {string} nome nome do cômodo   @param {number} area m²   @param {number} perimetro m
+     */
+    function tomadasMinimas(nome, area, perimetro) {
+        const classe = classificarAmbiente(nome);
+        const per = Number(perimetro) || 0, a = Number(area) || 0;
+        if (classe === 'banheiro') return 1;                                   // a) junto ao lavatório
+        if (classe === 'cozinha_servico') return Math.max(2, Math.ceil(per / 3.5)); // b) 1 / 3,5 m; 2 acima da bancada
+        if (classe === 'varanda') return 1;                                    // c)
+        if (classe === 'sala_dormitorio') return Math.max(1, Math.ceil(per / 5)); // d) 1 / 5 m
+        if (a <= 6) return 1;                                                  // e) até 6 m²: 1 ponto
+        return Math.max(1, Math.ceil(per / 5));                                // e) acima de 6 m²: 1 / 5 m
+    }
+
+    /**
+     * Potência mínima (VA) de cada ponto de tomada do ambiente — item 9.5.2.2.2:
+     * banheiros, cozinhas, copas, áreas de serviço e lavanderias: 600 VA até 3 pontos
+     * e 100 VA nos excedentes (com mais de 6 pontos no conjunto desses ambientes,
+     * admite-se 600 VA até 2 pontos); demais: 100 VA.
+     */
+    function potenciasTomadas(nome, qtd, totalConjuntoMolhado) {
+        const classe = classificarAmbiente(nome);
+        const n = Math.max(0, Math.round(Number(qtd) || 0));
+        if (classe !== 'banheiro' && classe !== 'cozinha_servico') return new Array(n).fill(100);
+        const ate = (Number(totalConjuntoMolhado) || 0) > 6 ? 2 : 3;
+        return Array.from({ length: n }, (_, i) => (i < ate ? 600 : 100));
+    }
+
+    /** Iz (A) da seção no método B1 com 3 condutores carregados. */
+    function izMetodoB1TresCondutores(secaoMm2) {
+        const iz = IZ_METODO_B1_3C[secaoMm2];
+        if (iz === undefined) throw new Error(`Seção ${secaoMm2} mm² não consta da Tabela 36 (B1, 3 condutores).`);
+        return iz;
+    }
+
+    /**
+     * Alimentador do quadro (medidor → QDC), conforme a NBR 5410.
+     * @param {Object} p
+     * @param {number} p.inDisjuntor      disjuntor geral (A)
+     * @param {number} p.secaoMinima      seção exigida pela concessionária (mm²), respeitada como mínimo
+     * @param {string} p.sistema          'monofasico' | 'bifasico' | 'trifasico'
+     * @param {number} p.comprimento      m
+     * @param {number} p.demandaKVA       demanda da instalação (kVA)
+     * @param {number} [p.tensaoFN=127]   tensão fase-neutro (V)
+     * @param {number} [p.quedaTerminalMaxPct=0] maior queda nos circuitos terminais (%)
+     * @param {number} [p.temperaturaAmbiente=30]
+     */
+    function dimensionarAlimentador(p) {
+        const sist = normalizarSistema(p.sistema);
+        const vFN = Number(p.tensaoFN) || 127;
+        const fct = fatorTemperatura(p.temperaturaAmbiente === undefined ? 30 : p.temperaturaAmbiente);
+        const inD = Number(p.inDisjuntor) || 0;
+        const L = Number(p.comprimento) || 0;
+        const sVA = (Number(p.demandaKVA) || 0) * 1000;
+        const nFases = sist === 'trifasico' ? 3 : (sist === 'bifasico' ? 2 : 1);
+        const ib = sVA / (nFases * vFN);                     // carga equilibrada entre as fases
+        const tres = sist !== 'monofasico';                  // F+F+N ou 3F: 3 condutores carregados
+        const iz = s => (tres ? IZ_METODO_B1_3C[s] : IZ_METODO_B1[s]) * fct;
+        // monofásico: ida e volta; equilibrado: neutro sem corrente, queda fase-neutro
+        const queda = s => ((sist === 'monofasico' ? 2 : 1) * RESISTIVIDADE_COBRE_70C * L * ib / s) / vFN * 100;
+        const limite = Math.max(0.5, QUEDA_TENSAO_TOTAL_MAX_PCT - (Number(p.quedaTerminalMaxPct) || 0));
+        const alertas = [];
+        const minimo = Math.max(Number(p.secaoMinima) || 0, SECAO_MINIMA_FORCA);
+        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= minimo && iz(s) >= inD);
+        if (idx < 0) { idx = SECOES_PADRONIZADAS.length - 1; alertas.push(`Nenhuma seção até ${SECOES_PADRONIZADAS[idx]} mm² atende ${inD} A.`); }
+        const porCorrente = SECOES_PADRONIZADAS[idx];
+        while (queda(SECOES_PADRONIZADAS[idx]) > limite && idx < SECOES_PADRONIZADAS.length - 1) idx++;
+        const secao = SECOES_PADRONIZADAS[idx];
+        const pct = queda(secao);
+        if (pct > limite + 1e-9) alertas.push(`Queda de tensão do alimentador ${pct.toFixed(1)}% excede o disponível (${limite.toFixed(1)}%).`);
+        if (ib > inD + 1e-9) alertas.push(`Corrente de demanda (${ib.toFixed(0)} A por fase) acima do disjuntor geral (${inD} A): Ib ≤ In não é atendida (item 5.3.4.1); confira a categoria de atendimento da concessionária.`);
+        return {
+            secao, secaoPorCorrente: porCorrente, secaoPE: secaoProtecao(secao), secaoNeutro: secao,
+            izCorrigida: iz(secao), ib, quedaPct: pct, quedaLimitePct: limite,
+            quedaTotalPct: pct + (Number(p.quedaTerminalMaxPct) || 0),
+            condutoresCarregados: tres ? 3 : 2, aumentouPorQueda: secao > porCorrente,
+            aumentouPorNorma: secao > (Number(p.secaoMinima) || 0), alertas
+        };
+    }
+
+    // =========================================================================
+    // 6. DISPOSITIVOS DR (IDR) — MODELOS COMERCIAIS NO BRASIL (NBR NM 61008)
+    // =========================================================================
+
+    // Correntes nominais de IDR encontradas no mercado nacional (Steck, Schneider,
+    // WEG, Siemens, ABB, Tramontina...). Bipolar (2P) e tetrapolar (4P).
+    const IDR_CORRENTES_COMERCIAIS = Object.freeze({
+        '2P': [25, 40, 63, 80, 100],
+        '4P': [25, 40, 63, 80, 100, 125]
+    });
+    const IDR_SENSIBILIDADES_MA = [30, 300];
+    // AC: correntes residuais alternadas; A: também contínuas pulsantes (eletrônica,
+    // inversores de ar-condicionado, carregadores) — recomendado nesses casos.
+    const IDR_TIPOS = ['AC', 'A'];
+
+    /** Menor corrente comercial de IDR ≥ a corrente do dispositivo a montante (null se não houver). */
+    function correnteIdrComercial(inMontante, polos) {
+        const lista = IDR_CORRENTES_COMERCIAIS[polos === '2P' ? '2P' : '4P'];
+        const alvo = Number(inMontante) || 0;
+        const c = lista.find(v => v >= alvo);
+        return c === undefined ? null : c;
+    }
+
+    /** Circuito de área molhada / uso específico (cozinha, banheiro, serviço, TUE). */
+    function ehCircuitoAreaMolhada(c) {
+        if (c && typeof c.drObrigatorio === 'boolean') return c.drObrigatorio;   // definido pelos ambientes atendidos
+        const n = String((c && c.nome) || '').toLowerCase();
+        return !!c && (c.tipo === 'TUE' || n.includes('cozinha') || n.includes('banheiro') || n.includes('serviço'));
+    }
+
+    /** Fases de um circuito a partir do campo `fase` ("R", "R + S"). */
+    function fasesDoCircuito(c) {
+        const f = String((c && c.fase) || '').toUpperCase().match(/[RST]/g) || [];
+        if (c && c.polos === '2P') return f.length >= 2 ? f.slice(0, 2) : ['R', 'S'];
+        return f.length ? [f[0]] : ['R'];
+    }
+
+    /**
+     * IDRs do quadro conforme a configuração escolhida.
+     * @param {Object} p
+     * @param {Array}  p.circuitos     circuitos numerados (com fase e polos)
+     * @param {string} p.sistema       'monofasico' | 'bifasico' | 'trifasico'
+     * @param {string} p.configIdr     'idr_geral' | 'idr_grupos' | 'idr_parcial' | 'ddr_individual'
+     * @param {string} p.esquema       esquema de aterramento ('TN-C' não admite DR)
+     * @param {number} p.inGeral       corrente do disjuntor geral (A)
+     * @param {Object} p.modelo        { polos: 'auto'|'2P'|'4P', corrente: 'auto'|número, sensibilidade: 30|300, tipo: 'AC'|'A' }
+     * @returns {{idrs: Array<{id, grupo, nome, polosLetras, polos, corrente, sensibilidade, tipo, circuitos:number[]}>,
+     *            direto: number[], alertas: string[]}}
+     */
+    function planejarIdrs(p) {
+        const modelo = Object.assign({ polos: 'auto', corrente: 'auto', sensibilidade: 30, tipo: 'AC' }, p.modelo || {});
+        const sist = normalizarSistema(p.sistema);
+        const circuitos = p.circuitos || [];
+        const alertas = [];
+        if (p.esquema === 'TN-C' || p.configIdr === 'ddr_individual') {
+            return { idrs: [], direto: circuitos.map(c => c.num), alertas };
+        }
+        let grupos;
+        const molhados = circuitos.filter(ehCircuitoAreaMolhada), secos = circuitos.filter(c => !ehCircuitoAreaMolhada(c));
+        if (p.configIdr === 'idr_grupos') grupos = [{ grupo: 'social', id: 'idr_grupo_1', rotulo: 'Social / Ilum.', circs: secos }, { grupo: 'molhadas', id: 'idr_grupo_2', rotulo: 'Áreas Molhadas', circs: molhados }];
+        else if (p.configIdr === 'idr_parcial') grupos = [{ grupo: 'molhadas', id: 'idr_parcial', rotulo: 'Áreas Molhadas', circs: molhados }];
+        else grupos = [{ grupo: 'geral', id: 'idr_geral', rotulo: 'Geral', circs: circuitos }];
+        const direto = p.configIdr === 'idr_parcial' ? secos.map(c => c.num) : [];
+
+        const polos = modelo.polos === 'auto' ? (sist === 'monofasico' ? '2P' : '4P') : modelo.polos;
+        const fasesSistema = sist === 'trifasico' ? ['R', 'S', 'T'] : (sist === 'bifasico' ? ['R', 'S'] : ['R']);
+        const inGeral = Number(p.inGeral) || 0;
+        let corrente = modelo.corrente === 'auto' ? correnteIdrComercial(inGeral, polos) : Number(modelo.corrente);
+        const lista = IDR_CORRENTES_COMERCIAIS[polos];
+        if (corrente === null) {
+            corrente = lista[lista.length - 1];
+            alertas.push(`Disjuntor geral de ${inGeral} A acima do maior IDR ${polos} comercial (${corrente} A): divida os circuitos em mais IDRs, cada um protegido por disjuntor de até ${corrente} A.`);
+        } else if (corrente < inGeral) {
+            alertas.push(`IDR de ${corrente} A abaixo do disjuntor geral (${inGeral} A): o IDR não protege contra sobrecarga; use ${correnteIdrComercial(inGeral, polos) || lista[lista.length - 1]} A ou um disjuntor de até ${corrente} A antes dele.`);
+        }
+        if (polos === '4P' && sist === 'monofasico') alertas.push('Sistema monofásico: o IDR tetrapolar funciona, mas o bipolar (F+N) atende e ocupa 2 módulos a menos.');
+        if (Number(modelo.sensibilidade) !== 30 && grupos.some(g => g.circs.length)) {
+            alertas.push(`IΔn de ${modelo.sensibilidade} mA não serve como proteção complementar contra choque: a NBR 5410 (5.1.3.2.2) exige 30 mA em áreas molhadas, tomadas internas e externas.`);
+        }
+
+        const idrs = [];
+        grupos.forEach(g => {
+            if (!g.circs.length && p.configIdr !== 'idr_geral') return;
+            const base = { grupo: g.grupo, polos, corrente, sensibilidade: Number(modelo.sensibilidade) || 30, tipo: modelo.tipo || 'AC' };
+            if (polos === '4P' || sist === 'monofasico') {
+                const letras = polos === '4P' ? ['N', 'R', 'S', 'T'] : ['N', 'R'];
+                idrs.push(Object.assign({}, base, { id: g.id, nome: g.rotulo, polosLetras: letras, circuitos: g.circs.map(c => c.num) }));
+                return;
+            }
+            // Bipolar em sistema com 2 ou 3 fases: um IDR por fase (F+N) e um por par de
+            // fases para os circuitos de 220 V entre fases (F+F)
+            const porChave = new Map();
+            g.circs.forEach(c => {
+                const fs = fasesDoCircuito(c);
+                const chave = c.polos === '2P' ? fs.slice().sort().join('+') : fs[0];
+                if (!porChave.has(chave)) porChave.set(chave, []);
+                porChave.get(chave).push(c.num);
+            });
+            if (!porChave.size) fasesSistema.forEach(f => porChave.set(f, []));
+            [...porChave.keys()].sort((a, b) => (a.length - b.length) || a.localeCompare(b)).forEach(chave => {
+                const letras = chave.includes('+') ? chave.split('+') : ['N', chave];
+                idrs.push(Object.assign({}, base, {
+                    id: `${g.id}_${chave.replace('+', '')}`,
+                    nome: `${g.rotulo} ${chave.includes('+') ? chave.replace('+', '+') + ' (220 V)' : chave + '+N'}`,
+                    polosLetras: letras, circuitos: porChave.get(chave)
+                }));
+            });
+        });
+        return { idrs, direto, alertas };
+    }
+
+    // =========================================================================
     // API PÚBLICA
     // =========================================================================
     return Object.freeze({
@@ -928,7 +1148,20 @@
         LIMITE_POT_TUG_VA,
         FATOR_POTENCIA_RESIDENCIAL,
         CONCESSIONARIAS,
+        IZ_METODO_B1_3C,
+        QUEDA_TENSAO_TOTAL_MAX_PCT,
+        IDR_CORRENTES_COMERCIAIS,
+        IDR_SENSIBILIDADES_MA,
+        IDR_TIPOS,
         // funções
+        classificarAmbiente,
+        tomadasMinimas,
+        potenciasTomadas,
+        izMetodoB1TresCondutores,
+        dimensionarAlimentador,
+        correnteIdrComercial,
+        ehCircuitoAreaMolhada,
+        planejarIdrs,
         izMetodoB1,
         fatorAgrupamento,
         fatorTemperatura,

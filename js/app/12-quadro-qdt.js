@@ -413,133 +413,45 @@
                 }
             }
 
-            // C. Interruptor Diferencial Residual (IDR)
-            // IDR tetrapolar (N + R + S + T) em bifásico e trifásico; bipolar apenas no monofásico
-            const polosIDR = (sistemaEntrada === 'monofasico') ? 2 : 4;
-            if (esquemaAterramento !== 'TN-C') {
-                if (tipoConfigIdr === 'idr_geral') {
-                    dispositivos.push({
-                        id: 'idr_geral',
-                        tipo: 'idr',
-                        nome: `IDR ${polosIDR}P`,
-                        subnome: 'Geral 30mA',
-                        polos: polosIDR,
-                        amperagem: disjGeralTxt,
-                        sensibilidade: 'IΔn 30mA',
-                        grupo: 'geral'
-                    });
-                    modulosUsados += polosIDR;
-                } else if (tipoConfigIdr === 'idr_grupos') {
-                    dispositivos.push({
-                        id: 'idr_grupo_1',
-                        tipo: 'idr',
-                        nome: `IDR 1 (${polosIDR}P)`,
-                        subnome: 'Social / Ilum.',
-                        polos: polosIDR,
-                        amperagem: disjGeralTxt,
-                        sensibilidade: 'IΔn 30mA',
-                        grupo: 'social'
-                    });
-                    modulosUsados += polosIDR;
-                }
-            }
-
-            // D. Circuitos Terminais e IDR Secundário (se grupos ou parcial)
-            if (tipoConfigIdr === 'idr_grupos' && esquemaAterramento !== 'TN-C') {
-                const circsSociais = circuitos.filter(c => !(c.tipo === 'TUE' || c.nome.toLowerCase().includes('cozinha') || c.nome.toLowerCase().includes('banheiro') || c.nome.toLowerCase().includes('serviço')));
-                const circsMolhados = circuitos.filter(c => (c.tipo === 'TUE' || c.nome.toLowerCase().includes('cozinha') || c.nome.toLowerCase().includes('banheiro') || c.nome.toLowerCase().includes('serviço')));
-
-                circsSociais.forEach(c => {
-                    const isBipolar = (c.polos === '2P');
-                    const p = isBipolar ? 2 : 1;
-                    modulosUsados += p;
-                    dispositivos.push({
-                        id: `c_${c.num}`,
-                        tipo: 'circuito',
-                        dados: c,
-                        polos: p,
-                        grupoIdr: 'social'
-                    });
-                });
-
+            // C/D. IDRs (modelos comerciais escolhidos no painel — NBR5410.planejarIdrs) e
+            // circuitos terminais, cada um logo após o IDR que o protege
+            const inGeral = parseInt(disjGeralTxt, 10) || 0;
+            const planoIdr = NBR5410.planejarIdrs({
+                circuitos, sistema: sistemaEntrada, configIdr: tipoConfigIdr,
+                esquema: esquemaAterramento, inGeral, modelo: state.modeloIdr
+            });
+            state.planoIdr = planoIdr;
+            atualizarPainelModeloIdr(planoIdr);
+            const circPorNum = new Map(circuitos.map(c => [c.num, c]));
+            const incluirCircuito = (c, fonteIdr, grupoIdr) => {
+                if (!c) return;
+                const p = (c.polos === '2P') ? 2 : 1;
+                modulosUsados += p;
                 dispositivos.push({
-                    id: 'idr_grupo_2',
-                    tipo: 'idr',
-                    nome: `IDR 2 (${polosIDR}P)`,
-                    subnome: 'Áreas Molhadas',
-                    polos: polosIDR,
-                    amperagem: disjGeralTxt,
-                    sensibilidade: 'IΔn 30mA',
-                    grupo: 'molhadas'
+                    id: `c_${c.num}`, tipo: 'circuito', dados: c, polos: p,
+                    isDdr: (tipoConfigIdr === 'ddr_individual' && esquemaAterramento !== 'TN-C'),
+                    grupoIdr, fonteIdr
                 });
-                modulosUsados += polosIDR;
-
-                circsMolhados.forEach(c => {
-                    const isBipolar = (c.polos === '2P');
-                    const p = isBipolar ? 2 : 1;
-                    modulosUsados += p;
-                    dispositivos.push({
-                        id: `c_${c.num}`,
-                        tipo: 'circuito',
-                        dados: c,
-                        polos: p,
-                        grupoIdr: 'molhadas'
-                    });
-                });
-            } else if (tipoConfigIdr === 'idr_parcial' && esquemaAterramento !== 'TN-C') {
-                const circsSecos = circuitos.filter(c => !(c.tipo === 'TUE' || c.nome.toLowerCase().includes('cozinha') || c.nome.toLowerCase().includes('banheiro') || c.nome.toLowerCase().includes('serviço')));
-                const circsMolhados = circuitos.filter(c => (c.tipo === 'TUE' || c.nome.toLowerCase().includes('cozinha') || c.nome.toLowerCase().includes('banheiro') || c.nome.toLowerCase().includes('serviço')));
-
-                circsSecos.forEach(c => {
-                    const isBipolar = (c.polos === '2P');
-                    const p = isBipolar ? 2 : 1;
-                    modulosUsados += p;
-                    dispositivos.push({
-                        id: `c_${c.num}`,
-                        tipo: 'circuito',
-                        dados: c,
-                        polos: p,
-                        grupoIdr: 'direto'
-                    });
-                });
-
-                dispositivos.push({
-                    id: 'idr_parcial',
-                    tipo: 'idr',
-                    nome: `IDR Parcial (${polosIDR}P)`,
-                    subnome: 'Áreas Molhadas',
-                    polos: polosIDR,
-                    amperagem: disjGeralTxt,
-                    sensibilidade: 'IΔn 30mA',
-                    grupo: 'molhadas'
-                });
-                modulosUsados += polosIDR;
-
-                circsMolhados.forEach(c => {
-                    const isBipolar = (c.polos === '2P');
-                    const p = isBipolar ? 2 : 1;
-                    modulosUsados += p;
-                    dispositivos.push({
-                        id: `c_${c.num}`,
-                        tipo: 'circuito',
-                        dados: c,
-                        polos: p,
-                        grupoIdr: 'molhadas'
-                    });
-                });
+            };
+            if (!planoIdr.idrs.length) {
+                circuitos.forEach(c => incluirCircuito(c, null, (tipoConfigIdr === 'ddr_individual' && esquemaAterramento !== 'TN-C') ? 'ddr' : 'geral'));
             } else {
-                circuitos.forEach(c => {
-                    const isBipolar = (c.polos === '2P');
-                    const p = isBipolar ? 2 : 1;
-                    modulosUsados += p;
+                planoIdr.direto.forEach(n => incluirCircuito(circPorNum.get(n), null, 'direto'));
+                planoIdr.idrs.forEach(idr => {
                     dispositivos.push({
-                        id: `c_${c.num}`,
-                        tipo: 'circuito',
-                        dados: c,
-                        polos: p,
-                        isDdr: (tipoConfigIdr === 'ddr_individual'),
-                        grupoIdr: (tipoConfigIdr === 'ddr_individual' ? 'ddr' : 'geral')
+                        id: idr.id,
+                        tipo: 'idr',
+                        nome: idr.polos === '4P' ? 'IDR 4P' : `IDR 2P ${idr.polosLetras.filter(l => l !== 'N').join('+')}${idr.polosLetras.includes('N') ? '+N' : ''}`,
+                        subnome: idr.nome,
+                        polos: idr.polosLetras.length,
+                        polosLetras: idr.polosLetras,
+                        amperagem: `${idr.corrente} A`,
+                        sensibilidade: `IΔn ${idr.sensibilidade} mA`,
+                        tipoDR: idr.tipo,
+                        grupo: idr.grupo
                     });
+                    modulosUsados += idr.polosLetras.length;
+                    idr.circuitos.forEach(n => incluirCircuito(circPorNum.get(n), idr.id, idr.grupo));
                 });
             }
 
@@ -686,6 +598,7 @@
 
         // Pólos do IDR: tetrapolar = N, R, S, T  |  bipolar = N, R
         function qdtPolosIdr(item) {
+            if (Array.isArray(item.polosLetras)) return item.polosLetras;
             return (item.polos === 4) ? ['N', 'R', 'S', 'T'] : ['N', 'R'];
         }
 
@@ -698,6 +611,8 @@
 
         function qdtFonteCircuito(item, idrIds, esquema) {
             if (esquema === 'TN-C') return 'geral';
+            if (item.fonteIdr) return idrIds.includes(item.fonteIdr) ? item.fonteIdr : 'geral';
+            if (item.grupoIdr === 'direto') return 'geral';
             const g = item.grupoIdr;
             if (g === 'geral') return idrIds.includes('idr_geral') ? 'idr_geral' : 'geral';
             if (g === 'social') return idrIds.includes('idr_grupo_1') ? 'idr_grupo_1' : 'geral';
@@ -715,7 +630,8 @@
             const idrs = itens.filter(i => i.tipo === 'idr');
             const idrIds = idrs.map(i => i.id);
             const barras = [{ id: 'pe', nome: esq === 'TN-C-S' ? 'Barra PE / BEP' : (esq === 'TT' ? 'Barra PE (haste local)' : 'Barra PE (Terra)'), tipo: 'PE' }];
-            idrs.forEach(i => barras.push({ id: 'n_' + i.id, nome: 'Neutro ' + (i.subnome || 'IDR'), tipo: 'N' }));
+            // cada IDR com pólo de neutro tem sua barra de neutro (IDR F+F de 220 V não tem)
+            idrs.forEach(i => { if (qdtPolosIdr(i).includes('N')) barras.push({ id: 'n_' + i.id, nome: 'Neutro ' + (i.subnome || 'IDR'), tipo: 'N' }); });
             const precisaDireto = idrs.length === 0 || itens.some(i => i.tipo === 'circuito' && qdtFonteCircuito(i, idrIds, esq) === 'geral');
             if (precisaDireto) barras.push({ id: 'n_direto', nome: 'Neutro direto (sem DR)', tipo: 'N' });
             return barras;
@@ -914,7 +830,8 @@
                         ${manopla('bg-blue-500', Math.min(90, L - 60))}
                     </div>
                     <span class="text-[12px] font-black text-white font-mono leading-none">${item.amperagem}</span>
-                    <span class="text-[7px] font-bold text-blue-300">IΔn 30 mA • ${item.subnome || ''}</span>`;
+                    <span class="text-[7px] font-bold text-blue-300">${item.sensibilidade || 'IΔn 30 mA'}${item.tipoDR ? ' • tipo ' + item.tipoDR : ''}</span>
+                    <span class="text-[6px] text-slate-400 font-mono truncate w-full px-0.5" title="${item.subnome || ''}">${item.subnome || ''}</span>`;
             } else if (item.tipo === 'circuito') {
                 const c = item.dados;
                 const isTue = c.tipo === 'TUE';
@@ -1180,7 +1097,7 @@
                 });
                 // Saída de neutro do IDR → sua barra de neutro exclusiva
                 const kN = polos.indexOf('N');
-                const bn = borneBarra('n_' + idr.item.id);
+                const bn = kN >= 0 ? borneBarra('n_' + idr.item.id) : null;
                 if (bn) fio(svg, rota(borne(idr, kN, 'bottom'), bn, 'R'), 'N', 'idr', 2.8, `Neutro protegido (${idr.item.subnome}) → barra de neutro`);
             });
 
@@ -1429,3 +1346,51 @@
         }
 
 
+
+        // ---------------------------------------------------------------
+        // MODELO COMERCIAL DO IDR (polos, corrente, sensibilidade e tipo)
+        // ---------------------------------------------------------------
+        function alterarModeloIdr(campo, valor) {
+            state.modeloIdr = Object.assign({ polos: 'auto', corrente: 'auto', sensibilidade: 30, tipo: 'AC' }, state.modeloIdr || {});
+            state.modeloIdr[campo] = (campo === 'sensibilidade' || (campo === 'corrente' && valor !== 'auto')) ? Number(valor) : valor;
+            // corrente fixa que não existe no novo número de polos volta para automática
+            if (campo === 'polos' && state.modeloIdr.corrente !== 'auto') {
+                const pol = valor === '2P' ? '2P' : '4P';
+                if (!NBR5410.IDR_CORRENTES_COMERCIAIS[pol].includes(state.modeloIdr.corrente)) state.modeloIdr.corrente = 'auto';
+            }
+            if (typeof atualizarTudo === 'function') atualizarTudo();
+            renderizarQuadroDIN(state.circuitosCalculados);
+        }
+
+        function atualizarPainelModeloIdr(plano) {
+            const m = Object.assign({ polos: 'auto', corrente: 'auto', sensibilidade: 30, tipo: 'AC' }, state.modeloIdr || {});
+            const selP = document.getElementById('selIdrPolos');
+            const selC = document.getElementById('selIdrCorrente');
+            const selS = document.getElementById('selIdrSensibilidade');
+            const selT = document.getElementById('selIdrTipo');
+            const polosEfetivos = (plano && plano.idrs[0] && plano.idrs[0].polos) || (m.polos === '2P' ? '2P' : '4P');
+            if (selP) selP.value = m.polos;
+            if (selC) {
+                const lista = NBR5410.IDR_CORRENTES_COMERCIAIS[polosEfetivos];
+                selC.innerHTML = '<option value="auto">Automática</option>' + lista.map(a => `<option value="${a}">${a} A</option>`).join('');
+                selC.value = String(m.corrente);
+            }
+            if (selS) selS.value = String(m.sensibilidade);
+            if (selT) selT.value = m.tipo;
+            const resumo = document.getElementById('txtResumoModeloIdr');
+            const alertas = document.getElementById('listaAlertasModeloIdr');
+            const desativado = !plano || !plano.idrs.length;
+            ['selIdrPolos', 'selIdrCorrente', 'selIdrSensibilidade', 'selIdrTipo'].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = desativado; });
+            if (resumo) {
+                if (desativado) {
+                    resumo.textContent = (state.esquemaAterramento === 'TN-C') ? 'Esquema TN-C: dispositivo DR não pode ser usado (NBR 5410 5.1.3.2.3).'
+                        : 'DDR individual: cada circuito tem disjuntor com DR próprio (RCBO), sem IDR no quadro.';
+                } else {
+                    const qtd = {};
+                    plano.idrs.forEach(i => { const k = `IDR ${i.polos === '4P' ? 'tetrapolar' : 'bipolar'} ${i.corrente} A ${i.sensibilidade} mA tipo ${i.tipo}`; qtd[k] = (qtd[k] || 0) + 1; });
+                    resumo.textContent = 'No quadro: ' + Object.entries(qtd).map(([k, n]) => `${n} × ${k}`).join(' + ')
+                        + '. Comerciais: bipolar 25/40/63/80/100 A; tetrapolar 25/40/63/80/100/125 A.';
+                }
+            }
+            if (alertas) alertas.innerHTML = (plano && plano.alertas || []).map(a => `<li>${escHtml(a)}</li>`).join('');
+        }

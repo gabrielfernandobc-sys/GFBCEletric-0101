@@ -804,6 +804,34 @@
                 mapa.polos = {};
                 circuitosFinais.forEach(c => { mapa.polos[c.num] = c.polos; });
                 state.unifilar = mapa;
+
+                // DR 30 mA obrigatório pelos ambientes que o circuito atende (NBR 5410 5.1.3.2.2):
+                // a) locais com banheira ou chuveiro (inclusive a iluminação); b)/c) tomadas em áreas
+                // externas ou que possam alimentar equipamentos no exterior (varanda, garagem...);
+                // d) tomadas de cozinha, copa, lavanderia, área de serviço e áreas molhadas.
+                // TUE: mantido sempre com DR (critério conservador do projeto).
+                const comodoPorId = new Map(state.comodos.map(c => [c.id, c]));
+                const pontoPorId = new Map(state.pontosEletricos.map(pt => [pt.id, pt]));
+                const ehExterno = n => /varanda|sacada|garag|extern|quintal|jardim|piscina|churrasq|gourmet|terra[çc]o|[áa]rea descoberta/i.test(n || '');
+                const temChuveiro = c => /banh|ducha/i.test(c.nome || '') ||
+                    state.pontosEletricos.some(pt => pt.comodoId === c.id && pt.tipo === 'TUE' && /chuveiro|banheira|hidromassagem|ducha/i.test(pt.nome || ''));
+                circuitosFinais.forEach(circ => {
+                    let obrig = circ.tipo === 'TUE';
+                    if (circ.tipo === 'Iluminação') {
+                        obrig = Object.keys(mapa.ilumPorComodo).some(id => mapa.ilumPorComodo[id] === circ.num && comodoPorId.has(isNaN(id) ? id : Number(id)) && temChuveiro(comodoPorId.get(isNaN(id) ? id : Number(id))));
+                    } else if (circ.tipo === 'TUG') {
+                        obrig = Object.keys(mapa.porPonto).some(id => {
+                            if (mapa.porPonto[id] !== circ.num) return false;
+                            const pt = pontoPorId.get(id) || pontoPorId.get(Number(id));
+                            const c = pt && comodoPorId.get(pt.comodoId);
+                            if (!c) return false;
+                            const classe = NBR5410.classificarAmbiente(c.nome);
+                            return classe === 'banheiro' || classe === 'cozinha_servico' || classe === 'varanda' || ehExterno(c.nome);
+                        });
+                    }
+                    circ.drObrigatorio = obrig;
+                    circ.idrTag = obrig ? 'IDR 30mA (Obrigatório)' : 'IDR 30mA (Geral)';
+                });
             }
 
             // Eletroduto do trecho compartilhado pelos circuitos agrupados (premissa do FCA)
@@ -960,10 +988,40 @@
             document.getElementById('lblMetragemTotalCaboAlim').innerText = `${totalMetrosAlimentador} m`;
             document.getElementById('lblFormulaCaboAlim').innerText = `${numCondutores} condutores × ${distAlimUsada}m`;
 
+            // Alimentador conforme a NBR 5410: Iz (B1, condutores carregados do sistema) ≥ disjuntor
+            // geral, PE pela Tabela 58 e queda total (alimentador + terminal) ≤ 5% — a seção da
+            // concessionária é mantida como mínimo
+            const quedaTerminalMax = circuitosFinais.reduce((m, c) => Math.max(m, Number(c.deltaVPct) || 0), 0);
+            const alimNBR = NBR5410.dimensionarAlimentador({
+                inDisjuntor: parseInt(disjGeral, 10) || 0,
+                secaoMinima: parseFloat(caboGeral) || 0,
+                sistema: sistemaUsado,
+                comprimento: distAlimUsada,
+                demandaKVA: calculoDemanda.demandaTotalkVA,
+                quedaTerminalMaxPct: quedaTerminalMax,
+                temperaturaAmbiente: obterParametrosNBR().temperaturaAmbiente
+            });
+            state.alimentadorNBR = alimNBR;
+            caboGeral = NBR5410.formatarSecao(alimNBR.secao).replace(/^(\d+) mm²$/, '$1.0 mm²');
+            document.getElementById('lblBitolaAlimExterna').innerText = caboGeral;
+            const notaAlim = document.getElementById('lblNotaAlimentadorNBR');
+            if (notaAlim) {
+                notaAlim.innerHTML = `Iz ${alimNBR.izCorrigida.toFixed(0)} A (B1, ${alimNBR.condutoresCarregados} carregados) • ΔV ${alimNBR.quedaPct.toFixed(1)}% (total ${alimNBR.quedaTotalPct.toFixed(1)}% ≤ 5%)`
+                    + (alimNBR.aumentouPorNorma ? ` • <span class="text-amber-400">maior que o da concessionária (${calculoDemanda.categoriaAtend.cabo})</span>` : '')
+                    + alimNBR.alertas.map(a => `<span class="block text-rose-400 mt-0.5">${escHtml(a)}</span>`).join('');
+            }
             document.getElementById('lblCaboGeral').innerText = caboGeral;
-            document.getElementById('lblTerraGeral').innerText = caboGeral;
+            document.getElementById('lblTerraGeral').innerText = NBR5410.formatarSecao(alimNBR.secaoPE).replace(/^(\d+) mm²$/, '$1.0 mm²');
             document.getElementById('lblDisjGeral').innerText = disjGeral;
-            document.getElementById('lblIdrGeral').innerText = `IDR ${disjGeral} / 30mA`;
+            // IDRs comerciais do quadro (mesmo planejamento usado no desenho do quadro e nos materiais)
+            state.planoIdr = NBR5410.planejarIdrs({
+                circuitos: circuitosFinais, sistema: sistemaUsado, configIdr: state.tipoConfigIdr || 'idr_geral',
+                esquema: state.esquemaAterramento || 'TN-S', inGeral: parseInt(disjGeral, 10) || 0, modelo: state.modeloIdr
+            });
+            const idrsPlano = state.planoIdr.idrs;
+            document.getElementById('lblIdrGeral').innerText = !idrsPlano.length
+                ? ((state.esquemaAterramento === 'TN-C') ? 'Sem DR (TN-C)' : 'DDR em cada circuito')
+                : `${idrsPlano.length > 1 ? idrsPlano.length + ' × ' : ''}IDR ${idrsPlano[0].polos} ${idrsPlano[0].corrente} A / ${idrsPlano[0].sensibilidade} mA`;
 
             // Quantitativo Consolidado de Materiais Avançado NBR 5410
             const materiaisDetalhados = calcularQuantitativoMateriaisCompleto(comodosParaCalcular, circuitosFinais, calculoDemanda);
