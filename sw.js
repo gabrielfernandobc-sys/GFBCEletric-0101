@@ -1,7 +1,7 @@
 // =========================================================================
 // SERVICE WORKER - PRO-ELÉTRICA CAD NBR 5410 (PWA OFFLINE / CACHE)
 // =========================================================================
-const CACHE_NAME = 'pro-eletrica-cad-v3.0';
+const CACHE_NAME = 'pro-eletrica-cad-v3.1';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -87,38 +87,40 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interceptação de Requisições: Stale-While-Revalidate para máxima agilidade e suporte offline
+// Interceptação de requisições:
+// - arquivos do próprio app (mesmo endereço): REDE PRIMEIRO, para uma atualização
+//   (git pull) aparecer já na primeira abertura; o cache só é usado sem conexão.
+//   (Antes era "cache primeiro": a primeira abertura depois de atualizar ainda
+//   mostrava a versão antiga.)
+// - bibliotecas de outros domínios (SheetJS): cache primeiro, atualizando em segundo plano.
 self.addEventListener('fetch', (event) => {
-  // Apenas métodos GET
   if (event.request.method !== 'GET') return;
-  // A API do servidor local (projetos salvos, status, preços) nunca é servida do cache
   const url = new URL(event.request.url);
+  // A API do servidor local (projetos salvos, status, pesquisa de preços) nunca é servida do cache
   if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
+  if (!event.request.url.startsWith('http')) return;
+
+  const guardar = (resp) => {
+    if (resp && (resp.status === 200 || resp.type === 'opaque')) {
+      const copia = resp.clone();
+      caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copia));
+    }
+    return resp;
+  };
+
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      fetch(event.request)
+        .then(guardar)
+        .catch(() => caches.match(event.request).then((r) => r || (event.request.mode === 'navigate' ? caches.match('./index.html') : undefined)))
+    );
+    return;
+  }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
-        .then((networkResponse) => {
-          // Se a resposta for válida, armazena no cache para uso offline posterior
-          // status 200 ou resposta "opaca" de CDN (scripts/CSS de outro domínio têm status 0)
-          if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              // Não armazena chrome-extension ou esquemas desconhecidos
-              if (event.request.url.startsWith('http')) {
-                cache.put(event.request, responseToCache);
-              }
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          // Se estiver sem internet, retorna o que estiver em cache
-          return cachedResponse;
-        });
-
-      // Retorna o cache se disponível para carregamento instantâneo, ou aguarda a rede
-      return cachedResponse || fetchPromise;
+    caches.match(event.request).then((emCache) => {
+      const daRede = fetch(event.request).then(guardar).catch(() => emCache);
+      return emCache || daRede;
     })
   );
 });

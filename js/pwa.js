@@ -363,8 +363,14 @@
             iniciarMonitorTelemetria();
             atualizarSeletorCircuitosLancamento();
 
+            // Versão nova instalada enquanto o app estava aberto: avisa (sem recarregar
+            // sozinho, para não perder uma edição em andamento)
+            const haviaVersaoAnterior = !!navigator.serviceWorker.controller;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (haviaVersaoAnterior) mostrarAvisoNovaVersao();
+            });
             navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('[PWA] Service Worker ativo:', reg.scope))
+                .then(reg => { console.log('[PWA] Service Worker ativo:', reg.scope); reg.update().catch(() => {}); })
                 .catch(err => console.log('[PWA] Erro ao registrar Service Worker:', err));
         });
     }
@@ -413,4 +419,19 @@
                 alert('Para instalar o aplicativo no seu dispositivo: No menu do navegador (três pontos ⋮), selecione "Instalar PRO-ELÉTRICA" ou "Adicionar à tela inicial".');
             }
         }
+    }
+
+    function mostrarAvisoNovaVersao() {
+        if (document.getElementById('avisoNovaVersao')) return;
+        const aviso = document.createElement('div');
+        aviso.id = 'avisoNovaVersao';
+        aviso.setAttribute('role', 'status');
+        aviso.className = 'no-print fixed top-3 left-1/2 -translate-x-1/2 z-[70] bg-slate-900 border border-sky-500 text-white text-xs rounded-2xl shadow-2xl px-4 py-2.5 flex items-center gap-3 max-w-[92vw]';
+        aviso.innerHTML = '<i class="fa-solid fa-arrows-rotate text-sky-400"></i><span>Nova versão do app instalada.</span>'
+            + '<button type="button" class="px-3 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 font-bold">Recarregar</button>'
+            + '<button type="button" class="text-slate-400 hover:text-white" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>';
+        const [btnRecarregar, btnFechar] = aviso.querySelectorAll('button');
+        btnRecarregar.onclick = () => location.reload();
+        btnFechar.onclick = () => aviso.remove();
+        document.body.appendChild(aviso);
     }
