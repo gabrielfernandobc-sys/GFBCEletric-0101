@@ -46,8 +46,11 @@
         // =========================================================================
         function ajustarZoomCad(fator, centroX = null, centroY = null) {
             const antigaEscala = state.escala || 35.0;
-            // Limites de escala segura: 15px/m até 90px/m
-            const novaEscala = Math.max(15, Math.min(90, Math.round(antigaEscala * fator * 10) / 10));
+            // Limites: até 90 px/m ao aproximar; ao afastar, 15 px/m ou menos se for
+            // preciso para ver o lote inteiro (chácaras e lotes grandes no celular)
+            const caber = escalaParaCaberNaTela();
+            const escalaMinima = Math.max(2, Math.min(15, caber ? caber * 0.85 : 15));
+            const novaEscala = Math.max(escalaMinima, Math.min(90, Math.round(antigaEscala * fator * 100) / 100));
             const ratio = novaEscala / antigaEscala;
 
             if (Math.abs(ratio - 1.0) < 0.001) return;
@@ -281,6 +284,67 @@
             }
         }
 
+        // Retângulo (px) ocupado pelo lote, cômodos do andar e quadro na escala atual
+        function caixaConteudoProjeto() {
+
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+
+            // 1. Considera o terreno (lote) se ativo
+            if (state.terreno && state.terreno.ativo) {
+                const tw = (state.terreno.largura || 12.0) * (state.escala || 35.0);
+                const th = (state.terreno.comprimento || 25.0) * (state.escala || 35.0);
+                const tx = state.terreno.x !== undefined ? state.terreno.x : 40;
+                const ty = state.terreno.y !== undefined ? state.terreno.y : 40;
+                minX = Math.min(minX, tx);
+                minY = Math.min(minY, ty);
+                maxX = Math.max(maxX, tx + tw);
+                maxY = Math.max(maxY, ty + th);
+            }
+
+            // 2. Considera os cômodos
+            const comodosAndar = (state.comodos || []).filter(c => c.pavimentoId === state.pavimentoAtivoId);
+            if (comodosAndar.length > 0) {
+                comodosAndar.forEach(c => {
+                    const cw = c.largura * (state.escala || 35.0);
+                    const ch = c.comprimento * (state.escala || 35.0);
+                    minX = Math.min(minX, c.x);
+                    minY = Math.min(minY, c.y);
+                    maxX = Math.max(maxX, c.x + cw);
+                    maxY = Math.max(maxY, c.y + ch);
+                });
+            }
+
+            // 3. Considera QDT e Prumada
+            if (state.qdtPos) {
+                minX = Math.min(minX, state.qdtPos.x);
+                minY = Math.min(minY, state.qdtPos.y);
+                maxX = Math.max(maxX, state.qdtPos.x + (state.qdtPos.w || 40));
+                maxY = Math.max(maxY, state.qdtPos.y + (state.qdtPos.h || 26));
+            }
+
+            if (minX === Infinity || maxX === -Infinity) return null;
+            return { minX, minY, maxX, maxY };
+        }
+
+        /**
+         * Escala (px/m) em que o projeto inteiro cabe no canvas visível (com margem).
+         * Usada como limite do zoom mínimo e para enquadrar a planta no celular.
+         */
+        function escalaParaCaberNaTela(canvasId) {
+            const ids = canvasId ? [canvasId] : ['cadCanvas', 'instalacoesCanvas'];
+            const canvas = ids.map(id => document.getElementById(id)).find(c => c && c.offsetParent) || document.getElementById(ids[0]);
+            const cx = caixaConteudoProjeto();
+            if (!canvas || !cx) return null;
+            const w = canvas.width, h = canvas.height;
+            if (w < 100 || h < 100) return null;
+            const margem = 24;
+            const larg = Math.max(1, cx.maxX - cx.minX), alt = Math.max(1, cx.maxY - cx.minY);
+            // altura: desconta também a barra flutuante de zoom sobre o canvas
+            const fator = Math.min((w - 2 * margem) / larg, (h - 2 * margem - 56) / alt);
+            return (state.escala || 35) * fator;
+        }
+
         function centralizarProjetoNoCanvas(canvasId) {
             const canvas = document.getElementById(canvasId);
             if (!canvas) return;
@@ -338,12 +402,19 @@
         }
 
         function resetarZoomCad() {
-            if (state.escala && state.escala !== 35) {
-                const fator = 35.0 / state.escala;
-                ajustarZoomCad(fator);
+            // computador: escala padrão (35 px/m); celular/tablet: enquadra o projeto na tela
+            let alvo = 35;
+            if (window.innerWidth < 1024) {
+                const caber = escalaParaCaberNaTela();
+                if (caber) alvo = Math.max(2, Math.min(35, caber));
             }
-            centralizarProjetoNoCanvas('cadCanvas');
-            centralizarProjetoNoCanvas('instalacoesCanvas');
+            if (state.escala && Math.abs(state.escala - alvo) > 0.01) {
+                ajustarZoomCad(alvo / state.escala);
+            }
+            // centraliza no canvas visível (as duas abas compartilham as coordenadas; o
+            // canvas da aba escondida tem outro tamanho e deslocava o projeto para fora)
+            const visivel = ['cadCanvas', 'instalacoesCanvas'].find(id => document.getElementById(id)?.offsetParent) || 'cadCanvas';
+            centralizarProjetoNoCanvas(visivel);
             desenharCAD();
             desenharInstalacoes();
         }

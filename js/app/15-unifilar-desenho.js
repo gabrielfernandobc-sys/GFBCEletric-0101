@@ -285,3 +285,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', atualizarControlesEstiloInstalacoes);
+
+        // Celular/tablet: ao abrir, enquadra o projeto na tela se ele não couber
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.innerWidth >= 1024 || typeof escalaParaCaberNaTela !== 'function') return;
+                const caber = escalaParaCaberNaTela('cadCanvas');
+                if (caber && caber < (state.escala || 35) * 0.98) resetarZoomCad();
+            }, 350);
+        });
