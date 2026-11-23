@@ -1471,6 +1471,35 @@
                                     <span class="text-[8px] text-slate-400 block leading-tight">RCBO por circuito</span>
                                 </button>
                             </div>
+                            <!-- MODELO COMERCIAL DO IDR (opções do mercado brasileiro, NBR NM 61008) -->
+                            <div id="painelModeloIdr" class="mt-2 p-2 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1.5">
+                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wide space-y-0.5">Polos
+                                        <select id="selIdrPolos" onchange="alterarModeloIdr('polos', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-blue-400 w-full">
+                                            <option value="auto">Automático</option>
+                                            <option value="2P">Bipolar (2P)</option>
+                                            <option value="4P">Tetrapolar (4P)</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wide space-y-0.5">Corrente
+                                        <select id="selIdrCorrente" onchange="alterarModeloIdr('corrente', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-blue-400 w-full"></select>
+                                    </label>
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wide space-y-0.5">Sensibilidade
+                                        <select id="selIdrSensibilidade" onchange="alterarModeloIdr('sensibilidade', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-blue-400 w-full">
+                                            <option value="30">30 mA (pessoas)</option>
+                                            <option value="300">300 mA (incêndio)</option>
+                                        </select>
+                                    </label>
+                                    <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wide space-y-0.5">Tipo
+                                        <select id="selIdrTipo" onchange="alterarModeloIdr('tipo', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-blue-400 w-full">
+                                            <option value="AC">AC (padrão)</option>
+                                            <option value="A">A (eletrônicos / inverter)</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <p id="txtResumoModeloIdr" class="text-[10px] text-slate-400 leading-snug"></p>
+                                <ul id="listaAlertasModeloIdr" class="text-[10px] text-amber-300 space-y-0.5 list-disc pl-4"></ul>
+                            </div>
                         </div>
                     </div>
 

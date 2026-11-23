@@ -963,7 +963,15 @@
             document.getElementById('lblCaboGeral').innerText = caboGeral;
             document.getElementById('lblTerraGeral').innerText = caboGeral;
             document.getElementById('lblDisjGeral').innerText = disjGeral;
-            document.getElementById('lblIdrGeral').innerText = `IDR ${disjGeral} / 30mA`;
+            // IDRs comerciais do quadro (mesmo planejamento usado no desenho do quadro e nos materiais)
+            state.planoIdr = NBR5410.planejarIdrs({
+                circuitos: circuitosFinais, sistema: sistemaUsado, configIdr: state.tipoConfigIdr || 'idr_geral',
+                esquema: state.esquemaAterramento || 'TN-S', inGeral: parseInt(disjGeral, 10) || 0, modelo: state.modeloIdr
+            });
+            const idrsPlano = state.planoIdr.idrs;
+            document.getElementById('lblIdrGeral').innerText = !idrsPlano.length
+                ? ((state.esquemaAterramento === 'TN-C') ? 'Sem DR (TN-C)' : 'DDR em cada circuito')
+                : `${idrsPlano.length > 1 ? idrsPlano.length + ' × ' : ''}IDR ${idrsPlano[0].polos} ${idrsPlano[0].corrente} A / ${idrsPlano[0].sensibilidade} mA`;
 
             // Quantitativo Consolidado de Materiais Avançado NBR 5410
             const materiaisDetalhados = calcularQuantitativoMateriaisCompleto(comodosParaCalcular, circuitosFinais, calculoDemanda);

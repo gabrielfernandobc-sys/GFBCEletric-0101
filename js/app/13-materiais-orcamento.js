@@ -107,6 +107,7 @@
                 'disjGeral3p': { unit: 75.00, customizado: false, fonte: 'Tabela de referência', refInternet: { min: 68.00, medio: 82.00, max: 99.00, fonte: 'SINAPI / CEF', url: 'https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/' } },
                 'qdt': { unit: 145.00, customizado: false, fonte: 'Tabela de referência', refInternet: { min: 125.00, medio: 158.00, max: 198.00, fonte: 'SINAPI / Tigre / Steck', url: 'https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/' } },
                 'idr': { unit: 95.00, customizado: false, fonte: 'Mercado DIN 30mA', refInternet: { min: 89.00, medio: 105.00, max: 135.00, fonte: 'SINAPI / Schneider / Steck', url: 'https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/' } },
+                'idr4p': { unit: 185.00, customizado: false, fonte: 'Tabela de referência', refInternet: { min: 150.00, medio: 195.00, max: 260.00, fonte: 'Leroy Merlin / Steck / Schneider', url: 'https://www.leroymerlin.com.br/materiais-eletricos' } },
                 'dps': { unit: 38.00, customizado: false, fonte: 'Mercado DIN Classe II', refInternet: { min: 34.00, medio: 42.00, max: 54.00, fonte: 'SINAPI / Clamper', url: 'https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/' } },
                 'pente12': { unit: 28.00, customizado: false, fonte: 'Mercado DIN Pente', refInternet: { min: 24.00, medio: 31.00, max: 38.00, fonte: 'Loja Elétrica', url: 'https://www.lojaeletrica.com.br/' } },
                 'pente18': { unit: 38.00, customizado: false, fonte: 'Mercado DIN Pente', refInternet: { min: 32.00, medio: 41.50, max: 49.00, fonte: 'Loja Elétrica', url: 'https://www.lojaeletrica.com.br/' } },
@@ -498,7 +499,8 @@
                 { id: 'disjGeral2p', nome: 'Disjuntor Geral Bipolar (2P)', norma: 'NBR IEC 60898', padrao: 48.00 },
                 { id: 'disjGeral3p', nome: 'Disjuntor Geral Tripolar (3P)', norma: 'NBR IEC 60898', padrao: 75.00 },
                 { id: 'qdt', nome: 'Quadro de Distribuição QDT de Embutir', norma: 'NBR IEC 60670', padrao: 145.00 },
-                { id: 'idr', nome: 'Interruptor Diferencial Residual (IDR) 30mA', norma: 'NBR IEC 61008', padrao: 95.00 },
+                { id: 'idr', nome: 'IDR Bipolar (2P) 30mA', norma: 'NBR NM 61008', padrao: 95.00 },
+                { id: 'idr4p', nome: 'IDR Tetrapolar (4P) 30mA', norma: 'NBR NM 61008', padrao: 185.00 },
                 { id: 'dps', nome: 'Dispositivo Proteção Contra Surtos (DPS) 275V', norma: 'NBR IEC 61643-1', padrao: 38.00 },
                 { id: 'pente18', nome: 'Barramento Tipo Pente DIN (18 Polos)', norma: 'NBR 5410', padrao: 38.00 }
             ];
@@ -1504,14 +1506,26 @@
                 `Acomodação dos disjuntores, IDR e DPS do imóvel (${qtdQuadrosDesc})`
             );
 
-            // IDR (Interruptor Diferencial Residual)
-            addItem(
-                'Quadros & Proteção DIN', 'protecao',
-                `Interruptor Diferencial Residual (IDR) ${sistemaUsado === 'trifasico' ? 'Tetrapolar 63A' : 'Bipolar 40A/63A'} - Sensibilidade 30 mA`,
-                'NBR IEC 61008 / NBR 5410 Item 5.1.3.2.2 (Proteção vital contra choques elétricos em áreas molhadas)',
-                numQdts, 'un', 95.00,
-                'Desarme automático instantâneo em correntes de fuga para terra superiores a 30mA'
-            );
+            // IDR (Interruptor Diferencial Residual): modelos e quantidades do quadro (state.planoIdr)
+            const planoIdrMat = state.planoIdr || (typeof NBR5410 !== 'undefined' ? NBR5410.planejarIdrs({ circuitos: circuitosFinais || [], sistema: sistemaUsado, configIdr: state.tipoConfigIdr || 'idr_geral', esquema: state.esquemaAterramento || 'TN-S', inGeral: 0, modelo: state.modeloIdr }) : { idrs: [] });
+            const modelosIdr = {};
+            planoIdrMat.idrs.forEach(i => {
+                const k = `${i.polos}|${i.corrente}|${i.sensibilidade}|${i.tipo}`;
+                modelosIdr[k] = modelosIdr[k] || { i, qtd: 0 };
+                modelosIdr[k].qtd++;
+            });
+            Object.values(modelosIdr).forEach(({ i, qtd }) => {
+                const ehTetra = i.polos === '4P';
+                addItem(
+                    'Quadros & Proteção DIN', 'protecao',
+                    `Interruptor Diferencial Residual (IDR) ${ehTetra ? 'Tetrapolar' : 'Bipolar'} ${i.corrente} A - ${i.sensibilidade} mA - Tipo ${i.tipo}`,
+                    'NBR NM 61008 / NBR 5410 Item 5.1.3.2.2 (proteção complementar contra choques)',
+                    qtd * numQdts, 'un',
+                    (typeof obterPrecoMaterial === 'function') ? obterPrecoMaterial('protecao', ehTetra ? 'idr4p' : 'idr', ehTetra ? 185.00 : 95.00) : (ehTetra ? 185.00 : 95.00),
+                    `Desarme em fuga para terra acima de ${i.sensibilidade} mA • ${ehTetra ? '4 módulos' : '2 módulos'} DIN`,
+                    0, ehTetra ? 'idr4p' : 'idr'
+                );
+            });
 
             // DPS (Dispositivo de Proteção contra Surtos)
             const numDPS = (sistemaUsado === 'trifasico' ? 4 : (sistemaUsado === 'bifasico' ? 3 : 2)) * numQdts;

@@ -908,6 +908,116 @@
     }
 
     // =========================================================================
+    // 6. DISPOSITIVOS DR (IDR) — MODELOS COMERCIAIS NO BRASIL (NBR NM 61008)
+    // =========================================================================
+
+    // Correntes nominais de IDR encontradas no mercado nacional (Steck, Schneider,
+    // WEG, Siemens, ABB, Tramontina...). Bipolar (2P) e tetrapolar (4P).
+    const IDR_CORRENTES_COMERCIAIS = Object.freeze({
+        '2P': [25, 40, 63, 80, 100],
+        '4P': [25, 40, 63, 80, 100, 125]
+    });
+    const IDR_SENSIBILIDADES_MA = [30, 300];
+    // AC: correntes residuais alternadas; A: também contínuas pulsantes (eletrônica,
+    // inversores de ar-condicionado, carregadores) — recomendado nesses casos.
+    const IDR_TIPOS = ['AC', 'A'];
+
+    /** Menor corrente comercial de IDR ≥ a corrente do dispositivo a montante (null se não houver). */
+    function correnteIdrComercial(inMontante, polos) {
+        const lista = IDR_CORRENTES_COMERCIAIS[polos === '2P' ? '2P' : '4P'];
+        const alvo = Number(inMontante) || 0;
+        const c = lista.find(v => v >= alvo);
+        return c === undefined ? null : c;
+    }
+
+    /** Circuito de área molhada / uso específico (cozinha, banheiro, serviço, TUE). */
+    function ehCircuitoAreaMolhada(c) {
+        const n = String((c && c.nome) || '').toLowerCase();
+        return !!c && (c.tipo === 'TUE' || n.includes('cozinha') || n.includes('banheiro') || n.includes('serviço'));
+    }
+
+    /** Fases de um circuito a partir do campo `fase` ("R", "R + S"). */
+    function fasesDoCircuito(c) {
+        const f = String((c && c.fase) || '').toUpperCase().match(/[RST]/g) || [];
+        if (c && c.polos === '2P') return f.length >= 2 ? f.slice(0, 2) : ['R', 'S'];
+        return f.length ? [f[0]] : ['R'];
+    }
+
+    /**
+     * IDRs do quadro conforme a configuração escolhida.
+     * @param {Object} p
+     * @param {Array}  p.circuitos     circuitos numerados (com fase e polos)
+     * @param {string} p.sistema       'monofasico' | 'bifasico' | 'trifasico'
+     * @param {string} p.configIdr     'idr_geral' | 'idr_grupos' | 'idr_parcial' | 'ddr_individual'
+     * @param {string} p.esquema       esquema de aterramento ('TN-C' não admite DR)
+     * @param {number} p.inGeral       corrente do disjuntor geral (A)
+     * @param {Object} p.modelo        { polos: 'auto'|'2P'|'4P', corrente: 'auto'|número, sensibilidade: 30|300, tipo: 'AC'|'A' }
+     * @returns {{idrs: Array<{id, grupo, nome, polosLetras, polos, corrente, sensibilidade, tipo, circuitos:number[]}>,
+     *            direto: number[], alertas: string[]}}
+     */
+    function planejarIdrs(p) {
+        const modelo = Object.assign({ polos: 'auto', corrente: 'auto', sensibilidade: 30, tipo: 'AC' }, p.modelo || {});
+        const sist = normalizarSistema(p.sistema);
+        const circuitos = p.circuitos || [];
+        const alertas = [];
+        if (p.esquema === 'TN-C' || p.configIdr === 'ddr_individual') {
+            return { idrs: [], direto: circuitos.map(c => c.num), alertas };
+        }
+        let grupos;
+        const molhados = circuitos.filter(ehCircuitoAreaMolhada), secos = circuitos.filter(c => !ehCircuitoAreaMolhada(c));
+        if (p.configIdr === 'idr_grupos') grupos = [{ grupo: 'social', id: 'idr_grupo_1', rotulo: 'Social / Ilum.', circs: secos }, { grupo: 'molhadas', id: 'idr_grupo_2', rotulo: 'Áreas Molhadas', circs: molhados }];
+        else if (p.configIdr === 'idr_parcial') grupos = [{ grupo: 'molhadas', id: 'idr_parcial', rotulo: 'Áreas Molhadas', circs: molhados }];
+        else grupos = [{ grupo: 'geral', id: 'idr_geral', rotulo: 'Geral', circs: circuitos }];
+        const direto = p.configIdr === 'idr_parcial' ? secos.map(c => c.num) : [];
+
+        const polos = modelo.polos === 'auto' ? (sist === 'monofasico' ? '2P' : '4P') : modelo.polos;
+        const fasesSistema = sist === 'trifasico' ? ['R', 'S', 'T'] : (sist === 'bifasico' ? ['R', 'S'] : ['R']);
+        const inGeral = Number(p.inGeral) || 0;
+        let corrente = modelo.corrente === 'auto' ? correnteIdrComercial(inGeral, polos) : Number(modelo.corrente);
+        const lista = IDR_CORRENTES_COMERCIAIS[polos];
+        if (corrente === null) {
+            corrente = lista[lista.length - 1];
+            alertas.push(`Disjuntor geral de ${inGeral} A acima do maior IDR ${polos} comercial (${corrente} A): divida os circuitos em mais IDRs, cada um protegido por disjuntor de até ${corrente} A.`);
+        } else if (corrente < inGeral) {
+            alertas.push(`IDR de ${corrente} A abaixo do disjuntor geral (${inGeral} A): o IDR não protege contra sobrecarga; use ${correnteIdrComercial(inGeral, polos) || lista[lista.length - 1]} A ou um disjuntor de até ${corrente} A antes dele.`);
+        }
+        if (polos === '4P' && sist === 'monofasico') alertas.push('Sistema monofásico: o IDR tetrapolar funciona, mas o bipolar (F+N) atende e ocupa 2 módulos a menos.');
+        if (Number(modelo.sensibilidade) !== 30 && grupos.some(g => g.circs.length)) {
+            alertas.push(`IΔn de ${modelo.sensibilidade} mA não serve como proteção complementar contra choque: a NBR 5410 (5.1.3.2.2) exige 30 mA em áreas molhadas, tomadas internas e externas.`);
+        }
+
+        const idrs = [];
+        grupos.forEach(g => {
+            if (!g.circs.length && p.configIdr !== 'idr_geral') return;
+            const base = { grupo: g.grupo, polos, corrente, sensibilidade: Number(modelo.sensibilidade) || 30, tipo: modelo.tipo || 'AC' };
+            if (polos === '4P' || sist === 'monofasico') {
+                const letras = polos === '4P' ? ['N', 'R', 'S', 'T'] : ['N', 'R'];
+                idrs.push(Object.assign({}, base, { id: g.id, nome: g.rotulo, polosLetras: letras, circuitos: g.circs.map(c => c.num) }));
+                return;
+            }
+            // Bipolar em sistema com 2 ou 3 fases: um IDR por fase (F+N) e um por par de
+            // fases para os circuitos de 220 V entre fases (F+F)
+            const porChave = new Map();
+            g.circs.forEach(c => {
+                const fs = fasesDoCircuito(c);
+                const chave = c.polos === '2P' ? fs.slice().sort().join('+') : fs[0];
+                if (!porChave.has(chave)) porChave.set(chave, []);
+                porChave.get(chave).push(c.num);
+            });
+            if (!porChave.size) fasesSistema.forEach(f => porChave.set(f, []));
+            [...porChave.keys()].sort((a, b) => (a.length - b.length) || a.localeCompare(b)).forEach(chave => {
+                const letras = chave.includes('+') ? chave.split('+') : ['N', chave];
+                idrs.push(Object.assign({}, base, {
+                    id: `${g.id}_${chave.replace('+', '')}`,
+                    nome: `${g.rotulo} ${chave.includes('+') ? chave.replace('+', '+') + ' (220 V)' : chave + '+N'}`,
+                    polosLetras: letras, circuitos: porChave.get(chave)
+                }));
+            });
+        });
+        return { idrs, direto, alertas };
+    }
+
+    // =========================================================================
     // API PÚBLICA
     // =========================================================================
     return Object.freeze({
@@ -928,7 +1038,13 @@
         LIMITE_POT_TUG_VA,
         FATOR_POTENCIA_RESIDENCIAL,
         CONCESSIONARIAS,
+        IDR_CORRENTES_COMERCIAIS,
+        IDR_SENSIBILIDADES_MA,
+        IDR_TIPOS,
         // funções
+        correnteIdrComercial,
+        ehCircuitoAreaMolhada,
+        planejarIdrs,
         izMetodoB1,
         fatorAgrupamento,
         fatorTemperatura,
