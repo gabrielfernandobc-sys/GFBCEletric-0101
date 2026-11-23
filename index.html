@@ -38,6 +38,10 @@
     <script src="js/nbr5410.js"></script>
     <!-- Importador de plantas DXF (geometria em metros e reconhecimento de cômodos) -->
     <script src="js/importador-dxf.js"></script>
+    <!-- Pesquisa de preços dos materiais na internet (consultas, conversão rolo → metro, mediana) -->
+    <script src="js/pesquisa-precos.js"></script>
+    <!-- Diagrama unifilar NBR 5444 na aba Instalações (circuito de cada ponto, condutores por eletroduto) -->
+    <script src="js/unifilar.js"></script>
     <link rel="stylesheet" href="css/app.css">
 </head>
 <body data-aba="planta" class="theme-woca-dark bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
@@ -201,9 +205,11 @@
                     </div>
                 </div>
                 <div class="h-6 w-px bg-slate-800 mx-1"></div>
-                <div class="flex items-center gap-1.5">
-                    <input type="text" id="inputNomeProjetoHeader" value="chácara" title="Clique para editar o nome do projeto" class="border border-slate-700 hover:border-slate-600 focus:border-amber-500 rounded-xl px-3 py-1 text-xs font-bold text-slate-100 bg-slate-950 shadow-inner w-36 sm:w-48 outline-none transition focus:ring-1 focus:ring-amber-400" onchange="atualizarNomeProjeto(this.value)">
-                </div>
+                <label class="group relative flex items-center gap-1.5" title="Clique para editar o nome do projeto">
+                    <span class="sr-only">Nome do projeto</span>
+                    <input type="text" id="inputNomeProjetoHeader" value="chácara" class="border border-transparent group-hover:border-slate-700 focus:border-amber-500 rounded-lg pl-2 pr-7 py-1 text-base font-black tracking-tight text-white bg-transparent focus:bg-slate-950 w-44 lg:w-64 outline-none transition focus:ring-1 focus:ring-amber-400 truncate" onchange="atualizarNomeProjeto(this.value)">
+                    <i class="fa-solid fa-pen absolute right-2 text-[10px] text-slate-500 group-hover:text-amber-400 pointer-events-none"></i>
+                </label>
                 <span id="indicadorStatusSalvamento" class="hidden xl:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
                     <i class="fa-solid fa-circle-check text-emerald-400"></i> <span id="txtStatusSalvamento">Sincronizado na pasta</span>
                 </span>
@@ -211,35 +217,55 @@
 
             <!-- AÇÕES GLOBAIS DO PROJETO (SEM REPETIÇÃO) -->
             <div class="flex items-center gap-1.5">
-                <!-- GRUPO: ARQUIVOS & DOCUMENTAÇÃO -->
-                <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                    <button onclick="salvarPontoRapido(); salvarProjetoNaPastaServidor();" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5" title="Salvar Projeto (Ctrl+S)">
-                        <i class="fa-solid fa-floppy-disk text-amber-400"></i> <span class="hidden md:inline">Salvar</span>
+                <!-- AÇÃO PRINCIPAL + MENU ARQUIVO -->
+                <button onclick="salvarPontoRapido(); salvarProjetoNaPastaServidor();" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 transition flex items-center gap-1.5 active:scale-95" title="Salvar Projeto (Ctrl+S)">
+                    <i class="fa-solid fa-floppy-disk"></i> <span>Salvar</span>
+                </button>
+                <div class="relative" id="menuArquivoWrapper">
+                    <button type="button" id="btnMenuArquivo" onclick="alternarMenuArquivo(event)" aria-haspopup="menu" aria-expanded="false" aria-controls="menuArquivo" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-950 border border-slate-800 text-slate-200 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-folder text-sky-400"></i> <span>Arquivo</span> <i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>
                     </button>
-                    <button onclick="abrirModalImpressaoPDF()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5" title="Exportar Pranchas ABNT em PDF">
-                        <i class="fa-solid fa-file-pdf text-rose-500"></i> <span class="hidden md:inline">PDF</span>
-                    </button>
-                    <button onclick="abrirModalImportar()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition flex items-center gap-1.5" title="Importar ou Exportar DWG/DXF/JSON">
-                        <i class="fa-solid fa-file-import text-sky-400"></i> <span class="hidden md:inline">Importar/Exportar</span>
-                    </button>
-                    <button onclick="duplicarProjetoAtual()" class="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Duplicar Projeto">
-                        <i class="fa-solid fa-clone"></i>
-                    </button>
-                    <button onclick="abrirModalMemoriaDemanda()" class="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition" title="Memória de Demanda NBR 5410">
-                        <i class="fa-solid fa-calculator text-amber-400"></i>
-                    </button>
+                    <div id="menuArquivo" role="menu" aria-labelledby="btnMenuArquivo" class="hidden absolute right-0 top-full mt-1.5 w-64 z-50 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5">
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalNovoProjeto()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-circle-plus text-emerald-400 w-4 text-center"></i><span class="flex-1">Novo projeto</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalGerenciarProjetos()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-folder-open text-amber-400 w-4 text-center"></i><span class="flex-1">Abrir / histórico de versões</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); duplicarProjetoAtual()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-clone text-slate-400 w-4 text-center"></i><span class="flex-1">Duplicar projeto</span>
+                        </button>
+                        <div class="my-1 border-t border-slate-800" role="separator"></div>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalImportar()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-import text-sky-400 w-4 text-center"></i><span class="flex-1">Importar planta (DXF / IFC / JSON)</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); trocarAba('arquivos')" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-box-archive text-sky-400 w-4 text-center"></i><span class="flex-1">Central de arquivos</span>
+                        </button>
+                        <div class="my-1 border-t border-slate-800" role="separator"></div>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalImpressaoPDF()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-pdf text-rose-400 w-4 text-center"></i><span class="flex-1">Imprimir pranchas / PDF</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); exportarParaExcel()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-file-excel text-emerald-400 w-4 text-center"></i><span class="flex-1">Exportar lista Excel (.xlsx)</span>
+                        </button>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); abrirModalMemoriaDemanda()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-calculator text-amber-400 w-4 text-center"></i><span class="flex-1">Memória de cálculo da demanda</span>
+                        </button>
+                        <div class="my-1 border-t border-slate-800" role="separator"></div>
+                        <button type="button" role="menuitem" onclick="fecharMenuArquivo(); limparProjetoConfirmacao()" class="w-full px-3 py-2 rounded-lg text-left text-xs text-slate-200 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 transition">
+                            <i class="fa-solid fa-trash-can text-rose-400 w-4 text-center"></i><span class="flex-1">Limpar projeto...</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- GRUPO: HISTÓRICO (DESFAZER / REFAZER / LIMPAR) -->
+                <!-- GRUPO: DESFAZER / REFAZER -->
                 <div class="flex items-center gap-0.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
                     <button onclick="desfazerAcao()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs" title="Desfazer (Ctrl+Z)">
                         <i class="fa-solid fa-arrow-rotate-left"></i>
                     </button>
                     <button onclick="refazerAcao()" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition text-xs" title="Refazer (Ctrl+Y)">
                         <i class="fa-solid fa-arrow-rotate-right"></i>
-                    </button>
-                    <button onclick="limparProjetoConfirmacao()" class="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-slate-800 transition text-xs" title="Limpar Projeto">
-                        <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
 
@@ -291,10 +317,10 @@
 
         <!-- ABA 1: PLANTA BAIXA & CAD 2D -->
         <div id="tab-planta" class="tab-content active space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div id="gridPlanta" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 
                 <!-- PAINEL DE CONTROLE DE CÔMODOS / GESTÃO DO ANDAR -->
-                <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-1 space-y-4 text-xs">
+                <div id="painelLateralPlanta" class="bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-1 space-y-4 text-xs">
                     <!-- BOTÕES DE AÇÃO PRINCIPAIS -->
                     <div class="space-y-2">
                         <button onclick="abrirModalNovoComodo()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-2.5 px-4 rounded-xl transition flex justify-center items-center gap-2 shadow-lg shadow-amber-500/20 text-xs">
@@ -381,11 +407,14 @@
                 </div>
 
                 <!-- ÁREA DO CANVAS CAD 2D -->
-                <div class="mob-primeiro bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-3 space-y-3">
+                <div id="painelPrincipalPlanta" class="mob-primeiro bg-slate-900 p-5 rounded-2xl border border-slate-800 lg:col-span-3 space-y-3">
                     <div class="flex flex-col gap-2.5 text-xs pb-1">
                         <!-- BARRA SUPERIOR: INDICADOR DE PAVIMENTO E SELETOR -->
                         <div class="mob-trilho flex flex-wrap items-center justify-between gap-2">
                             <div class="mob-conteudo mob-wrap flex items-center gap-2">
+                                <button type="button" id="btnRecolherPainelPlanta" onclick="alternarPainelLateralPlanta()" aria-controls="painelLateralPlanta" aria-expanded="true" class="hidden lg:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-600 transition" title="Recolher / mostrar o painel lateral (cômodos e terreno)">
+                                    <i class="fa-solid fa-angles-left text-[10px]"></i><span class="text-[11px] font-bold">Painel</span>
+                                </button>
                                 <span id="badgeIndicadorPavimento" class="mob-ocultar bg-sky-500/20 text-sky-400 border border-sky-500/40 px-2.5 py-1 rounded-lg font-bold text-xs flex items-center gap-1.5">
                                     🏢 PAVIMENTO TÉRREO
                                 </span>
@@ -420,10 +449,11 @@
                             </div>
                         </div>
 
-                        <!-- BARRA DE FERRAMENTAS CAD DA PLANTA BAIXA -->
-                        <div class="mob-trilho flex flex-wrap items-center justify-between gap-2 bg-slate-950 p-2 rounded-xl border border-slate-800">
-                            <!-- FERRAMENTAS DE INTERAÇÃO -->
-                            <div class="mob-conteudo flex flex-wrap items-center gap-1.5">
+                        <!-- BARRA DE FERRAMENTAS CAD DA PLANTA BAIXA: Desenhar | Inserir | Exibir — cor só na ação principal -->
+                        <div class="mob-trilho flex flex-wrap items-center justify-between gap-2 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+                          <div class="mob-conteudo flex flex-wrap items-center gap-2">
+                            <div class="mob-conteudo flex items-center gap-1" role="group" aria-label="Desenhar">
+                                <span class="mob-ocultar text-[9px] font-black uppercase tracking-wider text-slate-500 px-1">Desenhar</span>
                                 <button id="btnToolSelect" class="px-3 py-1.5 rounded-lg font-bold text-[11px] bg-amber-500 text-slate-950 flex items-center gap-1.5 shadow-sm" title="Mover & Redimensionar Cômodo">
                                     <i class="fa-solid fa-up-down-left-right"></i> Mover Cômodo
                                 </button>
@@ -433,36 +463,39 @@
                                 <button id="btnClearFreehand" class="px-2.5 py-1.5 rounded-lg text-rose-400 hover:text-rose-300 font-bold text-[11px]" title="Limpar riscos">
                                     <i class="fa-solid fa-eraser"></i> Limpar
                                 </button>
-
-                                <div class="w-px h-5 bg-slate-800 mx-1"></div>
-
-                                <!-- INSERÇÃO ARQUITETÔNICA -->
-                                <button onclick="abrirModalTransicaoTipo('porta')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-amber-400 border border-slate-800 hover:border-amber-500/40 flex items-center gap-1.5 transition" title="Inserir Porta Arquitetônica">
-                                    <i class="fa-solid fa-door-open"></i> + Porta
+                            </div>
+                            <div class="w-px h-6 bg-slate-800"></div>
+                            <div class="mob-conteudo flex items-center gap-1" role="group" aria-label="Inserir">
+                                <span class="mob-ocultar text-[9px] font-black uppercase tracking-wider text-slate-500 px-1">Inserir</span>
+                                <button onclick="abrirModalTransicaoTipo('porta')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Inserir Porta Arquitetônica">
+                                    <i class="fa-solid fa-door-open text-amber-400"></i> + Porta
                                 </button>
-                                <button onclick="abrirModalTransicaoTipo('janela')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-sky-400 border border-slate-800 hover:border-sky-500/40 flex items-center gap-1.5 transition" title="Inserir Janela">
-                                    <i class="fa-regular fa-window-maximize"></i> + Janela
+                                <button onclick="abrirModalTransicaoTipo('janela')" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Inserir Janela">
+                                    <i class="fa-regular fa-window-maximize text-sky-400"></i> + Janela
                                 </button>
-                                <button onclick="toggleCotasExibicao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition" title="Exibir / Ocultar Cotas e Medições">
-                                    <i class="fa-solid fa-ruler"></i> Cotas
-                                </button>
-                                <button onclick="abrirModalAnotacao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-slate-300 border border-slate-800 hover:border-slate-700 flex items-center gap-1.5 transition" title="Texto e Anotações CAD">
-                                    <i class="fa-solid fa-font"></i> Texto
+                                <button onclick="abrirModalAnotacao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Texto e Anotações CAD">
+                                    <i class="fa-solid fa-font text-slate-400"></i> Texto
                                 </button>
                             </div>
-
-                            <!-- AÇÕES INTELIGENTES -->
-                            <div class="mob-conteudo flex flex-wrap items-center gap-1.5">
-                                <button onclick="autoUnirEAlinharComodos()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 transition" title="Unir e alinhar todos os cômodos adjacentes como um ímã">
+                            <div class="w-px h-6 bg-slate-800"></div>
+                            <div class="mob-conteudo flex items-center gap-1" role="group" aria-label="Exibir">
+                                <span class="mob-ocultar text-[9px] font-black uppercase tracking-wider text-slate-500 px-1">Exibir</span>
+                                <button onclick="toggleCotasExibicao()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Exibir / Ocultar Cotas e Medições">
+                                    <i class="fa-solid fa-ruler text-slate-400"></i> Cotas
+                                </button>
+                                <button id="btnToggleLayersHUD" onclick="togglePainelLayersHUD()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Camadas / Layers">
+                                    <i class="fa-solid fa-layer-group text-sky-400"></i> Camadas
+                                </button>
+                            </div>
+                          </div>
+                          <div class="mob-conteudo flex items-center gap-1.5">
+                                <button onclick="autoUnirEAlinharComodos()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 hover:border-slate-600 flex items-center gap-1.5 transition" title="Unir e alinhar todos os cômodos adjacentes como um ímã">
                                     <i class="fa-solid fa-object-group text-amber-400"></i> Unir & Alinhar
                                 </button>
                                 <button id="btnAutoLancarTodosComodos" onclick="abrirModalAutoLancamentoPontos()" class="px-3 py-1.5 rounded-lg font-bold text-[11px] bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/25 transition active:scale-95" title="Auto-Lançamento NBR 5410 com Sugestão Completa de TUEs por Ambiente">
                                     <i class="fa-solid fa-wand-magic-sparkles text-amber-300"></i> Auto NBR 5410
                                 </button>
-                                <button id="btnToggleLayersHUD" onclick="togglePainelLayersHUD()" class="px-2.5 py-1.5 rounded-lg font-bold text-[11px] bg-slate-900 hover:bg-slate-850 text-sky-400 border border-slate-800 hover:border-sky-500/40 flex items-center gap-1.5 transition" title="Camadas / Layers">
-                                    <i class="fa-solid fa-layer-group"></i> Camadas
-                                </button>
-                            </div>
+                          </div>
                         </div>
                     </div>
 <div id="containerCad2D" class="relative w-full overflow-hidden rounded-xl border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-inner transition-all">
@@ -628,6 +661,9 @@
                                 <button id="btnToggleLajePisoAtivo" onclick="toggleLajePisoPavimentoAtivo()" class="px-1.5 py-0.5 rounded font-bold text-slate-300" title="Laje de Piso deste Andar">Laje Piso: <span id="lblStatusLajePisoAtivo" class="text-emerald-400">SIM</span></button>
                                 <button id="btnToggleLajeTetoAtivo" onclick="toggleLajeTetoPavimentoAtivo()" class="px-1.5 py-0.5 rounded font-bold text-slate-300" title="Laje de Teto deste Andar">Laje Teto: <span id="lblStatusLajeTetoAtivo" class="text-emerald-400">SIM</span></button>
                             </div>
+                            <button id="btnEstiloInstalacoes" onclick="alternarEstiloInstalacoes()" class="px-2 py-1 rounded-lg font-bold text-[11px] bg-slate-950 text-slate-200 border border-slate-800 hover:border-sky-500/50 flex items-center gap-1" title="Alternar entre diagrama unifilar (NBR 5444) e representação colorida por tipo de circuito">
+                                <i class="fa-solid fa-diagram-project text-sky-400"></i> <span id="lblEstiloInstalacoes">Unifilar NBR 5444</span>
+                            </button>
                             <button id="btnToggleRotulosInstalacoes" onclick="alternarExibicaoRotulosInstalacoes()" class="px-2 py-1 rounded-lg font-bold text-[11px] bg-slate-950 text-slate-300 border border-slate-800 flex items-center gap-1" title="Alternar visualização de rótulos no desenho">
                                 <i class="fa-solid fa-eye-slash text-amber-400"></i> Rótulos: <span id="lblStatusRotulosInstalacoes" class="text-amber-400">Ocultos</span>
                             </button>
@@ -727,15 +763,6 @@
 
                 <div class="flex flex-col lg:flex-row gap-4 items-start w-full">
                                 <div id="containerInstalacoes2D" class="relative flex-1 min-w-0 w-full overflow-hidden rounded-2xl border-2 border-slate-200 dark:border-sky-950/70 bg-white dark:bg-slate-950 shadow-2xl transition-all">
-                        <!-- MINI TELEMETRIA FLUTUANTE (GPU & CPU) -->
-                        <div onclick="abrirModalTelemetria()" class="hardware-telemetry-badge hidden sm:flex absolute top-3 left-4 z-10 items-center gap-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700/80 rounded-xl px-2.5 py-1 text-[10px] font-mono cursor-pointer hover:border-emerald-400 shadow-xl" title="Monitor de Hardware: Clique para detalhes de GPU, CPU, FPS e Memória">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                            <span class="text-slate-700 dark:text-slate-300">GPU: <b class="val-telemetry-gpu text-emerald-500">0%</b></span>
-                            <span class="text-slate-300 dark:text-slate-600">|</span>
-                            <span class="text-slate-700 dark:text-slate-300">CPU: <b class="val-telemetry-cpu text-sky-500">0%</b></span>
-                            <span class="text-slate-300 dark:text-slate-600">|</span>
-                            <span class="val-telemetry-fps text-amber-500 font-bold">60 FPS</span>
-                        </div>
                         <!-- BOTÃO DE SAÍDA FLUTUANTE EM TELA CHEIA (ESC) -->
                         <button id="btnExitFullscreenInstalacoes" onclick="toggleFullscreenViewport('instalacoes')" class="fullscreen-exit-btn hidden absolute top-4 left-4 z-50 bg-rose-600/90 hover:bg-rose-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl shadow-2xl items-center gap-2 border border-rose-400 backdrop-blur transition active:scale-95">
                             <i class="fa-solid fa-compress"></i> Sair da Tela Cheia (ESC)
@@ -789,8 +816,33 @@
                         <span id="badgeLegendaPavimento" class="bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded text-[9px] font-bold uppercase">TÉRREO</span>
                     </div>
 
-                    <!-- 1. Simbologia dos Ícones de Pontos -->
-                    <div>
+                    <!-- 0. Diagrama unifilar (NBR 5444) -->
+                    <div id="legendaUnifilar" class="space-y-3">
+                        <div>
+                            <h4 class="text-[10px] font-black uppercase tracking-wider text-sky-400 mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-diagram-project text-[9px]"></i> Condutores no eletroduto</h4>
+                            <div class="space-y-1 text-[11px]">
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 12 H42"/><path d="M19 17 L25 5 L29 5"/></svg><span>Fase</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 12 H42"/><path d="M19 17 L25 5"/></svg><span>Neutro</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 12 H42"/><path d="M22 12 L25 5"/></svg><span>Retorno (com a letra do comando)</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 12 H42"/><path d="M19 17 L25 5 M22.5 5 H27.5"/></svg><span>Proteção (terra)</span></div>
+                            </div>
+                            <p class="text-[10px] text-slate-500 mt-1.5 leading-snug">O número junto aos traços é o circuito do quadro (aba 4).</p>
+                        </div>
+                        <div>
+                            <h4 class="text-[10px] font-black uppercase tracking-wider text-amber-400 mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-shapes text-[9px]"></i> Símbolos (NBR 5444)</h4>
+                            <div class="space-y-1 text-[11px]">
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 14 Q22 2 42 14"/></svg><span>Eletroduto no teto / parede</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2 14 Q22 2 42 14" stroke-dasharray="4 3"/></svg><span>Eletroduto no piso</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="22" cy="9" r="8"/><path d="M14 9 H30 M22 9 V17"/></svg><span>Luminária: potência / circuito / comando</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="18" cy="9" r="3.5" fill="currentColor"/><text x="25" y="13" font-size="10" fill="currentColor" stroke="none" font-family="monospace">a</text></svg><span>Interruptor (letra = comando)</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M4 15 L9 4 L14 15 Z"/><path d="M17 15 L22 4 L27 15 Z"/><path d="M17 15 L22 4 L22 15 Z" fill="currentColor"/><path d="M30 15 L35 4 L40 15 Z" fill="currentColor"/></svg><span>Tomada baixa · média · alta / TUE</span></div>
+                            <div class="flex items-center gap-2 text-slate-300"><svg viewBox="0 0 44 18" class="w-11 h-[18px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><rect x="12" y="3" width="20" height="12"/><path d="M12 15 L32 3 V15 Z" fill="currentColor"/></svg><span>Quadro de distribuição</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 1. Simbologia dos Ícones de Pontos (representação colorida) -->
+                    <div id="legendaSimbolosColorido" class="hidden">
                         <h4 class="text-[10px] font-black uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
                             <i class="fa-solid fa-shapes text-[9px]"></i> Símbolos dos Pontos
                         </h4>
@@ -985,9 +1037,9 @@
                             <!-- MONITOR TELEMETRIA DE HARDWARE EM TEMPO REAL (GPU & CPU) -->
                             <span id="badgeHardwareTelemetry" onclick="abrirModalTelemetria()" class="hardware-telemetry-badge inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-bold bg-slate-950 border border-emerald-500/50 shadow-sm font-mono cursor-pointer transition active:scale-95" title="Monitor de Hardware em Tempo Real: Clique para ver detalhes de GPU, CPU, FPS e Memória">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                <span class="text-slate-400">GPU: <b id="valGpuUso" class="text-emerald-400">0% (Idle)</b></span>
+                                <span class="text-slate-400">3D: <b id="valGpuUso" class="text-emerald-400">em repouso</b></span>
                                 <span class="text-slate-600">|</span>
-                                <span class="text-slate-400">CPU: <b id="valCpuUso" class="text-sky-400">0% (Idle)</b></span>
+                                <span class="text-slate-400">Desenho: <b id="valCpuUso" class="text-sky-400">0%</b></span>
                                 <span class="text-slate-600">|</span>
                                 <span id="valFpsUso" class="text-amber-400">60 FPS</span>
                             </span>
@@ -1612,52 +1664,62 @@
                                 <h2 class="text-base sm:text-lg font-black text-white flex items-center gap-2">
                                     Quantitativo Detalhado de Materiais & Orçamento NBR 5410
                                 </h2>
-                                <p class="text-slate-400 text-xs mt-0.5">
+                                <p class="hidden sm:block text-slate-400 text-xs mt-0.5">
                                     Relação técnica completa com condutores por cor/função, infraestrutura de eletrodutos, quadros, dispositivos DIN, aparelhagem, iluminação e aterramento com margem normativa de sobras (+10%).
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2.5">
-                        <button id="btnInserirPrecosManual" onclick="abrirModalPrecosManuais()" class="bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-2 text-xs shadow-xl shadow-amber-600/30 active:scale-95" title="Inserir manualmente os valores dos componentes em metros e rolos de 100m">
-                            <i class="fa-solid fa-pen-to-square text-amber-200"></i>
-                            <span>Inserir Preços (Metros & Rolos)</span>
-                        </button>
-                        <button id="btnBuscarPrecosOnline" onclick="abrirModalPesquisaPrecosInternet()" class="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-2 text-xs shadow-xl shadow-sky-600/30 active:scale-95" title="Ver a tabela de preços de referência do app e onde conferir os valores (SINAPI, lojas)">
-                            <i class="fa-solid fa-globe text-sky-200"></i>
-                            <span>Tabela de Referência</span>
-                        </button>
-                        <button onclick="copiarListaComprasTexto()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 font-bold px-3 py-2.5 rounded-xl transition flex items-center gap-2 text-xs shadow-md active:scale-95" title="Copiar lista de compras para WhatsApp / E-mail">
-                            <i class="fa-solid fa-copy text-amber-400"></i>
-                            <span>Copiar Lista</span>
-                        </button>
-                        <button onclick="abrirModalImpressaoPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 font-bold px-3 py-2.5 rounded-xl transition flex items-center gap-2 text-xs shadow-md active:scale-95" title="Imprimir Memorial e Pranchas ABNT">
-                            <i class="fa-solid fa-print text-rose-400"></i>
-                            <span>Imprimir / PDF</span>
-                        </button>
-                        <button onclick="exportarParaExcel()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-2 text-xs shadow-xl shadow-emerald-600/30 active:scale-95" title="Exportar planilha Excel completa com fórmulas e quantitativos">
-                            <i class="fa-solid fa-file-excel text-base"></i>
-                            <span>Exportar Excel (.xlsx)</span>
-                        </button>
+                    <div class="w-full lg:w-auto flex flex-col sm:flex-row sm:flex-wrap lg:justify-end gap-2">
+                        <!-- Preços -->
+                        <div class="grid grid-cols-3 sm:flex gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800" role="group" aria-label="Preços">
+                            <button id="btnPesquisarInternet" onclick="abrirPesquisaInternet()" class="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold px-3 py-2 rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs shadow-lg shadow-violet-600/25 active:scale-95" title="Pesquisar os preços dos materiais na internet (Mercado Livre, Google Shopping, Leroy Merlin...)">
+                                <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                                <span>Pesquisar na Internet</span>
+                            </button>
+                            <button id="btnBuscarPrecosOnline" onclick="abrirModalPesquisaPrecosInternet()" class="bg-slate-800 hover:bg-slate-700 text-sky-200 font-bold px-3 py-2 rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs active:scale-95" title="Ver a tabela de preços de referência do app e onde conferir os valores (SINAPI, lojas)">
+                                <i class="fa-solid fa-table-list text-sky-400"></i>
+                                <span>Tabela de Referência</span>
+                            </button>
+                            <button id="btnInserirPrecosManual" onclick="abrirModalPrecosManuais()" class="bg-slate-800 hover:bg-slate-700 text-amber-200 font-bold px-3 py-2 rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs active:scale-95" title="Inserir manualmente os valores dos componentes em metros e rolos de 100m">
+                                <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+                                <span>Editar Preços</span>
+                            </button>
+                        </div>
+                        <!-- Saída -->
+                        <div class="grid grid-cols-3 sm:flex gap-1.5 p-1 rounded-xl bg-slate-950 border border-slate-800" role="group" aria-label="Exportar">
+                            <button onclick="exportarParaExcel()" class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold px-3 py-2 rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs shadow-lg shadow-emerald-600/25 active:scale-95" title="Exportar planilha Excel completa com fórmulas e quantitativos">
+                                <i class="fa-solid fa-file-excel"></i>
+                                <span>Excel</span>
+                            </button>
+                            <button onclick="abrirModalImpressaoPDF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3 py-2 rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs active:scale-95" title="Imprimir Memorial e Pranchas ABNT">
+                                <i class="fa-solid fa-print text-rose-400"></i>
+                                <span>Imprimir</span>
+                            </button>
+                            <button onclick="copiarListaComprasTexto()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold px-3 py-2 rounded-lg transition flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[11px] sm:text-xs active:scale-95" title="Copiar lista de compras para WhatsApp / E-mail">
+                                <i class="fa-solid fa-copy text-amber-400"></i>
+                                <span>Copiar Lista</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- SUB-TABS / SELETOR DE VISÕES DA ABA DE MATERIAIS -->
                 <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3" id="seletorVisoesMateriais">
-                    <div class="flex flex-wrap items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800" id="subTabsMateriais">
-                        <button onclick="trocarVisaoMateriais('completo')" id="btnVisaoCompleto" class="btn-subvisao-mat active px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
+                    <div class="flex flex-nowrap sm:flex-wrap items-center gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800 max-w-full overflow-x-auto mob-trilho" id="subTabsMateriais">
+                        <button onclick="trocarVisaoMateriais('completo')" id="btnVisaoCompleto" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat active px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
                             <i class="fa-solid fa-table-list"></i> Lista Geral Completa (BOM)
                         </button>
-                        <button onclick="trocarVisaoMateriais('cabos')" id="btnVisaoCabos" class="btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
+                        <button onclick="trocarVisaoMateriais('cabos')" id="btnVisaoCabos" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
                             <i class="fa-solid fa-palette text-blue-400"></i> Cabos por Seção & Cor (NBR 5410)
                         </button>
-                        <button onclick="trocarVisaoMateriais('disjuntores')" id="btnVisaoDisjuntores" class="btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
+                        <button onclick="trocarVisaoMateriais('disjuntores')" id="btnVisaoDisjuntores" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
                             <i class="fa-solid fa-shield-halved text-rose-400"></i> Disjuntores & Curvas Individuais
                         </button>
-                        <button onclick="trocarVisaoMateriais('barramento')" id="btnVisaoBarramento" class="btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
+                        <button onclick="trocarVisaoMateriais('barramento')" id="btnVisaoBarramento" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
                             <i class="fa-solid fa-grip-lines text-amber-400"></i> Sugestão: Barramento Pente DIN
                         </button>
-                        <button onclick="trocarVisaoMateriais('todos')" id="btnVisaoTodos" class="btn-subvisao-mat px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800">
+                        <button onclick="trocarVisaoMateriais('todos')" id="btnVisaoTodos" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800">
                             <i class="fa-solid fa-eye"></i> Exibir Todas as Visões
                         </button>
                     </div>
@@ -1778,7 +1840,7 @@
 
                 <!-- TABELA TÉCNICA PRINCIPAL DETALHADA -->
                 <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950">
-                    <div class="overflow-x-auto max-h-[620px]">
+                    <div class="overflow-x-auto sm:max-h-[620px]">
                         <table class="w-full text-left text-xs border-collapse" id="tabelaMateriaisDetalhada">
                             <thead class="bg-slate-900 text-slate-300 font-bold sticky top-0 z-10 border-b border-slate-800 shadow-sm">
                                 <tr>
@@ -1789,20 +1851,20 @@
                                     <th class="p-3 text-right w-24">Sobra (+10%)</th>
                                     <th class="p-3 text-right w-28">Total Compra</th>
                                     <th class="p-3 text-center w-16">Unid.</th>
-                                    <th class="p-3 text-right w-24">Preço Unit.</th>
+                                    <th class="p-3 text-right min-w-[150px]">Preço Unit.</th>
                                     <th class="p-3 text-right w-28">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody id="corpoTabelaMateriais" class="divide-y divide-slate-850">
                                 <!-- Linhas geradas dinamicamente via JS -->
                             </tbody>
-                            <tfoot class="bg-slate-900/90 font-bold text-white border-t border-slate-800 sticky bottom-0 z-10">
+                            <tfoot class="bg-slate-900 font-bold text-white border-t-2 border-slate-700 sticky bottom-0 z-10 shadow-[0_-6px_12px_rgba(0,0,0,0.35)]">
                                 <tr>
                                     <td colspan="5" class="p-3 text-right text-slate-300">INVESTIMENTO TOTAL ESTIMADO EM MATERIAIS:</td>
                                     <td class="p-3 text-right font-mono text-emerald-400 font-black text-sm" id="rodapeTotalItens">0 itens</td>
                                     <td class="p-3 text-center text-slate-400">-</td>
                                     <td class="p-3 text-right text-slate-400">-</td>
-                                    <td class="p-3 text-right font-mono text-emerald-400 font-black text-sm" id="rodapeTotalSubtotal">R$ 0,00</td>
+                                    <td class="p-3 text-right font-mono text-emerald-400 font-black text-sm whitespace-nowrap" id="rodapeTotalSubtotal">R$ 0,00</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -1852,7 +1914,7 @@
                                 <tbody id="corpoTabelaCabosPorCor" class="divide-y divide-slate-850">
                                     <!-- Gerado dinamicamente via JS -->
                                 </tbody>
-                                <tfoot class="bg-slate-900/90 font-bold text-white border-t border-slate-800 sticky bottom-0 z-10">
+                                <tfoot class="bg-slate-900 font-bold text-white border-t-2 border-slate-700 sticky bottom-0 z-10 shadow-[0_-6px_12px_rgba(0,0,0,0.35)]">
                                     <tr>
                                         <td colspan="4" class="p-3 text-right text-slate-300">TOTAIS DE CONDUTORES ELÉTRICOS:</td>
                                         <td class="p-3 text-right font-mono text-slate-300" id="rodapeCabosQtdProjeto">0 m</td>
@@ -1903,7 +1965,7 @@
                                         <th class="p-3 text-right w-24">Qtd. Projeto</th>
                                         <th class="p-3 text-right w-24">Reserva (+10%)</th>
                                         <th class="p-3 text-right w-28">Total Compra</th>
-                                        <th class="p-3 text-right w-24">Preço Unit.</th>
+                                        <th class="p-3 text-right min-w-[150px]">Preço Unit.</th>
                                         <th class="p-3 text-right w-28">Subtotal</th>
                                         <th class="p-3 min-w-[260px]">Circuitos Protegidos</th>
                                     </tr>
@@ -1911,7 +1973,7 @@
                                 <tbody id="corpoTabelaDisjuntoresIndividuais" class="divide-y divide-slate-850">
                                     <!-- Gerado dinamicamente via JS -->
                                 </tbody>
-                                <tfoot class="bg-slate-900/90 font-bold text-white border-t border-slate-800 sticky bottom-0 z-10">
+                                <tfoot class="bg-slate-900 font-bold text-white border-t-2 border-slate-700 sticky bottom-0 z-10 shadow-[0_-6px_12px_rgba(0,0,0,0.35)]">
                                     <tr>
                                         <td colspan="5" class="p-3 text-right text-slate-300">TOTAL DE DISPOSITIVOS DE PROTEÇÃO DIN:</td>
                                         <td class="p-3 text-right font-mono text-slate-300" id="rodapeDisjQtdProjeto">0 un</td>
@@ -3966,6 +4028,53 @@
     </div>
 
     <!-- ========================================================================= -->
+    <!-- MODAL: PESQUISAR PREÇOS DOS MATERIAIS NA INTERNET                          -->
+    <!-- ========================================================================= -->
+    <div id="modalPesquisaInternet" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden sm:p-4" role="dialog" aria-modal="true" aria-labelledby="tituloPesquisaInternet">
+        <div class="bg-slate-900 border border-violet-500/40 rounded-t-2xl sm:rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-start gap-3 bg-slate-950/70">
+                <div class="flex items-start gap-2.5">
+                    <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                    </span>
+                    <div>
+                        <h3 id="tituloPesquisaInternet" class="text-sm font-bold text-white">Pesquisar Preços na Internet</h3>
+                        <p class="text-[11px] text-slate-400 leading-snug">
+                            <strong class="text-slate-300">Buscar</strong> consulta o Mercado Livre pelo servidor local e calcula a mediana dos anúncios (rolos são convertidos para R$/m).
+                            Os botões das lojas abrem a busca numa nova aba para você comparar e digitar o valor. Confira os anúncios antes de aplicar.
+                        </p>
+                    </div>
+                </div>
+                <button type="button" onclick="fecharPesquisaInternet()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition" aria-label="Fechar">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-3 bg-slate-950 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center gap-2">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-filter absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[11px]"></i>
+                    <input id="inputFiltroPesquisaInternet" type="search" oninput="renderizarPesquisaInternet()" placeholder="Filtrar materiais..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-7 pr-2 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-500">
+                </div>
+                <button type="button" id="btnBuscarTodosInternet" onclick="pesquisarTodosInternet()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-bolt"></i> <span>Buscar todos automaticamente</span>
+                </button>
+            </div>
+            <div class="px-4 py-2 border-b border-slate-800 bg-slate-900">
+                <span id="lblStatusPesquisaInternet" class="text-[11px] text-slate-400" role="status" aria-live="polite"></span>
+            </div>
+            <div id="listaPesquisaInternet" class="p-3 overflow-y-auto space-y-2 flex-1 bg-slate-900/50"></div>
+            <div class="p-3 border-t border-slate-800 bg-slate-950 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2">
+                <p class="text-[10px] text-slate-500 leading-tight">Preços de anúncios variam com frete, marca e quantidade. O orçamento guarda a origem de cada valor.</p>
+                <div class="flex gap-2">
+                    <button type="button" onclick="fecharPesquisaInternet()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-3.5 rounded-xl transition text-xs">Fechar</button>
+                    <button type="button" id="btnAplicarPesquisaInternet" onclick="aplicarPesquisaInternet()" disabled class="flex-1 sm:flex-none bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black py-2 px-4 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-check-double"></i> <span>Aplicar ao orçamento</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- MODAL 2: TABELA DE PREÇOS DE REFERÊNCIA & ONDE CONFERIR                  -->
     <!-- ========================================================================= -->
     <div id="modalPesquisaPrecosInternet" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center hidden p-3 sm:p-4">
@@ -4164,6 +4273,8 @@
     <script src="js/app/11-circuitos.js"></script>
     <script src="js/app/12-quadro-qdt.js"></script>
     <script src="js/app/13-materiais-orcamento.js"></script>
+    <script src="js/app/14-pesquisa-internet.js"></script>
+    <script src="js/app/15-unifilar-desenho.js"></script>
 
     <!-- ========================================== -->
     <!-- MODAL 1: NOVO PROJETO (EM BRANCO OU MODELOS) -->
@@ -4414,7 +4525,7 @@
     </div>
 
     <!-- TOAST NOTIFICATION CONTAINER -->
-    <div id="toastNotificacao" class="fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/60 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
+    <div id="toastNotificacao" role="status" aria-live="polite" class="fixed bottom-20 lg:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-[60] bg-slate-900 border border-emerald-500/60 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs pointer-events-none transition-all duration-300 opacity-0 translate-y-4">
         <span id="toastIcone" class="text-emerald-400 text-base"><i class="fa-solid fa-circle-check"></i></span>
         <span id="toastMensagem" class="font-semibold">Projeto salvo com sucesso!</span>
     </div>
@@ -5004,7 +5115,7 @@
                             <span>Desempenho & Hardware</span>
                             <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">TEMPO REAL</span>
                         </h3>
-                        <p class="text-[11px] text-slate-400">Monitoramento instantâneo de processamento gráfico e computacional</p>
+                        <p class="text-[11px] text-slate-400">Quadros por segundo e tempo de desenho medidos pelo navegador</p>
                     </div>
                 </div>
                 <button onclick="fecharModalTelemetria()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800">
@@ -5018,19 +5129,19 @@
                 <div class="bg-slate-950 p-4 rounded-xl border border-emerald-500/40 space-y-2">
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
-                            <i class="fa-solid fa-bolt"></i> GPU (WebGL 3D)
+                            <i class="fa-solid fa-cube"></i> Renderização 3D
                         </span>
-                        <span id="badgeGpuEco" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">0% Idle</span>
+                        <span id="badgeGpuEco" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/30">sob demanda</span>
                     </div>
                     <div class="flex items-baseline gap-2">
-                        <span id="modalValGpu" class="text-3xl font-black text-emerald-300 font-mono">0%</span>
+                        <span id="modalValGpu" class="text-2xl font-black text-emerald-300">Repouso</span>
                         <span id="modalDescGpu" class="text-[10px] text-slate-400">Em repouso</span>
                     </div>
                     <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
                         <div id="barGpuUso" class="bg-emerald-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
                     <p class="text-[10px] text-slate-400 leading-tight">
-                        Renderização estritamente sob demanda. Zera o consumo quando a câmera está parada.
+                        A cena 3D só é redesenhada quando algo muda. O navegador não informa o uso real da GPU.
                     </p>
                 </div>
 
@@ -5038,7 +5149,7 @@
                 <div class="bg-slate-950 p-4 rounded-xl border border-sky-500/40 space-y-2">
                     <div class="flex items-center justify-between">
                         <span class="text-[11px] font-bold text-sky-400 flex items-center gap-1.5 uppercase tracking-wider">
-                            <i class="fa-solid fa-brain"></i> CPU (Main Thread)
+                            <i class="fa-solid fa-stopwatch"></i> Tempo de desenho
                         </span>
                         <span id="badgeCpuEco" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-950 text-sky-300 border border-sky-500/30">Otimizada</span>
                     </div>
@@ -5050,7 +5161,7 @@
                         <div id="barCpuUso" class="bg-sky-400 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
                     </div>
                     <p class="text-[10px] text-slate-400 leading-tight">
-                        Cálculos NBR 5410, traçado CAD e fiação executados sem bloqueio ou flickering.
+                        Parte do tempo gasta desenhando a planta e as instalações (2D) na última fração de segundo.
                     </p>
                 </div>
             </div>
@@ -5071,7 +5182,7 @@
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-slate-400">Modo de Economia Energética:</span>
-                    <span class="font-bold text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-leaf"></i> Ativo (Zero Drain)</span>
+                    <span class="font-bold text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-leaf"></i> 3D redesenha só quando muda</span>
                 </div>
             </div>
 

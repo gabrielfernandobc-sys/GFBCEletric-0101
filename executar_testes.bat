@@ -17,7 +17,7 @@ rem Testes unitários do cálculo NBR 5410 e do importador DXF (precisa do Node.
 where node >nul 2>nul
 if %errorlevel% equ 0 (
     echo --- Testes unitarios ^(Node.js^) ---
-    node --test testes/nbr5410.test.js testes/importador-dxf.test.js
+    node --test testes/nbr5410.test.js testes/importador-dxf.test.js testes/pesquisa-precos.test.js testes/unifilar.test.js
 ) else (
     echo Node.js nao encontrado: testes unitarios ignorados.
 )

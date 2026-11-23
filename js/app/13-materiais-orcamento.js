@@ -831,6 +831,7 @@
             });
 
             state.tabelaPrecos.fonteAtual = 'Tabela de referência (média, out/2026)';
+            delete state.tabelaPrecos.precosPorItem;
             recalcularOrcamentoComPrecos();
             fecharModalPesquisaPrecosInternet();
             mostrarNotificacaoToast('Tabela de referência aplicada e orçamento recalculado. Confira os valores com seus fornecedores.', 'sucesso');
@@ -886,6 +887,12 @@
             }
 
             modal.classList.remove('hidden');
+        }
+
+        // "Alterar" na tabela de materiais: pelo índice (o nome do item pode ter aspas, ex. 3/4")
+        function editarPrecoMaterialIdx(idx) {
+            const m = (state.quantitativoMateriaisDetalhado || [])[idx];
+            if (m) editarPrecoRapidoMaterial(m.item, m.precoUnit, m.categoriaId, m.unidade);
         }
 
         function editarPrecoBitolaRapido(secao) {
@@ -967,15 +974,14 @@
 
             const itemNomeSalvo = _itemEmEdicaoRapida.itemNome;
 
-            // Atualiza no quantitativo detalhado
-            const mats = state.quantitativoMateriaisDetalhado || [];
-            mats.forEach(m => {
-                if (m.item === itemNomeSalvo) {
-                    m.precoUnit = novoPreco;
-                    m.subtotal = m.qtdTotal * novoPreco;
-                    m.fontePreco = 'Inserção Manual';
-                }
-            });
+            // Itens sem preço por bitola/DN: guarda o valor do próprio item (antes ele
+            // só era trocado na linha e se perdia no recálculo logo em seguida)
+            const ehMetroTabelado = _itemEmEdicaoRapida.unidade === 'm' &&
+                (_itemEmEdicaoRapida.categoria === 'condutores' || _itemEmEdicaoRapida.categoria === 'eletrodutos');
+            if (!ehMetroTabelado && novoPreco > 0) {
+                if (!state.tabelaPrecos.precosPorItem) state.tabelaPrecos.precosPorItem = {};
+                state.tabelaPrecos.precosPorItem[itemNomeSalvo] = { valor: novoPreco, fonte: 'Inserção Manual' };
+            }
 
             recalcularOrcamentoComPrecos();
             fecharModalEdicaoRapidaPreco();
@@ -1041,8 +1047,14 @@
             function addItem(cat, catId, nome, espec, qtdCalc, unid, precoUnit, aplicacao, margemPct = 0.10, chaveItem = '') {
                 const margem = Math.ceil(qtdCalc * margemPct);
                 const qtdTotal = qtdCalc + margem;
+                let fonte = (typeof obterFontePrecoMaterial === 'function') ? obterFontePrecoMaterial(catId, chaveItem) : 'Tabela de referência';
+                // preço definido para este item (pesquisa na internet ou "Alterar") prevalece
+                const precoDoItem = state.tabelaPrecos && state.tabelaPrecos.precosPorItem && state.tabelaPrecos.precosPorItem[nome];
+                if (precoDoItem && Number(precoDoItem.valor) > 0) {
+                    precoUnit = Number(precoDoItem.valor);
+                    fonte = precoDoItem.fonte || 'Inserção Manual';
+                }
                 const subtotal = qtdTotal * precoUnit;
-                const fonte = (typeof obterFontePrecoMaterial === 'function') ? obterFontePrecoMaterial(catId, chaveItem) : 'Tabela de referência';
                 materiais.push({
                     categoria: cat,
                     categoriaId: catId,
@@ -1936,6 +1948,9 @@
                                         <button type="button" onclick="editarPrecoBitolaRapido('${gb.secao}')" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer shadow-sm" title="Editar valor do metro e rolo de 100m desta bitola">
                                             <i class="fa-solid fa-pen-to-square text-[11px]"></i> Editar Preço
                                         </button>
+                                        <button type="button" onclick="pesquisarBitolaNaInternet('${gb.secao}')" class="px-2.5 py-1 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 border border-violet-500/40 text-violet-200 text-xs font-bold inline-flex items-center gap-1.5 transition cursor-pointer shadow-sm" title="Pesquisar o preço desta bitola na internet">
+                                            <i class="fa-solid fa-magnifying-glass-dollar text-[11px]"></i> Pesquisar
+                                        </button>
                                     </div>
                                 </div>
                             </td>
@@ -2271,45 +2286,52 @@
                     }
                 }
 
+                const idxMaterial = materiais.indexOf(m);
                 const tr = document.createElement('tr');
                 tr.className = (idx % 2 === 0 ? 'bg-slate-950/40 hover:bg-slate-800/50' : 'bg-slate-900/30 hover:bg-slate-800/50') + ' transition';
                 const badgeClass = badgesCat[m.categoriaId] || 'bg-slate-800 text-slate-300 border-slate-700';
 
                 tr.innerHTML = `
-                    <td class="p-3 align-top">
+                    <td class="cel-categoria p-3 align-top">
                         <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${badgeClass}">
                             ${m.categoria}
                         </span>
                     </td>
-                    <td class="p-3 align-top">
+                    <td class="cel-item p-3 align-top">
                         <strong class="text-white block font-semibold text-xs">${m.item}</strong>
                         <span class="text-[11px] text-slate-400 block mt-0.5 leading-snug">${m.aplicacao}</span>
                     </td>
-                    <td class="p-3 align-top text-slate-400 text-[11px] leading-snug font-mono">
+                    <td class="cel-espec p-3 align-top text-slate-400 text-[11px] leading-snug font-mono">
                         ${m.especificacao}
                     </td>
-                    <td class="p-3 align-top text-right font-mono text-slate-300">
+                    <td data-rotulo="Projeto" class="cel-num p-3 align-top text-right font-mono text-slate-300">
                         ${m.qtdCalculada.toLocaleString('pt-BR')}
                     </td>
-                    <td class="p-3 align-top text-right font-mono text-amber-400/90 text-[11px]">
+                    <td data-rotulo="Sobra" class="cel-num p-3 align-top text-right font-mono text-amber-400/90 text-[11px]">
                         +${m.margemSobras.toLocaleString('pt-BR')}
                     </td>
-                    <td class="p-3 align-top text-right font-mono font-bold text-emerald-400 text-xs">
+                    <td data-rotulo="Comprar" class="cel-num p-3 align-top text-right font-mono font-bold text-emerald-400 text-xs">
                         ${m.qtdTotal.toLocaleString('pt-BR')}
                     </td>
-                    <td class="p-3 align-top text-center text-slate-400 font-mono text-xs">
+                    <td data-rotulo="Unid." class="cel-num p-3 align-top text-center text-slate-400 font-mono text-xs">
                         ${m.unidade}
                     </td>
-                    <td class="p-3 align-top text-right font-mono text-xs">
+                    <td data-rotulo="Preço unit." class="cel-preco p-3 align-top text-right text-xs">
                         <div class="flex flex-col items-end gap-0.5">
-                            <span class="font-bold text-emerald-400">R$ ${m.precoUnit.toFixed(2).replace('.', ',')} / ${m.unidade}</span>
-                            ${m.categoriaId === 'condutores' ? `<span class="text-[10px] text-amber-400/90 font-normal">~R$ ${(m.precoUnit * 100).toFixed(2).replace('.', ',')}/rolo 100m</span>` : (m.categoriaId === 'eletrodutos' && m.unidade === 'm' ? `<span class="text-[10px] text-amber-400/90 font-normal">~R$ ${(m.precoUnit * 50).toFixed(2).replace('.', ',')}/rolo 50m</span>` : '')}
-                            <button type="button" onclick="editarPrecoRapidoMaterial('${(m.item || '').replace(/'/g, "\\'")}', ${m.precoUnit}, '${m.categoriaId}', '${m.unidade}')" class="text-[10px] text-slate-400 hover:text-amber-300 inline-flex items-center gap-1 transition cursor-pointer mt-0.5" title="Ajustar preço unitário deste material">
-                                <i class="fa-solid fa-pen text-[9px]"></i> Alterar
-                            </button>
+                            <span class="font-mono font-bold text-emerald-400 whitespace-nowrap">R$ ${m.precoUnit.toFixed(2).replace('.', ',')}<span class="text-slate-500 font-normal">/${escHtml(m.unidade)}</span></span>
+                            ${m.categoriaId === 'condutores' ? `<span class="font-mono text-[10px] text-amber-400/90 whitespace-nowrap">R$ ${(m.precoUnit * 100).toFixed(2).replace('.', ',')}/rolo 100m</span>` : (m.categoriaId === 'eletrodutos' && m.unidade === 'm' ? `<span class="font-mono text-[10px] text-amber-400/90 whitespace-nowrap">R$ ${(m.precoUnit * 50).toFixed(2).replace('.', ',')}/rolo 50m</span>` : '')}
+                            ${/^Internet/.test(m.fontePreco || '') ? `<span class="text-[9px] text-violet-300 whitespace-nowrap" title="${escHtml(m.fontePreco)}"><i class="fa-solid fa-globe"></i> internet</span>` : ''}
+                            <div class="flex items-center gap-2 mt-0.5 whitespace-nowrap">
+                                <button type="button" onclick="pesquisarMaterialNaInternet(${idxMaterial})" class="text-[10px] text-violet-300 hover:text-violet-200 inline-flex items-center gap-1 transition" title="Pesquisar o preço deste material na internet">
+                                    <i class="fa-solid fa-magnifying-glass-dollar text-[9px]"></i> Pesquisar
+                                </button>
+                                <button type="button" onclick="editarPrecoMaterialIdx(${idxMaterial})" class="text-[10px] text-slate-400 hover:text-amber-300 inline-flex items-center gap-1 transition" title="Ajustar o preço unitário deste material">
+                                    <i class="fa-solid fa-pen text-[9px]"></i> Alterar
+                                </button>
+                            </div>
                         </div>
                     </td>
-                    <td class="p-3 align-top text-right font-mono font-bold text-white text-xs">
+                    <td data-rotulo="Subtotal" class="cel-subtotal p-3 align-top text-right font-mono font-bold text-white text-xs">
                         R$ ${m.subtotal.toFixed(2).replace('.', ',')}
                     </td>
                 `;

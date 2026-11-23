@@ -16,7 +16,9 @@ import ipaddress
 import argparse
 import tempfile
 import shutil
-from urllib.parse import unquote, parse_qs, urlparse
+from urllib.parse import unquote, parse_qs, urlparse, quote
+import urllib.request
+import urllib.error
 
 # Configura codificação do console para UTF-8 de forma segura
 if hasattr(sys.stdout, 'reconfigure'):
@@ -82,6 +84,67 @@ def desenhar_banner(ip_principal, porta, somente_local=False):
     print("\n" + "-" * 70)
     print("  [Pressione CTRL + C para encerrar o servidor]")
     print("=" * 70 + "\n")
+
+# ---------------------------------------------------------------------------
+# PESQUISA DE PREÇOS NA INTERNET (Mercado Livre)
+# O navegador não pode consultar a loja diretamente (CORS); o servidor local
+# faz a busca e devolve só título, preço e link de cada anúncio.
+# Se o Mercado Livre exigir credencial, defina a variável de ambiente
+# MERCADOLIVRE_TOKEN com um token de acesso da sua aplicação no Mercado Livre.
+# ---------------------------------------------------------------------------
+URL_BUSCA_MERCADOLIVRE = 'https://api.mercadolibre.com/sites/MLB/search?q={q}&limit={n}'
+
+
+def pesquisar_precos_mercadolivre(consulta, limite=20, abrir_url=None):
+    consulta = ' '.join(str(consulta or '').split())[:120]
+    if len(consulta) < 3:
+        return {'sucesso': False, 'erro': 'Texto de busca muito curto.'}
+    limite = max(1, min(int(limite or 20), 50))
+    url = URL_BUSCA_MERCADOLIVRE.format(q=quote(consulta), n=limite)
+    cabecalhos = {'Accept': 'application/json', 'User-Agent': 'ProEletricaCAD/1.0'}
+    token = os.environ.get('MERCADOLIVRE_TOKEN', '').strip()
+    if token:
+        cabecalhos['Authorization'] = 'Bearer ' + token
+    abrir = abrir_url or (lambda req: urllib.request.urlopen(req, timeout=12))
+    try:
+        with abrir(urllib.request.Request(url, headers=cabecalhos)) as resp:
+            dados = json.loads(resp.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403):
+            msg = ('O Mercado Livre recusou a busca automática sem credencial. Use os links das lojas '
+                   'ou defina MERCADOLIVRE_TOKEN antes de iniciar o servidor.')
+        elif e.code == 429:
+            msg = 'O Mercado Livre limitou as buscas por alguns instantes. Tente de novo em seguida.'
+        else:
+            msg = f'O Mercado Livre respondeu com erro {e.code}.'
+        return {'sucesso': False, 'erro': msg, 'codigo': e.code}
+    except (urllib.error.URLError, socket.timeout, TimeoutError, OSError) as e:
+        return {'sucesso': False, 'erro': 'Sem conexão com a internet (ou o Mercado Livre não respondeu).'}
+    except ValueError:
+        return {'sucesso': False, 'erro': 'Resposta inesperada do Mercado Livre.'}
+
+    resultados = []
+    for r in (dados.get('results') or [])[:limite]:
+        try:
+            preco = float(r.get('price'))
+        except (TypeError, ValueError):
+            continue
+        link = str(r.get('permalink') or '')
+        resultados.append({
+            'titulo': str(r.get('title') or '')[:200],
+            'preco': preco,
+            'moeda': str(r.get('currency_id') or 'BRL'),
+            'condicao': str(r.get('condition') or ''),
+            'link': link if link.startswith('https://') else ''
+        })
+    return {
+        'sucesso': True,
+        'fonte': 'Mercado Livre',
+        'consulta': consulta,
+        'data': datetime.datetime.now().strftime('%d/%m/%Y %H:%M'),
+        'resultados': resultados
+    }
+
 
 def sanitizar_nome_arquivo(nome):
     if not nome:
@@ -182,6 +245,17 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
         caminho = unquote(parsed.path)
 
         # Rota de status do servidor e pasta
+        # Pesquisa de preço de um material na internet (Mercado Livre)
+        if caminho == '/api/pesquisar-preco':
+            params = parse_qs(parsed.query)
+            consulta = (params.get('q') or [''])[0]
+            try:
+                limite = int((params.get('limite') or ['20'])[0])
+            except ValueError:
+                limite = 20
+            self.responder_json(200, pesquisar_precos_mercadolivre(consulta, limite))
+            return
+
         if caminho == '/api/status':
             self.responder_json(200, {
                 'status': 'online',

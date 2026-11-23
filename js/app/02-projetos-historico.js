@@ -6,26 +6,30 @@
         // SISTEMA DE PROJETOS, PONTOS DE SALVAMENTO (CHECKPOINTS) & ARQUIVOS
         // =========================================================================
 
+        let _timerToast = null;
         function mostrarNotificacaoToast(mensagem, tipo = 'sucesso') {
             const toast = document.getElementById('toastNotificacao');
             const txt = document.getElementById('toastMensagem');
             const icone = document.getElementById('toastIcone');
             if (!toast || !txt) return;
 
+            // no celular fica acima da barra de abas inferior
+            const base = 'fixed bottom-20 lg:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-[60] bg-slate-900 border text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs transition-all duration-300';
+            const estilos = {
+                sucesso: ['border-emerald-500', 'fa-circle-check text-emerald-400'],
+                aviso: ['border-amber-500', 'fa-triangle-exclamation text-amber-400'],
+                info: ['border-sky-500', 'fa-circle-info text-sky-400'],
+                erro: ['border-red-500', 'fa-circle-xmark text-red-400']
+            };
+            const [borda, ic] = estilos[tipo] || estilos.erro;
             txt.textContent = mensagem;
-            if (tipo === 'sucesso') {
-                toast.className = 'fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs transition-all duration-300 opacity-100 translate-y-0';
-                icone.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>';
-            } else if (tipo === 'aviso') {
-                toast.className = 'fixed bottom-6 right-6 z-50 bg-slate-900 border border-amber-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs transition-all duration-300 opacity-100 translate-y-0';
-                icone.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>';
-            } else {
-                toast.className = 'fixed bottom-6 right-6 z-50 bg-slate-900 border border-red-500 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs transition-all duration-300 opacity-100 translate-y-0';
-                icone.innerHTML = '<i class="fa-solid fa-circle-xmark text-red-400 text-base"></i>';
-            }
+            toast.setAttribute('role', tipo === 'erro' ? 'alert' : 'status');
+            toast.className = `${base} ${borda} opacity-100 translate-y-0`;
+            if (icone) icone.innerHTML = `<i class="fa-solid ${ic} text-base"></i>`;
 
-            setTimeout(() => {
-                toast.className = 'fixed bottom-6 right-6 z-50 bg-slate-900 border border-emerald-500/60 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs pointer-events-none transition-all duration-300 opacity-0 translate-y-4';
+            clearTimeout(_timerToast);
+            _timerToast = setTimeout(() => {
+                toast.className = `${base} ${borda} pointer-events-none opacity-0 translate-y-4`;
             }, 3500);
         }
 
@@ -36,6 +40,11 @@
         // consiga injetar HTML/JavaScript, os caracteres que abrem tags, atributos e
         // strings são trocados por equivalentes tipográficos visualmente iguais.
         // =========================================================================
+        // Escapa texto para inserir em HTML (títulos de anúncios, nomes de itens com aspas...)
+        function escHtml(v) {
+            return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+        }
+
         const _MAPA_TEXTO_SEGURO = { '<': '‹', '>': '›', '"': '”', "'": '’', '`': 'ˋ' };
         function textoSeguro(v) {
             if (typeof v !== 'string' || v.startsWith('data:')) return v;
