@@ -1241,3 +1241,24 @@ textarea:focus-visible, [tabindex]:focus-visible, summary:focus-visible {
 
 /* ícones/textos claros dentro de botões em degradê colorido mantêm a cor original */
 .theme-woca-light [class*="bg-gradient-to"][class*="from-"]:not([class*="from-sky-950"]):not([class*="from-emerald-950"]):not([class*="from-amber-950"]):not([class*="from-blue-950"]):not([class*="from-indigo-950"]):not([class*="from-rose-950"]):not([class*="from-violet-950"]):not([class*="from-purple-950"]):not([class*="from-teal-950"]):not([class*="from-slate-"]) [class*="text-"] { color: inherit !important; }
+
+/* Tabela de mão de obra em cartões no celular (mesmo padrão da lista de materiais) */
+@media (max-width: 639px) {
+    #tabelaMaoDeObra thead { display: none; }
+    #tabelaMaoDeObra, #tabelaMaoDeObra tbody, #tabelaMaoDeObra tfoot, #tabelaMaoDeObra tr { display: block; width: 100%; }
+    #corpoTabelaMaoDeObra > tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 10px; padding: 12px; }
+    #corpoTabelaMaoDeObra > tr > td { display: block; padding: 0 !important; text-align: left !important; }
+    #corpoTabelaMaoDeObra > tr > td[colspan], #corpoTabelaMaoDeObra .cel-item { grid-column: 1 / -1; }
+    #corpoTabelaMaoDeObra td[data-rotulo]::before {
+        content: attr(data-rotulo); display: block; margin-bottom: 1px;
+        font-family: ui-sans-serif, system-ui, sans-serif; font-size: 9px; font-weight: 600;
+        text-transform: uppercase; letter-spacing: .04em; color: #64748b;
+    }
+    #corpoTabelaMaoDeObra .cel-preco { grid-column: span 2; }
+    #corpoTabelaMaoDeObra .cel-preco input { width: 100%; }
+    #corpoTabelaMaoDeObra .cel-subtotal { grid-column: 3 / -1; text-align: right !important; align-self: end; font-size: 13px; }
+    #tabelaMaoDeObra tfoot tr { display: flex; justify-content: space-between; align-items: center; }
+    #tabelaMaoDeObra tfoot td { padding: 10px 12px !important; }
+    #tabelaMateriaisDetalhada tfoot tr.linha-total-orcamento td:first-child { font-size: 10px; }
+    #tabelaMateriaisDetalhada tfoot tr.linha-total-orcamento td:last-child { display: block !important; }
+}

@@ -355,6 +355,7 @@
                                 ${gerarLinhasTabelaPdfMateriais()}
                             </tbody>
                         </table>
+                        ${typeof htmlMaoDeObraParaImpressao === 'function' ? htmlMaoDeObraParaImpressao() : ''}
                     </div>
 
                     <div class="carimbo-tecnico" style="margin-top: 15px; padding: 10px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; font-size: 8pt;">

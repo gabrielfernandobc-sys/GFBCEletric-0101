@@ -1804,7 +1804,8 @@
                 completo: document.getElementById('painelVisaoCompleto'),
                 cabos: document.getElementById('painelVisaoCabos'),
                 disjuntores: document.getElementById('painelVisaoDisjuntores'),
-                barramento: document.getElementById('painelVisaoBarramento')
+                barramento: document.getElementById('painelVisaoBarramento'),
+                maoDeObra: document.getElementById('painelVisaoMaoDeObra')
             };
 
             const botoes = {
@@ -1812,6 +1813,7 @@
                 cabos: document.getElementById('btnVisaoCabos'),
                 disjuntores: document.getElementById('btnVisaoDisjuntores'),
                 barramento: document.getElementById('btnVisaoBarramento'),
+                maoDeObra: document.getElementById('btnVisaoMaoDeObra'),
                 todos: document.getElementById('btnVisaoTodos')
             };
 
@@ -1925,6 +1927,9 @@
 
             const rodapeTotalSubtotal = document.getElementById('rodapeTotalSubtotal');
             if (rodapeTotalSubtotal) rodapeTotalSubtotal.textContent = `R$ ${totOrcamentoReais.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            // Mão de obra, BDI e total geral (js/app/16-mao-de-obra.js)
+            if (typeof atualizarOrcamentoMaoDeObra === 'function') atualizarOrcamentoMaoDeObra(totOrcamentoReais);
 
             // 1. RENDERIZAÇÃO DA TABELA DEDICADA DE CABOS POR SEÇÃO & COR (NBR 5410)
             const corpoCabos = document.getElementById('corpoTabelaCabosPorCor');
@@ -2426,14 +2431,23 @@
                 txt += `[ ${cat.toUpperCase()} ]\n`;
                 cats[cat].forEach(it => {
                     totalEstimado += it.subtotal;
-                    txt += ` • ${it.qtdTotal} ${it.unid} - ${it.item}\n`;
+                    txt += ` • ${it.qtdTotal} ${it.unidade || it.unid || 'un'} - ${it.item}\n`;
                     txt += `   Especificação: ${it.especificacao}\n`;
                 });
                 txt += `\n`;
             });
 
+            // Mão de obra e totais do orçamento
+            if (typeof textoMaoDeObraParaCopiar === 'function') txt += textoMaoDeObraParaCopiar();
+            const totOrc = state.orcamentoMaoDeObra && state.orcamentoMaoDeObra.totais;
+            const brl = v => `R$ ${Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             txt += `=======================================================\n`;
-            txt += `INVESTIMENTO TOTAL ESTIMADO: R$ ${totalEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+            txt += `MATERIAL: ${brl(totalEstimado)}\n`;
+            if (totOrc) {
+                txt += `MÃO DE OBRA: ${brl(totOrc.maoDeObra)}\n`;
+                if (totOrc.bdi) txt += `BDI / MARGEM (${totOrc.bdiPct}%): ${brl(totOrc.bdi)}\n`;
+                txt += `TOTAL GERAL: ${brl(totOrc.total)}\n`;
+            }
             txt += `Normas Atendidas: ABNT NBR 5410, NBR 14136, NBR 15465, NBR IEC 60898, NBR IEC 61008\n`;
             txt += `=======================================================\n`;
 
@@ -2474,6 +2488,7 @@
                     ['Distância Alimentação Externa → QDT:', document.getElementById('lblFormulaCaboAlim') ? document.getElementById('lblFormulaCaboAlim').innerText : '-'],
                     ['Total de Cabos de Entrada:', document.getElementById('lblMetragemTotalCaboAlim') ? document.getElementById('lblMetragemTotalCaboAlim').innerText : '-']
                 ];
+                if (typeof linhasExcelTotaisOrcamento === 'function') dadosResumo.push(...linhasExcelTotaisOrcamento());
                 const wsResumo = XLSX.utils.aoa_to_sheet(dadosResumo);
                 XLSX.utils.book_append_sheet(wb, wsResumo, 'Resumo Geral');
 
@@ -2560,6 +2575,10 @@
 
                 const wsMateriais = XLSX.utils.aoa_to_sheet(linhasMateriais);
                 XLSX.utils.book_append_sheet(wb, wsMateriais, 'Quantitativo de Materiais');
+
+                // 3b. ABA: MÃO DE OBRA (js/app/16-mao-de-obra.js)
+                const linhasMO = (typeof linhasExcelMaoDeObra === 'function') ? linhasExcelMaoDeObra() : null;
+                if (linhasMO) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(linhasMO), 'Mão de Obra');
 
                 // 4. ABA 4: PONTOS DE CONSUMO POR CÔMODO E PAVIMENTO
                 const cabecalhoPontos = ['Pavimento', 'Cômodo', 'Identificação', 'Tipo', 'Potência (W)', 'Tensão (V)', 'Altura'];
