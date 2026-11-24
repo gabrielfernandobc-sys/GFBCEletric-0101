@@ -1,7 +1,7 @@
 // =========================================================================
 // SERVICE WORKER - PRO-ELÉTRICA CAD NBR 5410 (PWA OFFLINE / CACHE)
 // =========================================================================
-const CACHE_NAME = 'pro-eletrica-cad-v3.3';
+const CACHE_NAME = 'pro-eletrica-cad-v3.4';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -29,6 +29,8 @@ const STATIC_ASSETS = [
   './js/app/14-pesquisa-internet.js',
   './js/app/15-unifilar-desenho.js',
   './js/unifilar.js',
+  './js/mao-de-obra.js',
+  './js/app/16-mao-de-obra.js',
   './js/pesquisa-precos.js',
   './libs/fontawesome/css/all.min.css',
   './libs/fontawesome/webfonts/fa-solid-900.woff2',

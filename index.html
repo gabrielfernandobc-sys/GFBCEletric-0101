@@ -42,6 +42,8 @@
     <script src="js/pesquisa-precos.js"></script>
     <!-- Diagrama unifilar NBR 5444 na aba Instalações (circuito de cada ponto, condutores por eletroduto) -->
     <script src="js/unifilar.js"></script>
+    <!-- Mão de obra do orçamento (modos por ponto, %, m² e horas) -->
+    <script src="js/mao-de-obra.js"></script>
     <link rel="stylesheet" href="css/app.css">
 </head>
 <body data-aba="planta" class="theme-woca-dark bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
@@ -1740,6 +1742,9 @@
                         <button onclick="trocarVisaoMateriais('completo')" id="btnVisaoCompleto" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat active px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
                             <i class="fa-solid fa-table-list"></i> Lista Geral Completa (BOM)
                         </button>
+                        <button onclick="trocarVisaoMateriais('maoDeObra')" id="btnVisaoMaoDeObra" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
+                            <i class="fa-solid fa-helmet-safety text-violet-400"></i> Mão de Obra
+                        </button>
                         <button onclick="trocarVisaoMateriais('cabos')" id="btnVisaoCabos" class="whitespace-nowrap flex-shrink-0 btn-subvisao-mat px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-slate-900 text-slate-300 hover:text-white border border-transparent">
                             <i class="fa-solid fa-palette text-blue-400"></i> Cabos por Seção & Cor (NBR 5410)
                         </button>
@@ -1808,7 +1813,7 @@
                     <div class="bg-slate-950/80 border border-slate-800 p-3.5 rounded-xl flex flex-col justify-between hover:border-amber-500/40 transition">
                         <div class="flex items-center justify-between">
                             <span class="text-slate-400 text-[11px] font-medium flex items-center gap-1.5">
-                                <i class="fa-solid fa-calculator text-amber-300"></i> Orçamento Est.
+                                <i class="fa-solid fa-calculator text-amber-300"></i> Orçamento Total
                             </span>
                             <button onclick="abrirModalPrecosManuais()" class="text-[10px] text-amber-400 hover:text-amber-300 font-bold transition flex items-center gap-1" title="Ajustar valores em metros e rolos">
                                 <i class="fa-solid fa-pen-to-square"></i> Editar
@@ -1816,6 +1821,7 @@
                         </div>
                         <div class="mt-2">
                             <strong id="kpiTotalOrcamentoEstimado" class="text-base font-black text-emerald-400 font-mono">R$ 0,00</strong>
+                            <span id="kpiDetalheOrcamento" class="block text-[10px] text-slate-400 font-mono leading-snug mt-0.5"></span>
                             <div class="flex items-center justify-between gap-1 mt-0.5">
                                 <span id="kpiFonteOrcamentoInfo" class="text-[10px] text-slate-400 truncate block">tabela de referência</span>
                                 <button onclick="abrirModalPesquisaPrecosInternet()" class="text-[9px] text-sky-400 hover:underline flex-shrink-0" title="Ver a tabela de referência e onde conferir os preços">
@@ -1827,6 +1833,64 @@
                 </div>
 
                 <!-- PAINEL 1: LISTA GERAL COMPLETA (BOM) -->
+                <!-- ===================== VISÃO: MÃO DE OBRA ===================== -->
+                <div id="painelVisaoMaoDeObra" class="painel-subvisao-mat space-y-4 hidden">
+                    <div class="flex flex-col lg:flex-row lg:items-end gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide space-y-1 flex-1 min-w-0">Modo de cálculo
+                            <select id="selModoMaoDeObra" onchange="alterarMaoDeObra('modo', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-400 w-full">
+                                <option value="ponto">Por ponto / serviço</option>
+                                <option value="percentual">Percentual sobre o material</option>
+                                <option value="m2">Por m² construído</option>
+                                <option value="horas">Por horas (eletricista e ajudante)</option>
+                            </select>
+                        </label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wide space-y-1 w-full lg:w-28">BDI / margem (%)
+                            <input id="inputBdiMaoDeObra" type="number" min="0" max="200" step="0.5" value="0" onchange="alterarMaoDeObra('bdiPct', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-400 w-full text-right font-mono">
+                        </label>
+                        <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" id="chkAterramentoMaoDeObra" checked onchange="alterarMaoDeObra('incluirAterramento', this.checked)" class="accent-violet-500"> Aterramento</label>
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer select-none"><input type="checkbox" id="chkPadraoMaoDeObra" onchange="alterarMaoDeObra('incluirPadrao', this.checked)" class="accent-violet-500"> Padrão de entrada</label>
+                        </div>
+                        <div class="grid grid-cols-2 sm:flex gap-2">
+                            <button type="button" onclick="abrirTabelaMaoDeObra()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-200 text-xs font-bold flex items-center justify-center gap-1.5 transition"><i class="fa-solid fa-table-list text-amber-400"></i> Tabela de Mão de Obra</button>
+                            <button type="button" onclick="abrirTabelaMaoDeObra(true)" class="px-3 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition"><i class="fa-solid fa-magnifying-glass-dollar"></i> Pesquisar na Internet</button>
+                        </div>
+                    </div>
+                    <p id="txtAvisoMaoDeObra" class="text-[11px] text-amber-300/90 leading-snug"></p>
+
+                    <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse" id="tabelaMaoDeObra">
+                                <thead class="bg-slate-900 text-slate-300 font-bold border-b border-slate-800">
+                                    <tr>
+                                        <th class="p-3">Serviço</th>
+                                        <th class="p-3 text-right w-24">Quantidade</th>
+                                        <th class="p-3 text-center w-16">Unid.</th>
+                                        <th class="p-3 text-right w-40">Preço unit. (R$)</th>
+                                        <th class="p-3 text-right w-32">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="corpoTabelaMaoDeObra" class="divide-y divide-slate-850"></tbody>
+                                <tfoot class="bg-slate-900 font-bold text-white border-t-2 border-slate-700">
+                                    <tr>
+                                        <td colspan="4" class="p-3 text-right text-slate-300">TOTAL DE MÃO DE OBRA:</td>
+                                        <td class="p-3 text-right font-mono text-violet-300 font-black text-sm whitespace-nowrap" id="rodapeTabelaMaoDeObra">R$ 0,00</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="detalheHorasMaoDeObra" class="hidden text-[11px] text-slate-400"></div>
+
+                    <!-- Totais do orçamento -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        <div class="bg-slate-950/80 border border-slate-800 p-3 rounded-xl"><span class="text-slate-400 block">Material</span><strong id="cardTotalMaterial" class="font-mono text-sky-300 text-base">R$ 0,00</strong></div>
+                        <div class="bg-slate-950/80 border border-slate-800 p-3 rounded-xl"><span class="text-slate-400 block">Mão de obra</span><strong id="cardTotalMaoDeObra" class="font-mono text-violet-300 text-base">R$ 0,00</strong></div>
+                        <div class="bg-slate-950/80 border border-slate-800 p-3 rounded-xl"><span class="text-slate-400 block">BDI / margem <span id="cardBdiPct">0%</span></span><strong id="cardTotalBdi" class="font-mono text-slate-200 text-base">R$ 0,00</strong></div>
+                        <div class="bg-emerald-500/10 border border-emerald-500/40 p-3 rounded-xl"><span class="text-emerald-300 block font-bold">Total geral</span><strong id="cardTotalGeral" class="font-mono text-emerald-300 text-lg">R$ 0,00</strong></div>
+                    </div>
+                </div>
+
                 <div id="painelVisaoCompleto" class="painel-subvisao-mat space-y-6">
                 <!-- BARRA DE FILTROS POR CATEGORIA & CAMPO DE BUSCA -->
                 <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
@@ -1895,6 +1959,21 @@
                                     <td class="p-3 text-center text-slate-400">-</td>
                                     <td class="p-3 text-right text-slate-400">-</td>
                                     <td class="p-3 text-right font-mono text-emerald-400 font-black text-sm whitespace-nowrap" id="rodapeTotalSubtotal">R$ 0,00</td>
+                                </tr>
+                                <tr class="linha-total-orcamento">
+                                    <td colspan="5" class="p-2 text-right text-slate-300">MÃO DE OBRA (ver visão "Mão de Obra"):</td>
+                                    <td class="p-2"></td><td class="p-2"></td><td class="p-2"></td>
+                                    <td class="p-2 text-right font-mono text-violet-300 font-black text-sm whitespace-nowrap" id="rodapeTotalMaoDeObra">R$ 0,00</td>
+                                </tr>
+                                <tr class="linha-total-orcamento">
+                                    <td colspan="5" class="p-2 text-right text-slate-300">BDI / MARGEM:</td>
+                                    <td class="p-2"></td><td class="p-2"></td><td class="p-2"></td>
+                                    <td class="p-2 text-right font-mono text-slate-200 font-black text-sm whitespace-nowrap" id="rodapeTotalBdi">R$ 0,00</td>
+                                </tr>
+                                <tr class="linha-total-orcamento">
+                                    <td colspan="5" class="p-2 text-right text-slate-300">TOTAL GERAL (MATERIAL + MÃO DE OBRA + BDI):</td>
+                                    <td class="p-2"></td><td class="p-2"></td><td class="p-2"></td>
+                                    <td class="p-2 text-right font-mono text-emerald-300 font-black text-sm whitespace-nowrap" id="rodapeTotalGeral">R$ 0,00</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -4058,6 +4137,39 @@
     </div>
 
     <!-- ========================================================================= -->
+    <!-- MODAL: TABELA DE REFERÊNCIA DE MÃO DE OBRA (EDITÁVEL)                     -->
+    <!-- ========================================================================= -->
+    <div id="modalTabelaMaoDeObra" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden sm:p-4" role="dialog" aria-modal="true" aria-labelledby="tituloTabelaMaoDeObra">
+        <div class="bg-slate-900 border border-violet-500/40 rounded-t-2xl sm:rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div class="p-4 border-b border-slate-800 flex justify-between items-start gap-3 bg-slate-950/70">
+                <div class="flex items-start gap-2.5">
+                    <span class="w-9 h-9 flex-shrink-0 rounded-xl bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center justify-center"><i class="fa-solid fa-helmet-safety"></i></span>
+                    <div>
+                        <h3 id="tituloTabelaMaoDeObra" class="text-sm font-bold text-white flex flex-wrap items-center gap-2">Tabela de Referência de Mão de Obra
+                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono">Valores aproximados</span></h3>
+                        <p class="text-[11px] text-slate-400 leading-snug">Valores de <strong id="lblDataTabelaMaoDeObra" class="text-slate-200">nov/2026</strong> para o <strong id="lblRegiaoTabelaMaoDeObra" class="text-slate-200">interior de SP</strong>, médias de mercado. Confirme com profissionais da região ou no SINAPI.</p>
+                    </div>
+                </div>
+                <button type="button" onclick="fecharTabelaMaoDeObra()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition" aria-label="Fechar"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-3 bg-slate-950 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center gap-2 text-xs">
+                <label class="flex items-center gap-2 flex-1 text-slate-400">Região para as buscas:
+                    <input id="inputRegiaoMaoDeObra" type="text" onchange="alterarMaoDeObra('regiao', this.value)" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-200 outline-none focus:border-violet-500" placeholder="Ex.: Campinas SP">
+                </label>
+                <a href="https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 rounded-lg bg-sky-600/30 hover:bg-sky-600 text-sky-200 hover:text-white border border-sky-500/40 font-bold flex items-center justify-center gap-1.5"><i class="fa-solid fa-arrow-up-right-from-square"></i> SINAPI (Caixa)</a>
+            </div>
+            <div id="listaTabelaMaoDeObra" class="p-3 overflow-y-auto space-y-2 flex-1 bg-slate-900/50"></div>
+            <div class="p-3 border-t border-slate-800 bg-slate-950 flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-2">
+                <p class="text-[10px] text-slate-500 leading-tight">As horas por unidade são usadas no modo "por horas". Os valores ficam salvos com o projeto.</p>
+                <div class="flex gap-2">
+                    <button type="button" onclick="restaurarTabelaMaoDeObra()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-3.5 rounded-xl transition text-xs flex items-center justify-center gap-1.5"><i class="fa-solid fa-rotate-left"></i> Restaurar padrões</button>
+                    <button type="button" onclick="fecharTabelaMaoDeObra()" class="flex-1 sm:flex-none bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black py-2 px-4 rounded-xl transition text-xs">Concluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- MODAL: PESQUISAR PREÇOS DOS MATERIAIS NA INTERNET                          -->
     <!-- ========================================================================= -->
     <div id="modalPesquisaInternet" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-end sm:items-center justify-center hidden sm:p-4" role="dialog" aria-modal="true" aria-labelledby="tituloPesquisaInternet">
@@ -4305,6 +4417,7 @@
     <script src="js/app/13-materiais-orcamento.js"></script>
     <script src="js/app/14-pesquisa-internet.js"></script>
     <script src="js/app/15-unifilar-desenho.js"></script>
+    <script src="js/app/16-mao-de-obra.js"></script>
 
     <!-- ========================================== -->
     <!-- MODAL 1: NOVO PROJETO (EM BRANCO OU MODELOS) -->

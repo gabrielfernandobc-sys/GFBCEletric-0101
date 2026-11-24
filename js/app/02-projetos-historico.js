@@ -116,6 +116,7 @@
                 esquemaAterramento: state.esquemaAterramento || 'TN-S',
                 tipoConfigIdr: state.tipoConfigIdr || 'idr_geral',
                 modeloIdr: state.modeloIdr || null,
+                maoDeObra: state.maoDeObra ? JSON.parse(JSON.stringify(state.maoDeObra)) : null,
                 estiloInstalacoes: state.estiloInstalacoes || 'unifilar',
                 modoFiacaoQuadro: state.modoFiacaoQuadro !== false,
                 modoCanaletasQuadro: state.modoCanaletasQuadro || 'abertas',
@@ -175,6 +176,20 @@
                 tipo: snapshot.modeloIdr.tipo === 'A' ? 'A' : 'AC'
             } : null;
             if (snapshot.estiloInstalacoes === 'colorido' || snapshot.estiloInstalacoes === 'unifilar') state.estiloInstalacoes = snapshot.estiloInstalacoes;
+            // Mão de obra: modo, valores editados, horas, BDI e opções (só números e chaves conhecidas)
+            const mo = snapshot.maoDeObra;
+            if (mo && typeof mo === 'object') {
+                const numeros = o => { const r = {}; Object.keys(o || {}).forEach(k => { if (/^[A-Za-z]{1,40}$/.test(k) && isFinite(Number(o[k])) && Number(o[k]) >= 0) r[k] = Number(o[k]); }); return r; };
+                state.maoDeObra = {
+                    modo: ['ponto', 'percentual', 'm2', 'horas'].includes(mo.modo) ? mo.modo : 'ponto',
+                    tabela: numeros(mo.tabela), horas: numeros(mo.horas),
+                    bdiPct: Math.max(0, Math.min(200, Number(mo.bdiPct) || 0)),
+                    incluirAterramento: mo.incluirAterramento !== false, incluirPadrao: !!mo.incluirPadrao,
+                    regiao: typeof mo.regiao === 'string' ? textoSeguro(mo.regiao).slice(0, 60) : ''
+                };
+            } else {
+                state.maoDeObra = null;
+            }
             if (snapshot.modoFiacaoQuadro !== undefined) state.modoFiacaoQuadro = snapshot.modoFiacaoQuadro;
             if (snapshot.modoCanaletasQuadro) state.modoCanaletasQuadro = snapshot.modoCanaletasQuadro;
             if (snapshot.modoVisualQuadro) state.modoVisualQuadro = snapshot.modoVisualQuadro;

@@ -1008,7 +1008,7 @@
         if (pct > limite + 1e-9) alertas.push(`Queda de tensão do alimentador ${pct.toFixed(1)}% excede o disponível (${limite.toFixed(1)}%).`);
         if (ib > inD + 1e-9) alertas.push(`Corrente de demanda (${ib.toFixed(0)} A por fase) acima do disjuntor geral (${inD} A): Ib ≤ In não é atendida (item 5.3.4.1); confira a categoria de atendimento da concessionária.`);
         return {
-            secao, secaoPorCorrente: porCorrente, secaoPE: secaoProtecao(secao), secaoNeutro: secao,
+            secao, secaoPorCorrente: porCorrente, secaoPE: secaoProtecao(secao), secaoNeutro: secao, comprimento: L,
             izCorrigida: iz(secao), ib, quedaPct: pct, quedaLimitePct: limite,
             quedaTotalPct: pct + (Number(p.quedaTerminalMaxPct) || 0),
             condutoresCarregados: tres ? 3 : 2, aumentouPorQueda: secao > porCorrente,
