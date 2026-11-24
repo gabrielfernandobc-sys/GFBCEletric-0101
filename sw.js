@@ -1,7 +1,7 @@
 // =========================================================================
 // SERVICE WORKER - PRO-ELÉTRICA CAD NBR 5410 (PWA OFFLINE / CACHE)
 // =========================================================================
-const CACHE_NAME = 'pro-eletrica-cad-v3.8';
+const CACHE_NAME = 'pro-eletrica-cad-v3.9';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -113,7 +113,10 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(
-      fetch(event.request)
+      // cache: 'no-cache' → sempre confere com o servidor (ETag/304, barato). Sem isso o
+      // cache HTTP do navegador (GitHub Pages: 10 min) ainda entregava os .js antigos
+      // logo depois de uma atualização.
+      fetch(event.request, { cache: 'no-cache' })
         .then(guardar)
         .catch(() => caches.match(event.request).then((r) => r || (event.request.mode === 'navigate' ? caches.match('./index.html') : undefined)))
     );
