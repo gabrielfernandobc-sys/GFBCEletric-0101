@@ -116,6 +116,8 @@
             if (!canvas) return;
 
             canvas.addEventListener('mousedown', (e) => {
+                // o balão de informação (elemento da página) não acompanha o arraste: esconde
+                document.getElementById('tooltipInstalacoesCanvas')?.classList.add('hidden');
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = larguraLogicaCanvas(canvas) / rect.width;
                 const scaleY = alturaLogicaCanvas(canvas) / rect.height;

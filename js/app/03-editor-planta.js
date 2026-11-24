@@ -407,10 +407,11 @@
             }
         }
 
-        function resetarZoomCad() {
-            // computador: escala padrão (35 px/m); celular/tablet: enquadra o projeto na tela
+        function resetarZoomCad(enquadrar) {
+            // computador: escala padrão (35 px/m); celular/tablet (ou enquadrar = true, ao
+            // criar um projeto): enquadra o projeto inteiro na tela
             let alvo = 35;
-            if (window.innerWidth < 1024) {
+            if (enquadrar === true || window.innerWidth < 1024) {
                 const caber = escalaParaCaberNaTela();
                 if (caber) alvo = Math.max(2, Math.min(35, caber));
             }
@@ -1788,7 +1789,11 @@
         // DETECÇÃO DE TRANSIÇÕES ENTRE CÔMODOS
         function detectarProximidadeComodos() {
             const novasTransicoes = [];
-            const tol = 22; // Tolerância ajustada para paredes em contato real
+            // Limites em METROS (antes 22 px / 25 px: dependiam do zoom e, no zoom menor
+            // do celular, paredes comuns de 1 m deixavam de gerar porta)
+            const E = state.escala || 40;
+            const tol = 0.5 * E;                 // folga entre as faces das paredes
+            const sobreposicaoMin = 0.7 * E;     // parede em comum suficiente para uma porta
             const comodosAtivos = state.comodos.filter(c => c.pavimentoId === state.pavimentoAtivoId);
 
             for (let i = 0; i < comodosAtivos.length; i++) {
@@ -1806,7 +1811,7 @@
                     let posX = 0, posY = 0;
 
                     const overY = Math.min(A.y + Ah, B.y + Bh) - Math.max(A.y, B.y);
-                    if (overY >= 25) {
+                    if (overY >= sobreposicaoMin) {
                         const distDir = Math.abs(B.x - (A.x + Aw));
                         const distEsq = Math.abs(A.x - (B.x + Bw));
                         if (distDir <= tol) {
@@ -1824,7 +1829,7 @@
 
                     if (!adjacente) {
                         const overX = Math.min(A.x + Aw, B.x + Bw) - Math.max(A.x, B.x);
-                        if (overX >= 25) {
+                        if (overX >= sobreposicaoMin) {
                             const distAbaixo = Math.abs(B.y - (A.y + Ah));
                             const distAcima = Math.abs(A.y - (B.y + Bh));
                             if (distAbaixo <= tol) {
@@ -1862,7 +1867,8 @@
                 }
             }
 
-            state.transicoes = novasTransicoes;
+            // mantém as transições dos outros andares (antes eram descartadas)
+            state.transicoes = (state.transicoes || []).filter(t => t.pavimentoId !== state.pavimentoAtivoId).concat(novasTransicoes);
             renderizarBarraTransicoes();
         }
 

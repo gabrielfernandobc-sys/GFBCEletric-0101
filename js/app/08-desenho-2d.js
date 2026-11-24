@@ -1215,9 +1215,17 @@
 
             } // fim da representação colorida
 
-            // DESTAQUE DE CABO VIRTUAL AO PASSAR O MOUSE (HOVER NO COMPUTADOR / DESKTOP)
-            if (state.caboHoverInstalacoes && state.caboHoverInstalacoes.pts && state.caboHoverInstalacoes.pts.length >= 2) {
-                const ch = usarUnifilar ? ajustarCaboParaUnifilar(state.caboHoverInstalacoes) : state.caboHoverInstalacoes;
+            // DESTAQUE DE CABO VIRTUAL AO PASSAR O MOUSE / TOCAR
+            // Recalculado a cada desenho pelo id: antes o destaque guardava as coordenadas do
+            // momento do hover e, ao arrastar a tela, dar zoom ou mover cômodos/pontos, ficava
+            // parado fora do circuito (no celular ficava preso, pois não há "mouseleave").
+            const caboHoverAtual = state.caboHoverInstalacoes
+                ? obterCabosVirtuaisInstalacoes(state).find(c => c.id === state.caboHoverInstalacoes.id) || null
+                : null;
+            if (state.caboHoverInstalacoes && !caboHoverAtual) state.caboHoverInstalacoes = null;   // circuito não existe mais
+            if (caboHoverAtual && caboHoverAtual.pts && caboHoverAtual.pts.length >= 2) {
+                state.caboHoverInstalacoes = caboHoverAtual;
+                const ch = usarUnifilar ? ajustarCaboParaUnifilar(caboHoverAtual) : caboHoverAtual;
                 ctx.save();
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
