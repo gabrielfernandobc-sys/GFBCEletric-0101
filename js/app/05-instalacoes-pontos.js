@@ -623,6 +623,8 @@
                 const tensao = parseInt(document.getElementById('selModalPontoTensao').value, 10);
                 const pot = parseFloat(document.getElementById('numModalPontoPot').value) || 0;
                 const altura = document.getElementById('selModalPontoAltura').value;
+                const selDestino = document.getElementById('selModalPontoDestino');
+                const destino = (tipo === 'TUG' && selDestino && selDestino.value) ? selDestino.value : '';
 
                 if (pontoEmEdicaoModal && pontoEmEdicaoModal.id) {
                     const p = state.pontosEletricos.find(item => item.id === pontoEmEdicaoModal.id);
@@ -632,6 +634,7 @@
                         p.tensao = tensao;
                         p.pot = pot;
                         p.altura = altura;
+                        if (destino) p.destino = destino; else delete p.destino;
                     }
                 } else {
                     const comodosAndar = state.comodos.filter(c => c.pavimentoId === state.pavimentoAtivoId);
@@ -666,6 +669,7 @@
                         pot,
                         tensao,
                         altura,
+                        ...(destino ? { destino } : {}),
                         x: posX,
                         y: posY
                     });
@@ -716,6 +720,9 @@
                 selAltura.value = 'baixa';
             }
 
+            // o ponto novo entra no primeiro cômodo do pavimento (ver o submit do formulário)
+            const comodoNovo = state.comodos.find(c => c.pavimentoId === state.pavimentoAtivoId) || null;
+            if (typeof atualizarDestinoTomadaModal === 'function') atualizarDestinoTomadaModal(tipoPadrao, comodoNovo, '');
             document.getElementById('btnModalExcluirPonto').classList.add('hidden');
             document.getElementById('modalPontoEletrico').classList.remove('hidden');
         }
@@ -730,6 +737,8 @@
             document.getElementById('selModalPontoTensao').value = pt.tensao;
             document.getElementById('numModalPontoPot').value = pt.pot;
             document.getElementById('selModalPontoAltura').value = pt.altura || (pt.tipo === 'ILUM' ? 'teto' : 'media');
+            const comodoPt = state.comodos.find(c => String(c.id) === String(pt.comodoId)) || null;
+            if (typeof atualizarDestinoTomadaModal === 'function') atualizarDestinoTomadaModal(pt.tipo, comodoPt, pt.destino || '');
             document.getElementById('btnModalExcluirPonto').classList.remove('hidden');
             document.getElementById('modalPontoEletrico').classList.remove('hidden');
         }

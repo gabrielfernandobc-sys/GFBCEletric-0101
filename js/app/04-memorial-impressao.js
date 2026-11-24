@@ -406,6 +406,29 @@
                 </div>
             `;
 
+            // PRANCHA 07: AUTOMAÇÃO RESIDENCIAL (só quando incluída no projeto)
+            const autom = (typeof obterResultadoAutomacao === 'function') ? obterResultadoAutomacao() : null;
+            if (autom && typeof htmlPranchaAutomacao === 'function') {
+                container.innerHTML = container.innerHTML.replace(/(<strong>FOLHA:<\/strong> \d{2}) \/ 06/g, '$1 / 07');
+                container.insertAdjacentHTML('beforeend', `
+                <div class="folha-prancha-abnt">
+                    <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h1 style="font-size: 16pt; font-weight: 900; margin: 0; color: #0f172a;">PRO-ELÉTRICA CAD NBR 5410</h1>
+                            <p style="font-size: 9pt; margin: 0; color: #475569;">PRANCHA 07/07 — AUTOMAÇÃO RESIDENCIAL (${escHtml(autom.tec.nome)})</p>
+                        </div>
+                        <div style="text-align: right; font-size: 8pt; font-family: monospace;"><span>${autom.dispositivos.length} DISPOSITIVOS</span></div>
+                    </div>
+                    ${htmlPranchaAutomacao(autom, '')}
+                    <div class="carimbo-tecnico" style="margin-top: 15px; padding: 10px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; font-size: 8pt;">
+                        <div><strong>OBRA:</strong> ${nomeObra}</div>
+                        <div><strong>RESP. TÉCNICO:</strong> ${projetista}</div>
+                        <div><strong>DATA:</strong> ${dataHoje}</div>
+                        <div><strong>FOLHA:</strong> 07 / 07</div>
+                    </div>
+                </div>`);
+            }
+
             return true;
         }
 
@@ -575,6 +598,8 @@
             // NBR 5410 item 9.5.2.2.1: quantidade mínima de tomadas pela função do ambiente (js/nbr5410.js)
             const qtdTugs = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
             const potsTugs = NBR5410.potenciasTomadas(c.nome, qtdTugs, 0);
+            // destinação de cada tomada pelo uso do ambiente (geladeira, cabeceira, TV...)
+            const destinosTugs = NBR5410.destinacoesTomadas(c.nome, qtdTugs, 0);
             const margem = Math.max(4, Math.min(14, Math.min(w, h) * 0.25));
 
             // 1. PONTO DE ILUMINAÇÃO CENTRAL NBR 5410 (PERSISTENTE EM state.pontosEletricos)
@@ -636,10 +661,11 @@
                     comodoId: c.id,
                     pavimentoId: c.pavimentoId || 'terreo',
                     tipo: 'TUG',
-                    nome: `TUG ${c.nome} ${i + 1}`,
+                    nome: `TUG ${destinosTugs[i].destino}`,
+                    destino: destinosTugs[i].destino,
                     pot: potsTugs[i] || 100,                 // item 9.5.2.2.2
                     tensao: 127,
-                    altura: c.tipo === 'servico' ? 'media' : 'baixa',
+                    altura: destinosTugs[i].altura,
                     x: pt.x,
                     y: pt.y
                 });

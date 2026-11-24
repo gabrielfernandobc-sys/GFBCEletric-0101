@@ -46,6 +46,8 @@
     <script src="js/mao-de-obra.js"></script>
     <!-- Modelos do "Novo Projeto" (em metros, com terreno próprio) -->
     <script src="js/modelos-projeto.js"></script>
+    <!-- Automação residencial: tecnologias, levantamento, alcance, painel, nobreak e orçamento -->
+    <script src="js/automacao.js"></script>
     <link rel="stylesheet" href="css/app.css">
 </head>
 <body data-aba="planta" class="theme-woca-dark bg-slate-950 text-slate-100 font-sans antialiased min-h-screen">
@@ -311,11 +313,14 @@
             <button data-tab="materiais" class="tab-btn py-2 px-4 border-b-2 font-medium text-xs rounded-xl transition flex items-center gap-2 whitespace-nowrap border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60">
                 <i class="fa-solid fa-boxes-stacked text-emerald-400"></i> 5. Materiais
             </button>
+            <button data-tab="automacao" class="tab-btn py-2 px-4 border-b-2 font-medium text-xs rounded-xl transition flex items-center gap-2 whitespace-nowrap border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60">
+                <i class="fa-solid fa-house-signal text-violet-400"></i> 6. Automação
+            </button>
             <button data-tab="arquivos" class="tab-btn py-2 px-4 border-b-2 font-medium text-xs rounded-xl transition flex items-center gap-2 whitespace-nowrap border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60">
-                <i class="fa-solid fa-folder-open text-amber-400"></i> 6. Central Arquivos
+                <i class="fa-solid fa-folder-open text-amber-400"></i> 7. Central Arquivos
             </button>
             <button data-tab="duvidas" class="tab-btn py-2 px-4 border-b-2 font-medium text-xs rounded-xl transition flex items-center gap-2 whitespace-nowrap border-transparent text-slate-400 hover:text-white hover:bg-slate-800/60">
-                <i class="fa-solid fa-circle-question text-sky-400"></i> 7. Guia NBR
+                <i class="fa-solid fa-circle-question text-sky-400"></i> 8. Guia NBR
             </button>
         </nav>
 
@@ -1925,6 +1930,9 @@
                         <button onclick="filtrarTabelaMateriais('insumos')" class="btn-filtro-mat px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition">
                             <i class="fa-solid fa-toolbox text-slate-400 mr-1"></i> Insumos (<span id="contFiltroInsumos">0</span>)
                         </button>
+                        <button onclick="filtrarTabelaMateriais('automacao')" class="btn-filtro-mat px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-slate-300 hover:text-white border border-slate-800 transition">
+                            <i class="fa-solid fa-house-signal text-violet-400 mr-1"></i> Automação (<span id="contFiltroAutomacao">0</span>)
+                        </button>
                     </div>
 
                     <!-- CAMPO DE BUSCA -->
@@ -2653,7 +2661,12 @@
         </div>
 
 
-        <!-- ABA 7: GUIA NBR 5410 -->
+        <!-- ABA 6: AUTOMAÇÃO RESIDENCIAL (conteúdo montado por js/app/17-automacao.js) -->
+        <div id="tab-automacao" class="tab-content space-y-6">
+            <div id="automacaoRaiz" class="space-y-5"></div>
+        </div>
+
+        <!-- ABA 8: GUIA NBR 5410 -->
         <div id="tab-duvidas" class="tab-content space-y-6">
             <!-- CABEÇALHO DO GUIA NBR 5410 -->
             <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 p-6 rounded-2xl shadow-2xl border border-slate-800 text-xs space-y-6">
@@ -3562,10 +3575,10 @@
                             <button onclick="inserirPontoRapido('TUE', 2200, 220, 'media', 'Máquina Lava e Seca 2200W')" class="bg-blue-900 hover:bg-blue-800 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Máquina Lava e Seca Front Load">
                                 + Lava & Seca
                             </button>
-                            <button onclick="inserirPontoRapido('TUE', 7400, 220, 'media', 'Carregador Wallbox 7.4 kW')" class="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Carregador Veicular Wallbox 7.4 kW">
+                            <button onclick="inserirPontoRapido('TUE', 7040, 220, 'media', 'Carregador Wallbox 7 kW')" class="bg-emerald-800 hover:bg-emerald-700 text-white font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center" title="Carregador Veicular Wallbox 7 kW (32 A × 220 V)">
                                 + Carro Elétr.
                             </button>
-                            <button onclick="abrirCatalogoCompletoTuesModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center border border-amber-500/40" title="Ver catálogo completo com mais de 70 aparelhos e cargas">
+                            <button onclick="abrirCatalogoCompletoTuesModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold py-1.5 px-2 rounded-lg text-[10px] transition text-center border border-amber-500/40" title="Ver catálogo completo com mais de 140 aparelhos e cargas">
                                 <i class="fa-solid fa-list-check"></i> Todas TUEs...
                             </button>
                         </div>
@@ -3794,6 +3807,15 @@
                         <option value="">-- Escolha um aparelho para auto-preencher --</option>
                     </select>
                 </div>
+                <div id="boxModalPontoDestino" class="hidden">
+                    <label class="block font-semibold text-emerald-400 mb-1 flex items-center justify-between">
+                        <span class="flex items-center gap-1"><i class="fa-solid fa-plug"></i> Destinação da Tomada:</span>
+                        <span id="lblModalPontoDestinoComodo" class="text-[9px] text-slate-400 font-normal"></span>
+                    </label>
+                    <select id="selModalPontoDestino" onchange="aoSelecionarDestinoTomadaModal(this.value)" class="w-full bg-slate-950 border border-emerald-500/40 text-emerald-300 rounded-xl p-2 outline-none focus:ring-1 focus:ring-emerald-400 text-xs">
+                        <option value="">-- Para que esta tomada será usada? --</option>
+                    </select>
+                </div>
                 <div>
                     <label class="block font-semibold text-slate-300 mb-1">Nome / Identificação</label>
                     <input id="txtModalPontoNome" type="text" required class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-amber-400">
@@ -3950,7 +3972,7 @@
                 <input id="txtFiltroCatalogoTues" type="text" oninput="filtrarCatalogoTuesModal(this.value)" placeholder="🔍 Filtrar aparelhos (ex: chuveiro, ar, cooktop, wallbox, forno, torneira, hidro)..." class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl p-2.5 text-xs outline-none focus:ring-1 focus:ring-blue-400">
             </div>
             <div id="listaItensCatalogoTues" class="p-4 overflow-y-auto space-y-2 text-xs max-h-[58vh]">
-                <!-- Lista preenchida com os 75+ itens -->
+                <!-- Lista preenchida com os 140+ itens -->
             </div>
             <div class="p-3 border-t border-slate-800 bg-slate-950 flex justify-end">
                 <button type="button" onclick="fecharCatalogoCompletoTuesModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 px-4 rounded-xl transition text-xs">
@@ -4420,6 +4442,7 @@
     <script src="js/app/14-pesquisa-internet.js"></script>
     <script src="js/app/15-unifilar-desenho.js"></script>
     <script src="js/app/16-mao-de-obra.js"></script>
+    <script src="js/app/17-automacao.js"></script>
 
     <!-- ========================================== -->
     <!-- MODAL 1: NOVO PROJETO (EM BRANCO OU MODELOS) -->
@@ -4702,7 +4725,7 @@
         </button>
     </div>
 
-    <!-- MOBILE BOTTOM NAVIGATION BAR (BARRA NATIVA INFERIOR COM AS 6 ABAS) -->
+    <!-- MOBILE BOTTOM NAVIGATION BAR (BARRA NATIVA INFERIOR COM AS ABAS) -->
     <nav class="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-xl border-t border-slate-800/90 shadow-2xl flex items-center justify-around px-1 py-1.5 text-slate-400 no-print safe-area-bottom">
         <button data-tab="planta" onclick="trocarAba('planta')" class="tab-btn-mobile text-amber-400 border-t-2 border-amber-400 bg-slate-850 flex flex-col items-center justify-center w-full py-1 rounded-lg transition active:scale-95">
             <i class="fa-solid fa-pen-ruler text-sm"></i>
@@ -4723,6 +4746,10 @@
         <button data-tab="materiais" onclick="trocarAba('materiais')" class="tab-btn-mobile flex flex-col items-center justify-center w-full py-1 rounded-lg transition active:scale-95">
             <i class="fa-solid fa-boxes-stacked text-sm"></i>
             <span class="text-[9px] font-medium mt-0.5">Materiais</span>
+        </button>
+        <button data-tab="automacao" onclick="trocarAba('automacao')" class="tab-btn-mobile flex flex-col items-center justify-center w-full py-1 rounded-lg transition active:scale-95">
+            <i class="fa-solid fa-house-signal text-sm"></i>
+            <span class="text-[9px] font-medium mt-0.5">Automação</span>
         </button>
         <button data-tab="arquivos" onclick="trocarAba('arquivos')" class="tab-btn-mobile flex flex-col items-center justify-center w-full py-1 rounded-lg transition active:scale-95">
             <i class="fa-solid fa-folder-open text-sm text-amber-400"></i>

@@ -117,6 +117,8 @@
                 tipoConfigIdr: state.tipoConfigIdr || 'idr_geral',
                 modeloIdr: state.modeloIdr || null,
                 maoDeObra: state.maoDeObra ? JSON.parse(JSON.stringify(state.maoDeObra)) : null,
+                // Automação residencial (aba Automação): nível, tecnologia, lista editada, hub, painel e nobreak
+                automacao: state.automacao ? JSON.parse(JSON.stringify(state.automacao)) : null,
                 estiloInstalacoes: state.estiloInstalacoes || 'unifilar',
                 modoFiacaoQuadro: state.modoFiacaoQuadro !== false,
                 modoCanaletasQuadro: state.modoCanaletasQuadro || 'abertas',
@@ -190,6 +192,8 @@
             } else {
                 state.maoDeObra = null;
             }
+            // Automação residencial: só chaves e valores conhecidos (js/app/17-automacao.js)
+            state.automacao = (snapshot.automacao && typeof sanitizarConfigAutomacao === 'function') ? sanitizarConfigAutomacao(snapshot.automacao) : null;
             if (snapshot.modoFiacaoQuadro !== undefined) state.modoFiacaoQuadro = snapshot.modoFiacaoQuadro;
             if (snapshot.modoCanaletasQuadro) state.modoCanaletasQuadro = snapshot.modoCanaletasQuadro;
             if (snapshot.modoVisualQuadro) state.modoVisualQuadro = snapshot.modoVisualQuadro;
@@ -971,6 +975,7 @@
             state.pontoSelecionadoId = null;
             state.caboHoverInstalacoes = null;
             state.comodosFixados = false;
+            state.automacao = null;               // automação do projeto anterior não vale para o novo
             // pontos mínimos da NBR 5410 (luz, interruptor e tomadas) e portas entre cômodos vizinhos
             state.comodos.forEach(c => gerarPontosEletricosParaComodo(c));
             if (typeof detectarProximidadeComodos === 'function') {
@@ -1304,6 +1309,7 @@
         // =========================================================================
 
         function aoMudarTipoPontoModal(tipo) {
+            if (typeof atualizarDestinoTomadaModal === 'function') atualizarDestinoTomadaModal(tipo);
             const txtNome = document.getElementById('txtModalPontoNome');
             const numPot = document.getElementById('numModalPontoPot');
             const selTensao = document.getElementById('selModalPontoTensao');

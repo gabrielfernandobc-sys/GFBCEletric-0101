@@ -39,6 +39,12 @@
         { id: 'aterramento',      nome: 'Aterramento (haste, caixa de inspeção e conexões)',                                       unidade: 'cj', valor: 300,  horas: 3,    busca: 'preço mão de obra aterramento haste eletricista' },
         { id: 'padraoEntrada',    nome: 'Padrão de entrada (montagem conforme a concessionária)',                                   unidade: 'cj', valor: 1200, horas: 12,   busca: 'preço mão de obra instalação padrão de entrada energia' },
         { id: 'alimentadorMetro', nome: 'Alimentador (medidor → quadro)',                                                           unidade: 'm',  valor: 15,   horas: 0.15, busca: 'preço mão de obra passagem de cabo alimentador por metro' },
+        { id: 'automacaoDispositivo', nome: 'Automação: instalação de dispositivo (módulo, interruptor, tomada inteligente ou sensor)',          unidade: 'un', valor: 60,   horas: 0.75, busca: 'preço instalação interruptor inteligente módulo automação residencial' },
+        { id: 'automacaoConfiguracao', nome: 'Automação: configuração e integração de dispositivo no sistema',                                   unidade: 'un', valor: 35,   horas: 0.4,  busca: 'preço configuração automação residencial por dispositivo' },
+        { id: 'automacaoPainel',  nome: 'Automação: montagem e ligação do painel (atuadores, fontes e bornes)',                                    unidade: 'un', valor: 900,  horas: 10,   busca: 'preço montagem painel automação residencial KNX' },
+        { id: 'automacaoCaboMetro', nome: 'Automação: passagem do cabo de barramento/comando',                                                     unidade: 'm',  valor: 6,    horas: 0.08, busca: 'preço passagem cabo automação por metro' },
+        { id: 'automacaoRede',    nome: 'Automação: instalação de hub, repetidor, servidor ou nobreak',                                            unidade: 'un', valor: 80,   horas: 1,    busca: 'preço instalação hub automação residencial' },
+        { id: 'automacaoCena',    nome: 'Automação: programação de cena',                                                                          unidade: 'un', valor: 80,   horas: 1,    busca: 'preço programação cenas automação residencial' },
         { id: 'percentualMaterial', nome: 'Percentual sobre o material',                                                            unidade: '%',  valor: 45,   busca: 'percentual mão de obra instalação elétrica sobre material' },
         { id: 'porM2',            nome: 'Instalação elétrica por m² construído',                                                    unidade: 'm²', valor: 60,   busca: 'preço mão de obra instalação elétrica por m² construído' },
         { id: 'horaEletricista',  nome: 'Hora do eletricista',                                                                      unidade: 'h',  valor: 90,   busca: 'valor hora eletricista' },
@@ -95,7 +101,14 @@
             { id: 'dispositivo', qtd: num(q.dispositivos) },
             { id: 'alimentadorMetro', qtd: Math.ceil(num(q.alimentadorMetros)) },
             { id: 'aterramento', qtd: q.incluirAterramento === false ? 0 : 1 },
-            { id: 'padraoEntrada', qtd: q.incluirPadrao ? 1 : 0 }
+            { id: 'padraoEntrada', qtd: q.incluirPadrao ? 1 : 0 },
+            // automação residencial (aba Automação, quando incluída no projeto)
+            { id: 'automacaoDispositivo', qtd: num(q.automacaoDispositivos) },
+            { id: 'automacaoConfiguracao', qtd: num(q.automacaoConfiguracao) },
+            { id: 'automacaoPainel', qtd: num(q.automacaoPainel) },
+            { id: 'automacaoCaboMetro', qtd: Math.ceil(num(q.automacaoCaboMetros)) },
+            { id: 'automacaoRede', qtd: num(q.automacaoRede) },
+            { id: 'automacaoCena', qtd: num(q.automacaoCenas) }
         ];
         return linhas.filter(l => l.qtd > 0);
     }

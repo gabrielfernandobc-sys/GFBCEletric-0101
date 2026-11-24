@@ -13,15 +13,20 @@
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Convencional 127V', tipo: 'TUE', pot: 5500, tensao: 127, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro 127V (demanda Ib=43.3A)' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Ducha Higiênica Aquecida 220V', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-spray-can-sparkles', desc: 'Aquecedor individual para ducha higiênica' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Ducha Higiênica Aquecida 127V', tipo: 'TUE', pot: 3500, tensao: 127, altura: 'media', icon: 'fa-spray-can-sparkles', desc: 'Aquecedor individual ducha 127V (demanda 27.5A)' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Torneira Elétrica Banheiro / Lavatório', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'media', icon: 'fa-faucet-drip', desc: 'Torneira elétrica bica móvel lavatório' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Individual (1.0 HP)', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba banheira com IDR 30mA' },
-            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Dupla / Spa (1.5 HP)', tipo: 'TUE', pot: 2500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba + aquecedor auxiliar banheira' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Torneira Elétrica Banheiro / Lavatório', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'media', icon: 'fa-faucet-drip', desc: 'Torneira de lavatório 220V (5.500 W típicos no mercado)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Individual (motobomba 1 cv)', tipo: 'TUE', pot: 1400, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba 1 cv: ≈6,4 A em 220V (potência absorvida), IDR 30mA' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Hidromassagem Dupla / Spa (motobomba 1,5 cv)', tipo: 'TUE', pot: 1900, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Motobomba 1,5 cv: ≈8,6 A em 220V; aquecedor em circuito à parte' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Banheira Jacuzzi c/ Aquecimento', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'baixa', icon: 'fa-hot-tub-person', desc: 'Sistema integrado hidromassagem e aquecimento' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Toalheiro Térmico / Secador de Toalhas 220V', tipo: 'TUE', pot: 150, tensao: 220, altura: 'media', icon: 'fa-rug', desc: 'Aquecedor de toalhas de parede' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Toalheiro Térmico / Secador 127V', tipo: 'TUE', pot: 150, tensao: 127, altura: 'media', icon: 'fa-rug', desc: 'Aquecedor de toalhas de parede 127V' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Secador de Cabelo de Parede Hotel', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-wind', desc: 'Secador fixo em suporte de parede' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Sauna Seca Residencial', tipo: 'TUE', pot: 6000, tensao: 220, altura: 'baixa', icon: 'fa-temperature-high', desc: 'Gerador elétrico para sauna seca 220V' },
             { grupo: 'Banheiro & Suíte (TUE)', nome: 'Sauna Úmida a Vapor', tipo: 'TUE', pot: 9000, tensao: 220, altura: 'baixa', icon: 'fa-cloud', desc: 'Gerador de vapor para sauna úmida' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Eletrônico 7.800 W 220V', tipo: 'TUE', pot: 7800, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Controle eletrônico contínuo de temperatura (≈35,5 A)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico 6.400 W 220V', tipo: 'TUE', pot: 6400, tensao: 220, altura: 'alta', icon: 'fa-shower', desc: 'Multitemperaturas 220V de potência intermediária' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Chuveiro Elétrico Econômico 4.400 W 127V', tipo: 'TUE', pot: 4400, tensao: 127, altura: 'alta', icon: 'fa-shower', desc: 'Chuveiro 127V de menor potência (≈34,6 A)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Torneira Elétrica Lavatório 127V', tipo: 'TUE', pot: 4500, tensao: 127, altura: 'media', icon: 'fa-faucet-drip', desc: 'Torneira de lavatório 127V (≈35,4 A)' },
+            { grupo: 'Banheiro & Suíte (TUE)', nome: 'Aquecedor de Passagem Elétrico 220V (Ponto Único)', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'media', icon: 'fa-fire', desc: 'Aquecedor instantâneo para um ponto de consumo' },
 
             // 2. COZINHA, COPA & ESPAÇO GOURMET (TUE)
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop por Indução 4 Bocas', tipo: 'TUE', pot: 7200, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Fogão de indução 4 zonas turbo' },
@@ -37,8 +42,8 @@
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Grande 14 Serviços', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-sink', desc: 'Máquina de lavar louças de embutir ou piso' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Compacta 8 Serviços 220V', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'media', icon: 'fa-sink', desc: 'Lava-louças compacta de nicho 220V' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Lava-Louças Compacta 8 Serviços 127V', tipo: 'TUE', pot: 1500, tensao: 127, altura: 'media', icon: 'fa-sink', desc: 'Lava-louças compacta 127V (demanda 11.8A)' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Triturador de Alimentos de Pia 1.0 HP', tipo: 'TUE', pot: 750, tensao: 220, altura: 'baixa', icon: 'fa-blender', desc: 'Triturador de resíduos orgânicos sob a cuba' },
-            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Triturador de Alimentos 127V', tipo: 'TUE', pot: 750, tensao: 127, altura: 'baixa', icon: 'fa-blender', desc: 'Triturador de resíduos sob a cuba 127V' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Triturador de Alimentos de Pia 1 cv 220V', tipo: 'TUE', pot: 950, tensao: 220, altura: 'baixa', icon: 'fa-blender', desc: 'Triturador de resíduos sob a cuba (≈4,3 A em 220V)' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Triturador de Alimentos 127V', tipo: 'TUE', pot: 950, tensao: 127, altura: 'baixa', icon: 'fa-blender', desc: 'Triturador de resíduos sob a cuba 127V (≈7,5 A)' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Coifa / Depurador Ilha Alta Sucção', tipo: 'TUE', pot: 350, tensao: 220, altura: 'alta', icon: 'fa-fan', desc: 'Coifa central de ilha com exaustão forçada' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Coifa de Parede / Depurador 127V', tipo: 'TUE', pot: 250, tensao: 127, altura: 'alta', icon: 'fa-fan', desc: 'Coifa de parede com iluminação LED integrada' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Churrasqueira Elétrica de Embutir Gourmet', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'media', icon: 'fa-drumstick-bite', desc: 'Grill elétrico com refratários para bancada' },
@@ -47,21 +52,30 @@
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Máquina de Gelo (Ice Maker) Embutida', tipo: 'TUE', pot: 250, tensao: 220, altura: 'media', icon: 'fa-cubes', desc: 'Fabricador de gelo com abastecimento direto' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cafeteira Expresso de Embutir', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'media', icon: 'fa-mug-hot', desc: 'Máquina de café barista em torre de nicho' },
             { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Chopeira Elétrica Residencial Gourmet', tipo: 'TUE', pot: 650, tensao: 220, altura: 'media', icon: 'fa-beer-mug-empty', desc: 'Chopeira torre a gelo/compressor' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno Combinado Micro-ondas + Convecção de Embutir', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno multifunção de torre quente (micro-ondas, grill e convecção)' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Forno a Vapor de Embutir', tipo: 'TUE', pot: 2500, tensao: 220, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno combinado vapor + convecção de embutir' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Cooktop Vitrocerâmico 2 Bocas / Dominó', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Cooktop radiante de 2 zonas' },
+            { grupo: 'Cozinha & Espaço Gourmet (TUE)', nome: 'Refrigerador de Embutir / Built-in', tipo: 'TUE', pot: 500, tensao: 220, altura: 'baixa', icon: 'fa-icicles', desc: 'Refrigerador integrado à marcenaria, ponto dedicado' },
 
             // 3. ÁREA DE SERVIÇO & LAVANDERIA (TUE)
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Máquina Lava e Seca Front Load 220V', tipo: 'TUE', pot: 2200, tensao: 220, altura: 'media', icon: 'fa-soap', desc: 'Lavadora e secadora automática com aquecimento' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Máquina Lava e Seca Front Load 127V', tipo: 'TUE', pot: 2000, tensao: 127, altura: 'media', icon: 'fa-soap', desc: 'Lava e seca 127V (demanda 15.7A)' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas Elétrica Parede/Piso', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'alta', icon: 'fa-wind', desc: 'Secadora de roupas por resistência térmica' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas Elétrica 10-11 kg (Resistência)', tipo: 'TUE', pot: 2500, tensao: 220, altura: 'alta', icon: 'fa-wind', desc: 'Secadora por resistência: 2.000 a 2.500 W no mercado' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas a Gás (Tomada de Comando)', tipo: 'TUE', pot: 400, tensao: 127, altura: 'media', icon: 'fa-fire-flame-simple', desc: 'Ponto elétrico para comando da secadora a gás' },
-            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Torneira Elétrica Tanque / Lavanderia', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'media', icon: 'fa-faucet', desc: 'Torneira com aquecimento elétrico para tanque' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Torneira Elétrica Tanque / Lavanderia', tipo: 'TUE', pot: 5500, tensao: 220, altura: 'media', icon: 'fa-faucet', desc: 'Torneira com aquecimento elétrico para tanque (220V)' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Boiler Central de Água Quente 200L', tipo: 'TUE', pot: 3000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Reservatório térmico com aquecedor de apoio' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Boiler Central de Água Quente 300L/400L', tipo: 'TUE', pot: 5000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Boiler alta capacidade residencial' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Pressurizador de Água Sanitária 220V', tipo: 'TUE', pot: 550, tensao: 220, altura: 'baixa', icon: 'fa-gauge-high', desc: 'Bomba pressurizadora da rede de água fria/quente' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Pressurizador de Água Sanitária 127V', tipo: 'TUE', pot: 550, tensao: 127, altura: 'baixa', icon: 'fa-gauge-high', desc: 'Bomba pressurizadora 127V' },
             { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Passadeira a Vapor / Estação Profissional', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'media', icon: 'fa-shirt', desc: 'Ferro com caldeira de vapor contínuo' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Secadora de Roupas por Bomba de Calor', tipo: 'TUE', pot: 1000, tensao: 220, altura: 'alta', icon: 'fa-wind', desc: 'Secadora heat pump: consumo bem menor que a de resistência' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Aquecedor Elétrico de Acumulação 50-80 L', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'alta', icon: 'fa-cubes-stacked', desc: 'Aquecedor de água compacto com reservatório' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Bomba de Calor para Água Quente Residencial', tipo: 'TUE', pot: 1200, tensao: 220, altura: 'baixa', icon: 'fa-temperature-arrow-up', desc: 'Aquecimento de água por bomba de calor (COP ≈ 3 a 4)' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Bomba de Recalque Caixa d’Água ½ cv', tipo: 'TUE', pot: 850, tensao: 220, altura: 'baixa', icon: 'fa-gauge-high', desc: 'Recalque da cisterna à caixa d’água (≈3,9 A em 220V)' },
+            { grupo: 'Área de Serviço & Lavanderia (TUE)', nome: 'Bomba de Recalque Caixa d’Água 1 cv', tipo: 'TUE', pot: 1400, tensao: 220, altura: 'baixa', icon: 'fa-gauge-high', desc: 'Recalque predial/residencial maior (≈6,4 A em 220V)' },
 
             // 4. CLIMATIZAÇÃO & CONFORTO TÉRMICO (TUE)
-            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 7.000 BTU', tipo: 'TUE', pot: 750, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Quartos compactos até 9m²' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado de Janela 7.500 BTU 127V', tipo: 'TUE', pot: 750, tensao: 127, altura: 'alta', icon: 'fa-snowflake', desc: 'Janela compacto 127V (split inverter começa em 9.000 BTU)' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 9.000 BTU', tipo: 'TUE', pot: 900, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Dormitórios médios até 14m²' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 12.000 BTU', tipo: 'TUE', pot: 1150, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Suíte master e home offices até 20m²' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Split Inverter 18.000 BTU', tipo: 'TUE', pot: 1700, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Salas e ambientes integrados até 30m²' },
@@ -76,33 +90,44 @@
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Aquecedor Termoventilador Ambiente 220V', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'baixa', icon: 'fa-sun', desc: 'Calefator elétrico de ambiente 220V' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Aquecedor de Ambiente Óleo / Convector 127V', tipo: 'TUE', pot: 1500, tensao: 127, altura: 'baixa', icon: 'fa-sun', desc: 'Aquecedor de convecção 127V' },
             { grupo: 'Climatização & Conforto (TUE)', nome: 'Desumidificador de Ar Ambiente', tipo: 'TUE', pot: 400, tensao: 127, altura: 'media', icon: 'fa-droplet-slash', desc: 'Controle de umidade para closets e bibliotecas' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado de Janela 12.000 BTU 220V', tipo: 'TUE', pot: 1200, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Janela monobloco 12.000 BTU' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Portátil 12.000 BTU 127V', tipo: 'TUE', pot: 1200, tensao: 127, altura: 'media', icon: 'fa-snowflake', desc: 'Portátil com duto de exaustão pela janela' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Ar Condicionado Multi Split Inverter 18.000 BTU (2 Evaporadoras)', tipo: 'TUE', pot: 1700, tensao: 220, altura: 'alta', icon: 'fa-snowflake', desc: 'Uma condensadora para dois ambientes' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Lareira Elétrica Decorativa', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'baixa', icon: 'fa-fire-flame-curved', desc: 'Lareira de efeito chama com aquecimento' },
+            { grupo: 'Climatização & Conforto (TUE)', nome: 'Cortina de Ar (Entrada / Porta)', tipo: 'TUE', pot: 200, tensao: 220, altura: 'alta', icon: 'fa-wind', desc: 'Barreira de ar sobre a porta de acesso' },
 
             // 5. GARAGEM, VEÍCULOS & ÁREA EXTERNA (TUE)
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Carro Elétrico Wallbox 7.4 kW (Monofásico/Bifásico)', tipo: 'TUE', pot: 7400, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Estação de recarga veicular Tipo 2 32A' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Rápido 11 kW (Trifásico 16A)', tipo: 'TUE', pot: 11000, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Recarga veicular rápida trifásica 380V/220V' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Rápido 22 kW (Trifásico 32A)', tipo: 'TUE', pot: 22000, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Estação ultra rápida comercial/residencial' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Portátil Tomada 20A / 3.5 kW', tipo: 'TUE', pot: 3500, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Ponto dedicado de recarga lenta com plugue 20A' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 0.75 HP', tipo: 'TUE', pot: 550, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba de circulação e filtragem' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 1.0 HP', tipo: 'TUE', pot: 750, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba piscina média com IDR 30mA' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 1.5 HP', tipo: 'TUE', pot: 1100, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba piscina grande' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 7 kW (32 A / 220V)', tipo: 'TUE', pot: 7040, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Recarga Modo 3, conector Tipo 2: 32 A × 220 V = 7,04 kW; IDR tipo A/B' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Portátil (Tomada 20 A / 16 A de recarga)', tipo: 'TUE', pot: 3520, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Recarga Modo 2: 16 A × 220 V = 3,5 kW em ponto dedicado' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina ¾ cv', tipo: 'TUE', pot: 1150, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba ¾ cv: ≈5,2 A em 220V (potência absorvida)' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 1 cv', tipo: 'TUE', pot: 1400, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba 1 cv: ≈6,4 A em 220V, com IDR 30mA' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Filtro de Piscina 1,5 cv', tipo: 'TUE', pot: 1900, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba 1,5 cv: ≈8,6 A em 220V' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Aquecedor Piscina Bomba de Calor Inverter', tipo: 'TUE', pot: 4500, tensao: 220, altura: 'baixa', icon: 'fa-temperature-arrow-up', desc: 'Trocador de calor elétrico para piscina' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Cascata / Hidromassagem da Piscina', tipo: 'TUE', pot: 1100, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba auxiliar para efeitos de água' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Cascata / Hidromassagem da Piscina (1 cv)', tipo: 'TUE', pot: 1400, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Motobomba auxiliar 1 cv para efeitos de água' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Eletrônico Garagem 220V', tipo: 'TUE', pot: 400, tensao: 220, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador basculante/deslizante rápido' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Eletrônico Garagem 127V', tipo: 'TUE', pot: 400, tensao: 127, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador portão 127V' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Submersa de Poço / Drenagem 1.5 HP', tipo: 'TUE', pot: 1100, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Bomba centrífuga submersa poço artesiano' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Bomba Submersa de Poço / Drenagem 1,5 cv', tipo: 'TUE', pot: 1900, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Bomba submersa 1,5 cv: ≈8,6 A em 220V' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Sistema de Irrigação Automatizado Jardim', tipo: 'TUE', pot: 500, tensao: 220, altura: 'media', icon: 'fa-seedling', desc: 'Controlador de eletroválvulas + bomba booster' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Lavadora de Alta Pressão Externa (Wap)', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'media', icon: 'fa-spray-can', desc: 'Tomada externa IP55 com tampa para lava-jatos' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Compressor de Ar para Oficina 2 HP', tipo: 'TUE', pot: 1500, tensao: 220, altura: 'baixa', icon: 'fa-screwdriver-wrench', desc: 'Compressor pistão ferramentas pneumáticas' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Compressor de Ar para Oficina 2 cv', tipo: 'TUE', pot: 2400, tensao: 220, altura: 'baixa', icon: 'fa-screwdriver-wrench', desc: 'Compressor pistão 2 cv: ≈11 A em 220V' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Furadeira de Bancada / Serra Oficina', tipo: 'TUE', pot: 1200, tensao: 220, altura: 'media', icon: 'fa-toolbox', desc: 'Maquinário de bancada e marcenaria' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Cortador de Grama Elétrico / Roçadeira', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-scissors', desc: 'Ponto externo para jardinagem pesada' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 3,7 kW (16 A / 220V)', tipo: 'TUE', pot: 3520, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Wallbox de menor potência: 16 A × 220 V' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Deslizante Pesado ½ cv', tipo: 'TUE', pot: 850, tensao: 220, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador para portões pesados (≈3,9 A)' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Máquina de Solda Inversora 160 A', tipo: 'TUE', pot: 5000, tensao: 220, altura: 'media', icon: 'fa-bolt', desc: 'Solda eletrodo revestido: tomada 220V de 32 A' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Central de Cerca Elétrica / Alarme', tipo: 'TUE', pot: 50, tensao: 127, altura: 'alta', icon: 'fa-shield-halved', desc: 'Ponto dedicado para central de segurança' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'CFTV / DVR + Câmeras', tipo: 'TUE', pot: 100, tensao: 127, altura: 'alta', icon: 'fa-video', desc: 'Alimentação do gravador e das câmeras' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Gerador de Cloro Salino da Piscina', tipo: 'TUE', pot: 300, tensao: 220, altura: 'baixa', icon: 'fa-water', desc: 'Clorador por eletrólise do sal' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Iluminação Subaquática da Piscina (Trafo 12 V)', tipo: 'TUE', pot: 150, tensao: 127, altura: 'baixa', icon: 'fa-lightbulb', desc: 'Transformador de segurança SELV, IDR 30mA' },
 
             // 6. SALA, ESCRITÓRIO, TI & AUTOMAÇÃO (TUE)
             { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Nobreak Senoidal Online / Rack TI 220V', tipo: 'TUE', pot: 1200, tensao: 220, altura: 'baixa', icon: 'fa-server', desc: 'Alimentação ininterrupta para rede estruturada' },
             { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Nobreak Senoidal / Rack Servidor 127V', tipo: 'TUE', pot: 1000, tensao: 127, altura: 'baixa', icon: 'fa-server', desc: 'Alimentação para roteadores, switch PoE e CFTV' },
             { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Workstation / Render & PC Gamer Extremo', tipo: 'TUE', pot: 850, tensao: 127, altura: 'baixa', icon: 'fa-desktop', desc: 'Computador profissional com fonte de alta demanda' },
             { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Projetor Home Cinema 4K + Telão Retrátil', tipo: 'TUE', pot: 450, tensao: 220, altura: 'alta', icon: 'fa-video', desc: 'Alimentação de teto para projetor motorizado' },
-            { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Cortina / Persiana Motorizada Integrada', tipo: 'TUE', pot: 150, tensao: 127, altura: 'alta', icon: 'fa-blinds', desc: 'Motor tubular no cortineiro de gesso' },
+            { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Cortina / Persiana Motorizada Integrada', tipo: 'TUE', pot: 150, tensao: 127, altura: 'alta', icon: 'fa-bars-staggered', desc: 'Motor tubular no cortineiro de gesso' },
             { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Elevador Residencial / Plataforma Acessibilidade', tipo: 'TUE', pot: 2200, tensao: 220, altura: 'alta', icon: 'fa-elevator', desc: 'Quadro de comando para plataforma elevatória' },
+            { grupo: 'Sala, Escritório & Automação (TUE)', nome: 'Esteira Ergométrica', tipo: 'TUE', pot: 2000, tensao: 220, altura: 'baixa', icon: 'fa-person-running', desc: 'Esteira motorizada com ponto dedicado' },
 
             // 7. ELETRODOMÉSTICOS GERAIS E MULTIUSO (TUG)
             { grupo: 'Cozinha & Serviço (TUG)', nome: 'Air Fryer (Fritadeira sem Óleo) 127V', tipo: 'TUG', pot: 1500, tensao: 127, altura: 'media', icon: 'fa-kitchen-set', desc: 'Fritadeira de bancada 127V' },
@@ -120,6 +145,13 @@
             { grupo: 'Cozinha & Serviço (TUG)', nome: 'Batedeira Planetária', tipo: 'TUG', pot: 600, tensao: 127, altura: 'media', icon: 'fa-cake-candles', desc: 'Batedeira para massas pesadas' },
             { grupo: 'Cozinha & Serviço (TUG)', nome: 'Lavadora de Roupas Top Load (Abertura Superior)', tipo: 'TUG', pot: 800, tensao: 127, altura: 'media', icon: 'fa-soap', desc: 'Lavadora mecânica sem aquecimento' },
             { grupo: 'Cozinha & Serviço (TUG)', nome: 'Tanquinho Lavadora Semi-automática', tipo: 'TUG', pot: 450, tensao: 127, altura: 'media', icon: 'fa-soap', desc: 'Lavadora por turbilhonamento' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Chaleira Elétrica 127V', tipo: 'TUG', pot: 1200, tensao: 127, altura: 'media', icon: 'fa-mug-hot', desc: 'Chaleira de bancada' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Forno Elétrico de Bancada 44 L 127V', tipo: 'TUG', pot: 1750, tensao: 127, altura: 'media', icon: 'fa-temperature-arrow-up', desc: 'Forno portátil (≈13,8 A: prefira tomada de 20 A)' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Panela de Pressão Elétrica', tipo: 'TUG', pot: 1000, tensao: 127, altura: 'media', icon: 'fa-kitchen-set', desc: 'Panela elétrica multifunção 6 L' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Torradeira', tipo: 'TUG', pot: 800, tensao: 127, altura: 'media', icon: 'fa-bread-slice', desc: 'Torradeira de pães' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Fogão a Gás (Acendimento Automático)', tipo: 'TUG', pot: 100, tensao: 127, altura: 'baixa', icon: 'fa-fire-burner', desc: 'Tomada para o acendimento e a luz do forno' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Freezer Horizontal 300-400 L', tipo: 'TUG', pot: 300, tensao: 127, altura: 'baixa', icon: 'fa-box', desc: 'Freezer de tampa para despensa ou área de serviço' },
+            { grupo: 'Cozinha & Serviço (TUG)', nome: 'Ferro de Passar a Vapor', tipo: 'TUG', pot: 1200, tensao: 127, altura: 'media', icon: 'fa-shirt', desc: 'Ferro de passar doméstico' },
 
             // 8. SALA & QUARTO (TUG)
             { grupo: 'Sala & Quarto (TUG)', nome: 'Smart TV 55"/65" 4K LED', tipo: 'TUG', pot: 120, tensao: 127, altura: 'media', icon: 'fa-tv', desc: 'Televisor inteligente em painel' },
@@ -130,12 +162,27 @@
             { grupo: 'Sala & Quarto (TUG)', nome: 'Aspirador Robô c/ Base de Carga', tipo: 'TUG', pot: 50, tensao: 127, altura: 'baixa', icon: 'fa-circle-dot', desc: 'Estação de recarga inteligente de piso' },
             { grupo: 'Sala & Quarto (TUG)', nome: 'Aspirador de Pó Vertical / Trenó', tipo: 'TUG', pot: 1400, tensao: 127, altura: 'baixa', icon: 'fa-broom', desc: 'Aspirador de alta sucção portátil' },
             { grupo: 'Sala & Quarto (TUG)', nome: 'Tomada Uso Geral 10A (NBR 5410)', tipo: 'TUG', pot: 100, tensao: 127, altura: 'baixa', icon: 'fa-plug', desc: 'Tomada residencial padrão 100 VA' },
-            { grupo: 'Sala & Quarto (TUG)', nome: 'Tomada Serviço / Bancada 20A', tipo: 'TUG', pot: 600, tensao: 127, altura: 'media', icon: 'fa-plug', desc: 'Tomada de uso geral com capacidade até 20A (600 VA)' }
+            { grupo: 'Sala & Quarto (TUG)', nome: 'Tomada Serviço / Bancada 20A', tipo: 'TUG', pot: 600, tensao: 127, altura: 'media', icon: 'fa-plug', desc: 'Tomada de uso geral com capacidade até 20A (600 VA)' },
+            { grupo: 'Sala & Quarto (TUG)', nome: 'Ventilador de Teto c/ Luminária', tipo: 'TUG', pot: 130, tensao: 127, altura: 'alta', icon: 'fa-fan', desc: 'Ventilador de teto (motor + luminária)' },
+            { grupo: 'Sala & Quarto (TUG)', nome: 'Climatizador Evaporativo', tipo: 'TUG', pot: 200, tensao: 127, altura: 'baixa', icon: 'fa-wind', desc: 'Climatizador de ar por evaporação' },
+            { grupo: 'Sala & Quarto (TUG)', nome: 'Impressora Laser', tipo: 'TUG', pot: 600, tensao: 127, altura: 'baixa', icon: 'fa-print', desc: 'Picos de até ≈1.000 W no aquecimento do fusor' },
+            { grupo: 'Sala & Quarto (TUG)', nome: 'Console de Videogame', tipo: 'TUG', pot: 200, tensao: 127, altura: 'baixa', icon: 'fa-gamepad', desc: 'Console de mesa' },
+            { grupo: 'Sala & Quarto (TUG)', nome: 'Aquário c/ Aquecedor e Filtro', tipo: 'TUG', pot: 300, tensao: 127, altura: 'baixa', icon: 'fa-fish', desc: 'Termostato, bomba e iluminação' },
+            { grupo: 'Banheiro & Suíte (TUG)', nome: 'Secador de Cabelo Portátil 2.000 W', tipo: 'TUG', pot: 2000, tensao: 127, altura: 'media', icon: 'fa-wind', desc: 'Secador doméstico (≈15,7 A em 127V: tomada de 20 A)' },
+            { grupo: 'Banheiro & Suíte (TUG)', nome: 'Exaustor de Banheiro', tipo: 'TUG', pot: 30, tensao: 127, altura: 'alta', icon: 'fa-fan', desc: 'Exaustor axial de parede/forro' }
         ];
 
         // =========================================================================
         // MOTOR DE SUGESTÃO INTELIGENTE DE TUES POR CÔMODO (NBR 5410)
         // =========================================================================
+        // Potência, tensão, altura e ícone vêm sempre do catálogo acima: a sugestão por
+        // cômodo não pode divergir do aparelho que o usuário vê na lista.
+        function tueDoCatalogo(nome, padraoSelecionado, obs) {
+            const it = SUGESTOES_CARGAS_BR.find(i => i.nome === nome);
+            if (!it) throw new Error(`Aparelho "${nome}" não consta de SUGESTOES_CARGAS_BR.`);
+            return { nome: it.nome, pot: it.pot, tensao: it.tensao, altura: it.altura, padraoSelecionado, icon: it.icon, obs };
+        }
+
         function obterTuesSugeridasPorComodo(c) {
             if (!c) return [];
             const nomeLower = (c.nome || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -154,88 +201,88 @@
             const ehPiscina = nomeLower.includes('piscin') || nomeLower.includes('extern') || nomeLower.includes('jardim') || nomeLower.includes('quintal') || nomeLower.includes('maquin');
 
             if (ehLavabo) {
-                tues.push({ nome: 'Torneira Elétrica Banheiro / Lavatório', pot: 4500, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-faucet-drip', obs: 'Água quente no lavatório (NBR 5410)' });
-                tues.push({ nome: 'Toalheiro Térmico / Secador de Toalhas 220V', pot: 150, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-rug', obs: 'Conforto térmico' });
-                tues.push({ nome: 'Secador de Cabelo de Parede Hotel', pot: 1800, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-wind', obs: 'Ponto dedicado de secador' });
+                tues.push(tueDoCatalogo('Torneira Elétrica Banheiro / Lavatório', true, 'Água quente no lavatório (NBR 5410)'));
+                tues.push(tueDoCatalogo('Toalheiro Térmico / Secador de Toalhas 220V', false, 'Conforto térmico'));
+                tues.push(tueDoCatalogo('Secador de Cabelo de Parede Hotel', false, 'Ponto dedicado de secador'));
             } else if (ehBanheiro) {
-                tues.push({ nome: 'Chuveiro Elétrico Turbo Master', pot: 7500, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-shower', obs: 'Item 9.5.3.1 NBR 5410 - Circuito Exclusivo' });
-                tues.push({ nome: 'Chuveiro Elétrico Convencional 220V', pot: 5500, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-shower', obs: 'Alternativa convencional' });
-                tues.push({ nome: 'Torneira Elétrica Banheiro / Lavatório', pot: 4500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-faucet-drip', obs: 'Água quente em cuba' });
-                tues.push({ nome: 'Ducha Higiênica Aquecida 220V', pot: 3500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-spray-can-sparkles', obs: 'Aquecedor individual' });
-                tues.push({ nome: 'Toalheiro Térmico / Secador de Toalhas 220V', pot: 150, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-rug', obs: 'Toalhas secas e aquecidas' });
+                tues.push(tueDoCatalogo('Chuveiro Elétrico Turbo Master', true, 'Item 9.5.3.1 NBR 5410 - Circuito Exclusivo'));
+                tues.push(tueDoCatalogo('Chuveiro Elétrico Convencional 220V', false, 'Alternativa convencional'));
+                tues.push(tueDoCatalogo('Torneira Elétrica Banheiro / Lavatório', false, 'Água quente em cuba'));
+                tues.push(tueDoCatalogo('Ducha Higiênica Aquecida 220V', false, 'Aquecedor individual'));
+                tues.push(tueDoCatalogo('Toalheiro Térmico / Secador de Toalhas 220V', false, 'Toalhas secas e aquecidas'));
                 if (nomeLower.includes('master') || nomeLower.includes('hidro') || nomeLower.includes('spa') || nomeLower.includes('banheira')) {
-                    tues.push({ nome: 'Hidromassagem Dupla / Spa (1.5 HP)', pot: 2500, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-hot-tub-person', obs: 'Motobomba com proteção IDR' });
+                    tues.push(tueDoCatalogo('Hidromassagem Dupla / Spa (motobomba 1,5 cv)', true, 'Motobomba com proteção IDR'));
                 } else {
-                    tues.push({ nome: 'Hidromassagem Individual (1.0 HP)', pot: 1500, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-hot-tub-person', obs: 'Banheira de hidromassagem' });
+                    tues.push(tueDoCatalogo('Hidromassagem Individual (motobomba 1 cv)', false, 'Banheira de hidromassagem'));
                 }
             }
 
             if (ehCozinha) {
-                tues.push({ nome: 'Cooktop por Indução 4 Bocas', pot: 7200, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-fire-burner', obs: 'Circuito Exclusivo' });
-                tues.push({ nome: 'Forno Elétrico de Embutir Padrão (50L)', pot: 2800, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-temperature-arrow-up', obs: 'Torre quente convecção' });
-                tues.push({ nome: 'Torneira Elétrica Cozinha 220V', pot: 5500, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-faucet', obs: 'Água quente para desengordurar' });
-                tues.push({ nome: 'Lava-Louças Grande 14 Serviços', pot: 1800, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-sink', obs: 'Máquina de lavar louça' });
-                tues.push({ nome: 'Forno Micro-ondas de Embutir 220V', pot: 1400, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-microchip', obs: 'Micro-ondas dedicado em torre quente' });
-                tues.push({ nome: 'Coifa / Depurador Ilha Alta Sucção', pot: 350, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-fan', obs: 'Exaustor de ilha / teto' });
-                tues.push({ nome: 'Triturador de Alimentos de Pia 1.0 HP', pot: 750, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-blender', obs: 'Triturador na cuba inox' });
-                tues.push({ nome: 'Aquecedor Elétrico de Pia (Sob Bancada)', pot: 4500, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-fire', obs: 'Aquecedor individual sob pia' });
+                tues.push(tueDoCatalogo('Cooktop por Indução 4 Bocas', true, 'Circuito Exclusivo'));
+                tues.push(tueDoCatalogo('Forno Elétrico de Embutir Padrão (50L)', true, 'Torre quente convecção'));
+                tues.push(tueDoCatalogo('Torneira Elétrica Cozinha 220V', true, 'Água quente para desengordurar'));
+                tues.push(tueDoCatalogo('Lava-Louças Grande 14 Serviços', true, 'Máquina de lavar louça'));
+                tues.push(tueDoCatalogo('Forno Micro-ondas de Embutir 220V', false, 'Micro-ondas dedicado em torre quente'));
+                tues.push(tueDoCatalogo('Coifa / Depurador Ilha Alta Sucção', false, 'Exaustor de ilha / teto'));
+                tues.push(tueDoCatalogo('Triturador de Alimentos de Pia 1 cv 220V', false, 'Triturador na cuba inox'));
+                tues.push(tueDoCatalogo('Aquecedor Elétrico de Pia (Sob Bancada)', false, 'Aquecedor individual sob pia'));
             }
 
             if (ehLavanderia) {
-                tues.push({ nome: 'Máquina Lava e Seca Front Load 220V', pot: 2200, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-soap', obs: 'Ciclo lavagem com água aquecida' });
-                tues.push({ nome: 'Secadora de Roupas Elétrica Parede/Piso', pot: 3500, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-wind', obs: 'Resistência térmica alta demanda' });
-                tues.push({ nome: 'Torneira Elétrica Tanque / Lavanderia', pot: 4500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-faucet', obs: 'Tanque aquecido' });
-                tues.push({ nome: 'Boiler Central de Água Quente 200L', pot: 3000, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-cubes-stacked', obs: 'Aquecedor central acumulador' });
-                tues.push({ nome: 'Pressurizador de Água Sanitária 220V', pot: 550, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-gauge-high', obs: 'Bomba de pressão da rede' });
+                tues.push(tueDoCatalogo('Máquina Lava e Seca Front Load 220V', true, 'Ciclo lavagem com água aquecida'));
+                tues.push(tueDoCatalogo('Secadora de Roupas Elétrica 10-11 kg (Resistência)', true, 'Resistência térmica alta demanda'));
+                tues.push(tueDoCatalogo('Torneira Elétrica Tanque / Lavanderia', false, 'Tanque aquecido'));
+                tues.push(tueDoCatalogo('Boiler Central de Água Quente 200L', false, 'Aquecedor central acumulador'));
+                tues.push(tueDoCatalogo('Pressurizador de Água Sanitária 220V', false, 'Bomba de pressão da rede'));
             }
 
             if (ehQuarto) {
                 if (nomeLower.includes('master') || nomeLower.includes('casal')) {
-                    tues.push({ nome: 'Ar Condicionado Split Inverter 12.000 BTU', pot: 1150, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-snowflake', obs: 'Climatização Suíte Master' });
+                    tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 12.000 BTU', true, 'Climatização Suíte Master'));
                 } else {
-                    tues.push({ nome: 'Ar Condicionado Split Inverter 9.000 BTU', pot: 900, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-snowflake', obs: 'Climatização Dormitório' });
+                    tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 9.000 BTU', true, 'Climatização Dormitório'));
                 }
-                tues.push({ nome: 'Aquecedor Termoventilador Ambiente 220V', pot: 2000, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-sun', obs: 'Conforto térmico no inverno' });
-                tues.push({ nome: 'Piso Aquecido Quarto/Banheiro (5 m²)', pot: 750, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-border-none', obs: 'Calefação radiante de piso' });
+                tues.push(tueDoCatalogo('Aquecedor Termoventilador Ambiente 220V', false, 'Conforto térmico no inverno'));
+                tues.push(tueDoCatalogo('Piso Aquecido Quarto/Banheiro (5 m²)', false, 'Calefação radiante de piso'));
             }
 
             if (ehSala) {
-                tues.push({ nome: 'Ar Condicionado Split Inverter 18.000 BTU', pot: 1700, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-snowflake', obs: 'Climatização Sala / Living amplo' });
-                tues.push({ nome: 'Ar Condicionado Split Inverter 24.000 BTU', pot: 2300, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-snowflake', obs: 'Ambientes integrados e pé-direito duplo' });
-                tues.push({ nome: 'Projetor Home Cinema 4K + Telão Retrátil', pot: 450, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-video', obs: 'Tomada de teto dedicada' });
-                tues.push({ nome: 'Cortina / Persiana Motorizada Integrada', pot: 150, tensao: 127, altura: 'alta', padraoSelecionado: false, icon: 'fa-blinds', obs: 'Automação residencial' });
+                tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 18.000 BTU', true, 'Climatização Sala / Living amplo'));
+                tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 24.000 BTU', false, 'Ambientes integrados e pé-direito duplo'));
+                tues.push(tueDoCatalogo('Projetor Home Cinema 4K + Telão Retrátil', false, 'Tomada de teto dedicada'));
+                tues.push(tueDoCatalogo('Cortina / Persiana Motorizada Integrada', false, 'Automação residencial'));
             }
 
             if (ehGourmet) {
-                tues.push({ nome: 'Churrasqueira Elétrica de Embutir Gourmet', pot: 3000, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-drumstick-bite', obs: 'Bancada gourmet' });
-                tues.push({ nome: 'Cooktop por Indução 2 Bocas / Dominó', pot: 3600, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-fire-burner', obs: 'Cooktop auxiliar de bancada' });
-                tues.push({ nome: 'Ar Condicionado Split Inverter 18.000 BTU', pot: 1700, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-snowflake', obs: 'Climatização varanda fechada' });
-                tues.push({ nome: 'Chopeira Elétrica Residencial Gourmet', pot: 650, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-beer-mug-empty', obs: 'Ponto exclusivo para torre de chopp' });
-                tues.push({ nome: 'Forno de Pizza Elétrico de Embutir', pot: 2500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-pizza-slice', obs: 'Forno pizza gourmet 400°C' });
+                tues.push(tueDoCatalogo('Churrasqueira Elétrica de Embutir Gourmet', true, 'Bancada gourmet'));
+                tues.push(tueDoCatalogo('Cooktop por Indução 2 Bocas / Dominó', true, 'Cooktop auxiliar de bancada'));
+                tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 18.000 BTU', false, 'Climatização varanda fechada'));
+                tues.push(tueDoCatalogo('Chopeira Elétrica Residencial Gourmet', false, 'Ponto exclusivo para torre de chopp'));
+                tues.push(tueDoCatalogo('Forno de Pizza Elétrico de Embutir', false, 'Forno pizza gourmet 400°C'));
             }
 
             if (ehGaragem) {
-                tues.push({ nome: 'Carregador Carro Elétrico Wallbox 7.4 kW (Monofásico/Bifásico)', pot: 7400, tensao: 220, altura: 'media', padraoSelecionado: true, icon: 'fa-car-battery', obs: 'Recarga veicular Tipo 2' });
-                tues.push({ nome: 'Motor Portão Eletrônico Garagem 220V', pot: 400, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-door-open', obs: 'Automatizador portão basculante' });
-                tues.push({ nome: 'Lavadora de Alta Pressão Externa (Wap)', pot: 2000, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-spray-can', obs: 'Tomada externa IP55 com tampa' });
-                tues.push({ nome: 'Compressor de Ar para Oficina 2 HP', pot: 1500, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-screwdriver-wrench', obs: 'Oficina / Ferramentas' });
+                tues.push(tueDoCatalogo('Carregador Veicular Wallbox 7 kW (32 A / 220V)', true, 'Recarga veicular Tipo 2'));
+                tues.push(tueDoCatalogo('Motor Portão Eletrônico Garagem 220V', true, 'Automatizador portão basculante'));
+                tues.push(tueDoCatalogo('Lavadora de Alta Pressão Externa (Wap)', false, 'Tomada externa IP55 com tampa'));
+                tues.push(tueDoCatalogo('Compressor de Ar para Oficina 2 cv', false, 'Oficina / Ferramentas'));
             }
 
             if (ehEscritorio) {
-                tues.push({ nome: 'Ar Condicionado Split Inverter 9.000 BTU', pot: 900, tensao: 220, altura: 'alta', padraoSelecionado: true, icon: 'fa-snowflake', obs: 'Climatização escritório / home office' });
-                tues.push({ nome: 'Nobreak Senoidal Online / Rack TI 220V', pot: 1200, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-server', obs: 'Alimentação estabilizada para servidores' });
-                tues.push({ nome: 'Workstation / Render & PC Gamer Extremo', pot: 850, tensao: 127, altura: 'baixa', padraoSelecionado: false, icon: 'fa-desktop', obs: 'Fonte de alto desempenho' });
+                tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 9.000 BTU', true, 'Climatização escritório / home office'));
+                tues.push(tueDoCatalogo('Nobreak Senoidal Online / Rack TI 220V', false, 'Alimentação estabilizada para servidores'));
+                tues.push(tueDoCatalogo('Workstation / Render & PC Gamer Extremo', false, 'Fonte de alto desempenho'));
             }
 
             if (ehPiscina) {
-                tues.push({ nome: 'Bomba Filtro de Piscina 1.0 HP', pot: 750, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-water', obs: 'Motobomba com proteção IDR 30mA' });
-                tues.push({ nome: 'Aquecedor Piscina Bomba de Calor Inverter', pot: 4500, tensao: 220, altura: 'baixa', padraoSelecionado: true, icon: 'fa-temperature-arrow-up', obs: 'Bomba de calor trocador térmico' });
-                tues.push({ nome: 'Cascata / Hidromassagem da Piscina', pot: 1100, tensao: 220, altura: 'baixa', padraoSelecionado: false, icon: 'fa-water', obs: 'Motobomba auxiliar de hidromassagem' });
-                tues.push({ nome: 'Sistema de Irrigação Automatizado Jardim', pot: 500, tensao: 220, altura: 'media', padraoSelecionado: false, icon: 'fa-seedling', obs: 'Controlador de eletroválvulas' });
+                tues.push(tueDoCatalogo('Bomba Filtro de Piscina 1 cv', true, 'Motobomba com proteção IDR 30mA'));
+                tues.push(tueDoCatalogo('Aquecedor Piscina Bomba de Calor Inverter', true, 'Bomba de calor trocador térmico'));
+                tues.push(tueDoCatalogo('Cascata / Hidromassagem da Piscina (1 cv)', false, 'Motobomba auxiliar de hidromassagem'));
+                tues.push(tueDoCatalogo('Sistema de Irrigação Automatizado Jardim', false, 'Controlador de eletroválvulas'));
             }
 
             if (tues.length === 0) {
-                tues.push({ nome: 'Ar Condicionado Split Inverter 9.000 BTU', pot: 900, tensao: 220, altura: 'alta', padraoSelecionado: false, icon: 'fa-snowflake', obs: 'Ponto dedicado de climatização' });
+                tues.push(tueDoCatalogo('Ar Condicionado Split Inverter 9.000 BTU', false, 'Ponto dedicado de climatização'));
             }
 
             return tues;

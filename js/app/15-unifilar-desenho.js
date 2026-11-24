@@ -235,6 +235,8 @@
             const pal = paletaUnifilar();
             const escalaV = Math.min(1.4, Math.max(0.8, (state.escala || 35) / 35));
             const mapa = state.unifilar || { ilumPorComodo: {}, porPonto: {}, polos: {} };
+            // interruptores inteligentes (automação incluída no projeto) recebem neutro
+            const neutroInterruptores = (typeof idsInterruptoresComNeutro === 'function') ? idsInterruptoresComNeutro() : new Set();
             const quadro = { x: state.qdtPos.x + state.qdtPos.w / 2, y: state.qdtPos.y + state.qdtPos.h / 2 };
             const status = (chave, idx) => (typeof obterStatusVisibilidadeCircuito === 'function')
                 ? obterStatusVisibilidadeCircuito(chave, idx) : { visivel: true, destacado: false, opacidade: 1 };
@@ -253,7 +255,8 @@
                     rotaQuadro: state.eletrodutoWaypoints[idx + 1] || [],
                     pontos, letra: letraComodo, circIlum,
                     circPorPonto: mapa.porPonto, polosPorCircuito: mapa.polos,
-                    encadearTugs: c.passagemTomadas === 'horizontal' || (!c.passagemTomadas && pontos.filter(pt => pt.tipo === 'TUG').length > 1)
+                    encadearTugs: c.passagemTomadas === 'horizontal' || (!c.passagemTomadas && pontos.filter(pt => pt.tipo === 'TUG').length > 1),
+                    interruptoresComNeutro: neutroInterruptores
                 });
                 trechos.forEach(tr => {
                     const st = tr.tipo === 'principal' ? status(`comodo_${idx + 1}`, idx) : status(chaveStatus[tr.tipo], idx);

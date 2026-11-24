@@ -61,12 +61,19 @@
             // (o campo tipo só distingue "servico"/"geral"; antes banheiros recebiam a regra
             // da cozinha e varandas/cômodos pequenos não tinham regra própria)
             const classeAmb = NBR5410.classificarAmbiente(c.nome);
-            const ehAreaServicoOuCozinha = classeAmb === 'cozinha_servico';
-            const ehBanheiro = classeAmb === 'banheiro';
             const qtdTugsMin = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
 
             const tugsExistentes = state.pontosEletricos.filter(p => String(p.comodoId) === String(c.id) && p.tipo === 'TUG');
             const qtdAdicionar = Math.max(0, qtdTugsMin - tugsExistentes.length);
+            // destinação de cada tomada pelo uso do ambiente (geladeira, cabeceira, TV...)
+            const destinosTugs = NBR5410.destinacoesTomadas(c.nome, Math.max(qtdTugsMin, tugsExistentes.length), 0);
+            // tomadas já lançadas com nome genérico ("TUG Cozinha 2") recebem a destinação da sua posição
+            const nomeGenerico = new RegExp('^TUG ' + c.nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ' \\d+$');
+            tugsExistentes.forEach((p, i) => {
+                if (p.destino || !nomeGenerico.test(p.nome || '') || !destinosTugs[i]) return;
+                p.destino = destinosTugs[i].destino;
+                p.nome = `TUG ${p.destino}`;
+            });
 
             if (qtdAdicionar > 0) {
                 const cw = c.largura * escala;
@@ -91,11 +98,12 @@
                     state.pontosEletricos.push({
                         id: 'pt_tug_' + Date.now() + '_' + i + '_' + Math.floor(Math.random() * 1000),
                         tipo: 'TUG',
-                        subTipo: ehAreaServicoOuCozinha ? 'media' : 'baixa',
-                        nome: `TUG ${c.nome} ${idxGlobal + 1}`,
+                        subTipo: destinosTugs[idxGlobal].altura,
+                        nome: `TUG ${destinosTugs[idxGlobal].destino}`,
+                        destino: destinosTugs[idxGlobal].destino,
                         pot: potTug,
                         tensao: 127,
-                        altura: ehAreaServicoOuCozinha ? 'media' : 'baixa',
+                        altura: destinosTugs[idxGlobal].altura,
                         x: Math.round(px),
                         y: Math.round(py),
                         comodoId: c.id,
@@ -239,6 +247,9 @@
                 const ehServico = classeAmb === 'cozinha_servico';
                 const ehBanheiro = classeAmb === 'banheiro';
                 const qtdTugsMin = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
+                const potsTugsMin = NBR5410.potenciasTomadas(c.nome, qtdTugsMin, 0);
+                const destinosTugsMin = NBR5410.destinacoesTomadas(c.nome, qtdTugsMin, 0);
+                const ALTURA_M = { baixa: '0,30 m', media: '1,20 m', alta: '2,00 m' };
 
                 const sugeridas = obterTuesSugeridasPorComodo(c);
                 const ptsExistentes = (state.pontosEletricos || []).filter(p => p.comodoId === c.id);
@@ -267,6 +278,16 @@
                                 🔌 Mínimo TUGs: ${qtdTugsMin}x (${ehServico || ehBanheiro ? '600W/100W' : '100W'})
                             </span>
                             ${tuesExistentes.length > 0 ? `<span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2 py-0.5 rounded-full font-bold">⚡ ${tuesExistentes.length} TUE já instalada</span>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- DESTINAÇÃO DE CADA TOMADA DE USO GERAL (TUG) -->
+                    <div class="space-y-1.5">
+                        <span class="text-[11px] font-bold text-emerald-400 flex items-center gap-1.5 uppercase tracking-wider">
+                            <i class="fa-solid fa-plug"></i> Destinação das Tomadas de Uso Geral (TUG):
+                        </span>
+                        <div class="flex flex-wrap gap-1.5 text-[10px]">
+                            ${destinosTugsMin.map((d, i) => `<span class="bg-emerald-950/40 text-emerald-200 border border-emerald-500/25 px-2 py-0.5 rounded-lg"><strong>${i + 1}.</strong> ${d.destino} <span class="text-slate-400 font-mono">• ${potsTugsMin[i]} VA • ${ALTURA_M[d.altura] || d.altura}</span></span>`).join('')}
                         </div>
                     </div>
 
@@ -327,7 +348,7 @@
                         </span>
                         <div class="flex items-center gap-1.5">
                             <select id="selAddOutraTue_${c.id}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-lg p-1.5 text-[11px] outline-none focus:ring-1 focus:ring-blue-400 max-w-[240px]">
-                                <option value="">-- Escolha da lista de 75+ aparelhos --</option>
+                                <option value="">-- Escolha da lista de 140+ aparelhos --</option>
                             </select>
                             <button type="button" onclick="adicionarTueCustomizadaAoComodoModal('${c.id}')" class="px-2.5 py-1 rounded-lg bg-blue-700 hover:bg-blue-600 text-white font-bold text-[11px] transition shadow">
                                 + Incluir
@@ -635,6 +656,45 @@
                 document.getElementById('selModalPontoAltura').value = item.altura;
             }
             mostrarNotificacaoToast(`Dados de "${item.nome}" preenchidos!`, 'sucesso');
+        }
+
+        // =========================================================================
+        // DESTINAÇÃO DA TOMADA (TUG) NO MODAL DO PONTO: sugestões pelo uso do cômodo
+        // =========================================================================
+        let _comodoModalPonto = null;
+
+        function atualizarDestinoTomadaModal(tipo, comodo, destinoAtual) {
+            if (comodo !== undefined) _comodoModalPonto = comodo;
+            const box = document.getElementById('boxModalPontoDestino');
+            const sel = document.getElementById('selModalPontoDestino');
+            if (!box || !sel) return;
+            const c = _comodoModalPonto;
+            if (tipo !== 'TUG' || !c) {
+                box.classList.add('hidden');
+                sel.value = '';
+                return;
+            }
+            const opcoes = NBR5410.opcoesDestinacaoTomada(c.nome);
+            if (destinoAtual && !opcoes.some(o => o.destino === destinoAtual)) {
+                opcoes.unshift({ destino: destinoAtual, altura: '' });
+            }
+            const ROTULO_ALTURA = { baixa: 'baixa 0,30 m', media: 'média 1,20 m', alta: 'alta 2,00 m' };
+            sel.innerHTML = '<option value="">-- Para que esta tomada será usada? --</option>' + opcoes.map(o =>
+                `<option value="${o.destino.replace(/"/g, '&quot;')}" data-altura="${o.altura}">${o.destino}${o.altura ? ` (${ROTULO_ALTURA[o.altura]})` : ''}</option>`
+            ).join('');
+            sel.value = destinoAtual || '';
+            const lbl = document.getElementById('lblModalPontoDestinoComodo');
+            if (lbl) lbl.textContent = `Sugestões para ${c.nome}`;
+            box.classList.remove('hidden');
+        }
+
+        function aoSelecionarDestinoTomadaModal(destino) {
+            if (!destino) return;
+            const sel = document.getElementById('selModalPontoDestino');
+            const opt = sel && sel.selectedOptions[0];
+            document.getElementById('txtModalPontoNome').value = `TUG ${destino}`;
+            const altura = opt && opt.getAttribute('data-altura');
+            if (altura) document.getElementById('selModalPontoAltura').value = altura;
         }
 
         // =========================================================================
