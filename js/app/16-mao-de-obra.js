@@ -44,7 +44,9 @@
                 incluirAterramento: temProjeto && cfg.incluirAterramento !== false,
                 incluirPadrao: temProjeto && !!cfg.incluirPadrao,
                 areaConstruida: comodos.reduce((s, c) => s + (Number(c.area) || 0), 0),
-                totalMaterial: Number(totalMaterial) || 0
+                totalMaterial: Number(totalMaterial) || 0,
+                // automação residencial (só quando incluída no projeto, aba Automação)
+                ...((typeof obterResultadoAutomacao === 'function' && obterResultadoAutomacao()) ? obterResultadoAutomacao().maoDeObra : {})
             };
         }
 

@@ -89,6 +89,7 @@
      * @param {Object} p.circPorPonto              circuito de cada ponto (atribuirCircuitos)
      * @param {Object} p.polosPorCircuito          '1P' | '2P' por número de circuito
      * @param {boolean} p.encadearTugs             tomadas ligadas em sequência (true) ou radiais
+     * @param {Set|Array} [p.interruptoresComNeutro] ids dos interruptores inteligentes (exigem neutro na caixa)
      * @returns {Array<{tipo, de, para, via?, condutores, pontoId?}>}
      */
     function montarTrechosComodo(p) {
@@ -105,11 +106,13 @@
         const tues = pontos.filter(pt => pt.tipo === 'TUE');
         const letraDe = pt => (pt && pt.comando) || p.letra || 'a';
 
-        // luminária → interruptores: fase + retorno(s) do comando
+        // luminária → interruptores: fase + retorno(s) do comando (+ neutro no interruptor inteligente)
+        const comNeutro = new Set(p.interruptoresComNeutro || []);
         interr.forEach(s => {
             const letra = letraDe(s);
             const cond = [{ tipo: 'F', circ: L }, { tipo: 'R', circ: L, letra }];
             if (ehThreeWay(s)) cond.push({ tipo: 'R', circ: L, letra });
+            if (comNeutro.has(s.id)) cond.push({ tipo: 'N', circ: L });
             trechos.push({ tipo: 'interruptor', de: luz, para: s, pontoId: s.id, condutores: cond });
         });
         // luminária → luminárias extras: neutro + retorno + proteção

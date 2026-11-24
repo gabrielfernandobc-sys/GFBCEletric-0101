@@ -1795,6 +1795,17 @@
                 'Lubrificação facilitadora do puxamento de condutores em eletrodutos longos'
             );
 
+            // -------------------------------------------------------------
+            // CATEGORIA 9: AUTOMAÇÃO RESIDENCIAL (aba Automação, quando incluída no projeto)
+            // -------------------------------------------------------------
+            if (typeof obterMateriaisAutomacao === 'function') {
+                obterMateriaisAutomacao().forEach(it => addItem(
+                    'Automação Residencial', 'automacao', it.item, it.especificacao, it.qtd, it.unidade,
+                    (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('automacao', it.chave, it.precoRef) : it.precoRef),
+                    it.aplicacao, it.margem || 0, it.chave
+                ));
+            }
+
             state.quantitativoMateriaisDetalhado = materiais;
             return materiais;
         }
@@ -1869,7 +1880,8 @@
                 aparelhagem: materiais.filter(m => m.categoriaId === 'aparelhagem').length,
                 iluminacao: materiais.filter(m => m.categoriaId === 'iluminacao').length,
                 aterramento: materiais.filter(m => m.categoriaId === 'aterramento').length,
-                insumos: materiais.filter(m => m.categoriaId === 'insumos').length
+                insumos: materiais.filter(m => m.categoriaId === 'insumos').length,
+                automacao: materiais.filter(m => m.categoriaId === 'automacao').length
             };
 
             const mapIds = {
@@ -1881,7 +1893,8 @@
                 aparelhagem: 'contFiltroAparelhagem',
                 iluminacao: 'contFiltroIluminacao',
                 aterramento: 'contFiltroAterramento',
-                insumos: 'contFiltroInsumos'
+                insumos: 'contFiltroInsumos',
+                automacao: 'contFiltroAutomacao'
             };
 
             Object.keys(mapIds).forEach(k => {

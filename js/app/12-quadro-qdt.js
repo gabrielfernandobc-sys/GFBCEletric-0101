@@ -455,6 +455,11 @@
                 });
             }
 
+            // E. Automação residencial: contatores das cargas > 16 A e, com o painel integrado,
+            // atuadores, fontes e proteção do painel (js/app/17-automacao.js)
+            const dinAutomacao = (typeof obterDispositivosDinAutomacaoQdc === 'function') ? obterDispositivosDinAutomacaoQdc() : [];
+            dinAutomacao.forEach(it => { dispositivos.push(it); modulosUsados += it.polos; });
+
             // =========================================================================
             // CÁLCULO NORMATIVO DE RESERVA (NBR 5410 ITEM 6.5.4.7) & CAIXA COMERCIAL
             // =========================================================================
@@ -491,7 +496,7 @@
             const textoCaixaDesc = `Quadro de Distribuição para ${tamanhoSugerido} Módulos DIN (${numTrilhos} Fileiras de 12 Pólos - Embutir / Sobrepor)`;
             if (txtModelo) txtModelo.innerText = textoCaixaDesc;
             if (txtDesc) {
-                txtDesc.innerHTML = `Recomendação técnica: Caixa comercial de <strong>${tamanhoSugerido} módulos DIN (${numTrilhos} fileiras de 12 pólos)</strong> atende aos <strong>${modulosUsados} módulos ocupados</strong> (Geral, IDR, DPS, Monopolares e Bipolares) + <strong>${modulosReservaNorma} de reserva mínima NBR 5410</strong>.`;
+                txtDesc.innerHTML = `Recomendação técnica: Caixa comercial de <strong>${tamanhoSugerido} módulos DIN (${numTrilhos} fileiras de 12 pólos)</strong> atende aos <strong>${modulosUsados} módulos ocupados</strong> (Geral, IDR, DPS, Monopolares e Bipolares${dinAutomacao.length ? `, ${dinAutomacao.reduce((s, i) => s + i.polos, 0)} da automação` : ''}) + <strong>${modulosReservaNorma} de reserva mínima NBR 5410</strong>.`;
             }
             if (bOcup) bOcup.innerText = `${modulosUsados} Módulos`;
             if (bRes) bRes.innerText = `+${modulosReservaNorma} NBR 5410`;
@@ -845,6 +850,11 @@
                     <span class="text-[11px] font-black text-white font-mono leading-none">${c.disj}</span>
                     <span class="text-[7px] font-bold text-amber-400">Curva ${c.curva}</span>
                     <span class="text-[6px] text-slate-400 font-mono truncate w-full px-0.5">${w === 2 ? '2P • ' : ''}${qdtFasesDoCircuito(c).join('+')}</span>`;
+            } else if (item.tipo === 'automacao') {
+                el.className = `${base} border-violet-500/70`;
+                el.title = item.nome || 'Automação';
+                miolo = (typeof mioloDispositivoAutomacao === 'function') ? mioloDispositivoAutomacao(item, w)
+                    : `<span class="text-[7px] font-black text-violet-300">AUTOMAÇÃO</span>`;
             } else {
                 el.className = 'relative shrink-0 rounded-[3px] border border-dashed border-slate-700 bg-slate-800/40 flex items-center justify-center';
                 miolo = `<span class="text-[7px] text-slate-500 font-bold tracking-widest" style="writing-mode:vertical-rl">RESERVA</span>`;

@@ -79,6 +79,16 @@ test('three-way leva dois retornos; luminária extra leva neutro, retorno e prot
     assert.deepEqual(tr.find(t => t.tipo === 'ilum').condutores.map(c => c.tipo), ['N', 'R', 'T']);
 });
 
+test('interruptor inteligente (automação) recebe neutro: fase, neutro e retorno', () => {
+    const pontos = [
+        { id: 's1', tipo: 'INTERRUPTOR', nome: 'Interruptor Simples', comando: 'a', x: 10, y: 10 },
+        { id: 's2', tipo: 'INTERRUPTOR', nome: 'Interruptor Simples', comando: 'a', x: 30, y: 10 }
+    ];
+    const tr = U.montarTrechosComodo(Object.assign({}, base, { pontos, circPorPonto: {}, interruptoresComNeutro: new Set(['s1']) }));
+    assert.deepEqual(tr.find(t => t.pontoId === 's1').condutores.map(c => c.tipo), ['F', 'N', 'R']);
+    assert.deepEqual(tr.find(t => t.pontoId === 's2').condutores.map(c => c.tipo), ['F', 'R']);   // convencional: sem neutro
+});
+
 test('geometria: curva passa pelas pontas e a tangente no meio é paralela à corda', () => {
     const a = { x: 0, y: 0 }, b = { x: 100, y: 0 };
     const c = U.curva(a, b);

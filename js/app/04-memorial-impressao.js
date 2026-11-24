@@ -406,6 +406,29 @@
                 </div>
             `;
 
+            // PRANCHA 07: AUTOMAÇÃO RESIDENCIAL (só quando incluída no projeto)
+            const autom = (typeof obterResultadoAutomacao === 'function') ? obterResultadoAutomacao() : null;
+            if (autom && typeof htmlPranchaAutomacao === 'function') {
+                container.innerHTML = container.innerHTML.replace(/(<strong>FOLHA:<\/strong> \d{2}) \/ 06/g, '$1 / 07');
+                container.insertAdjacentHTML('beforeend', `
+                <div class="folha-prancha-abnt">
+                    <div style="border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h1 style="font-size: 16pt; font-weight: 900; margin: 0; color: #0f172a;">PRO-ELÉTRICA CAD NBR 5410</h1>
+                            <p style="font-size: 9pt; margin: 0; color: #475569;">PRANCHA 07/07 — AUTOMAÇÃO RESIDENCIAL (${escHtml(autom.tec.nome)})</p>
+                        </div>
+                        <div style="text-align: right; font-size: 8pt; font-family: monospace;"><span>${autom.dispositivos.length} DISPOSITIVOS</span></div>
+                    </div>
+                    ${htmlPranchaAutomacao(autom, '')}
+                    <div class="carimbo-tecnico" style="margin-top: 15px; padding: 10px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; font-size: 8pt;">
+                        <div><strong>OBRA:</strong> ${nomeObra}</div>
+                        <div><strong>RESP. TÉCNICO:</strong> ${projetista}</div>
+                        <div><strong>DATA:</strong> ${dataHoje}</div>
+                        <div><strong>FOLHA:</strong> 07 / 07</div>
+                    </div>
+                </div>`);
+            }
+
             return true;
         }
 

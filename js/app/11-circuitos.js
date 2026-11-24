@@ -750,7 +750,9 @@
                 }
             }
 
-            const circuitosFinais = [...circsBase, ...circuitos];
+            // circuitos dedicados da automação residencial (rack/nobreak e painel), quando incluída no projeto
+            const circuitosAutomacao = (!ehUnidadeEspecifica && typeof obterCircuitosAutomacao === 'function') ? obterCircuitosAutomacao() : [];
+            const circuitosFinais = [...circsBase, ...circuitos, ...circuitosAutomacao];
             let somaMetragensFinais = 0;
 
             // Distribuição dos circuitos nas fases equilibrando a carga (js/nbr5410.js)

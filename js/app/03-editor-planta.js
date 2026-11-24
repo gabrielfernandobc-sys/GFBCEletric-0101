@@ -946,7 +946,7 @@
         // FUNÇÃO CENTRAL DE TROCA DE ABAS (DESKTOP & MOBILE BOTTOM NAV)
         function trocarAba(tabTarget) {
             // Suporte retrocompatível a índices numéricos de 0 a 6
-            const mapAbasIndice = ['planta', 'instalacoes', 'visualizacao3d', 'alimentador', 'materiais', 'arquivos', 'duvidas'];
+            const mapAbasIndice = ['planta', 'instalacoes', 'visualizacao3d', 'alimentador', 'materiais', 'arquivos', 'duvidas', 'automacao'];
             if (typeof tabTarget === 'number') {
                 tabTarget = mapAbasIndice[tabTarget] || 'planta';
             }
@@ -1018,6 +1018,7 @@
                 if (typeof atualizarCabecalhoAbaArquivos === 'function') atualizarCabecalhoAbaArquivos();
             }
             if (tabTarget === 'duvidas') renderizarMemorialAba6();
+            if (tabTarget === 'automacao' && typeof renderizarAbaAutomacao === 'function') renderizarAbaAutomacao();
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
