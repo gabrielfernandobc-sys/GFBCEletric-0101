@@ -964,6 +964,105 @@
         return Array.from({ length: n }, (_, i) => (i < ate ? 600 : 100));
     }
 
+    /*
+     * Destinação de cada ponto de tomada (TUG) pelo uso do ambiente — prática de projeto
+     * residencial brasileira, alinhada à ordem de potenciasTomadas: nos ambientes molhados
+     * os primeiros pontos (600 VA) são os da bancada e os excedentes (100 VA) os demais.
+     * Alturas: baixa 0,30 m, media 1,20 m (bancadas, TV na parede), alta 2,00 m.
+     */
+    const D = (destino, altura) => ({ destino, altura });
+    const DESTINOS_TOMADA = {
+        banheiro: { bancada: [D('Bancada do lavatório (secador / barbeador)', 'media'), D('Bancada – escova elétrica / chapinha', 'media')],
+            demais: [D('Exaustor', 'alta'), D('Espelho com iluminação / toalheiro', 'media')] },
+        lavabo: { bancada: [D('Bancada do lavatório', 'media')], demais: [D('Uso geral', 'baixa')] },
+        cozinha: {
+            bancada: [D('Bancada – micro-ondas', 'media'), D('Bancada – eletroportáteis (liquidificador / air fryer)', 'media'),
+                D('Bancada – cafeteira / torradeira', 'media')],
+            demais: [D('Geladeira', 'baixa'), D('Depurador / coifa', 'alta'), D('Fogão (acendimento automático)', 'baixa'),
+                D('Filtro / purificador de água', 'media'), D('Freezer / adega', 'baixa'), D('Lava-louças', 'baixa')],
+            reserva: D('Bancada – reserva', 'media') },
+        gourmet: {
+            bancada: [D('Bancada – grill / eletroportáteis', 'media'), D('Bancada – liquidificador / cafeteira', 'media'),
+                D('Bancada – panela elétrica / reserva', 'media')],
+            demais: [D('Frigobar / cervejeira', 'baixa'), D('Coifa da churrasqueira', 'alta'), D('Som / TV da varanda', 'media')],
+            reserva: D('Uso geral', 'baixa') },
+        servico: {
+            bancada: [D('Máquina de lavar roupas', 'media'), D('Ferro de passar / bancada', 'media'), D('Secadora / tanquinho', 'media')],
+            demais: [D('Freezer', 'baixa'), D('Aspirador / uso geral', 'baixa')],
+            reserva: D('Uso geral', 'baixa') },
+        dormitorio: { demais: [D('Cabeceira – lado esquerdo', 'baixa'), D('Cabeceira – lado direito', 'baixa'), D('TV', 'media'),
+            D('Escrivaninha / penteadeira', 'baixa'), D('Uso geral (aspirador / ventilador)', 'baixa')] },
+        escritorio: { demais: [D('Mesa – computador / monitor', 'baixa'), D('Mesa – notebook / carregadores', 'baixa'),
+            D('Impressora', 'baixa'), D('Roteador / modem', 'baixa'), D('Uso geral (aspirador)', 'baixa')] },
+        jantar: { demais: [D('Aparador / buffet', 'baixa'), D('Mesa (rechaud / eletroportáteis)', 'baixa'), D('Uso geral (aspirador)', 'baixa')] },
+        sala: { demais: [D('TV / painel', 'media'), D('Rack – home theater / videogame', 'baixa'), D('Lateral do sofá (abajur / carregadores)', 'baixa'),
+            D('Roteador / modem', 'baixa'), D('Uso geral (aspirador)', 'baixa'), D('Lateral do sofá – lado oposto', 'baixa')] },
+        varanda: { demais: [D('Uso geral externa (com tampa)', 'baixa'), D('Ventilador / iluminação decorativa', 'alta')] },
+        garagem: { demais: [D('Bancada de ferramentas', 'media'), D('Aspirador / lavadora de alta pressão', 'baixa'), D('Uso geral', 'baixa')] },
+        circulacao: { demais: [D('Uso geral (aspirador / enceradeira)', 'baixa')] },
+        closet: { demais: [D('Vaporizador / ferro de passar', 'media'), D('Uso geral', 'baixa')] },
+        despensa: { demais: [D('Freezer / eletroportáteis', 'baixa'), D('Uso geral', 'baixa')] },
+        outro: { demais: [D('Uso geral', 'baixa')] }
+    };
+
+    /** Perfil de uso do ambiente para a destinação das tomadas (mais fino que classificarAmbiente). */
+    function perfilUsoAmbiente(nome) {
+        const n = String(nome || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+        const classe = classificarAmbiente(nome);
+        if (classe === 'banheiro') return /lavabo/.test(n) ? 'lavabo' : 'banheiro';
+        if (classe === 'cozinha_servico') {
+            if (/cozinha|copa/.test(n)) return 'cozinha';               // "Cozinha Gourmet" continua cozinha
+            if (/gourmet|churrasq/.test(n)) return 'gourmet';
+            if (/lavand|servico|\ba\.?\s*s\.?$/.test(n)) return 'servico';
+            return 'cozinha';
+        }
+        if (classe === 'varanda') return 'varanda';
+        if (/escrit|office|estud|bibliot/.test(n)) return 'escritorio';
+        if (/quarto|dormit|suite/.test(n)) return 'dormitorio';
+        if (/jantar/.test(n)) return 'jantar';
+        if (classe === 'sala_dormitorio') return 'sala';
+        if (/garag|abrigo|estacion/.test(n)) return 'garagem';
+        if (/closet/.test(n)) return 'closet';
+        if (/despensa|deposito/.test(n)) return 'despensa';
+        if (/circul|corredor|hall|escada|entrada/.test(n)) return 'circulacao';
+        return 'outro';
+    }
+
+    /**
+     * Destinação sugerida de cada ponto de tomada do ambiente, na mesma ordem e
+     * quantidade de potenciasTomadas(nome, qtd, totalConjuntoMolhado).
+     * @returns {{destino: string, altura: string}[]} destinos únicos no ambiente
+     */
+    function destinacoesTomadas(nome, qtd, totalConjuntoMolhado) {
+        const perfil = DESTINOS_TOMADA[perfilUsoAmbiente(nome)];
+        const pots = potenciasTomadas(nome, qtd, totalConjuntoMolhado);
+        const bancada = (perfil.bancada || []).slice();
+        const demais = (perfil.demais || []).slice();
+        const reserva = perfil.reserva || D('Uso geral', 'baixa');
+        const lista = pots.map((pot, i) => {
+            // 600 VA: ponto de bancada; 100 VA: demais usos do ambiente
+            if (pot >= 600 && bancada.length) return bancada.shift();
+            if (demais.length) return demais.shift();
+            if (bancada.length) return bancada.shift();
+            return reserva;
+        });
+        const vistos = {};
+        return lista.map(d => {
+            vistos[d.destino] = (vistos[d.destino] || 0) + 1;
+            return vistos[d.destino] > 1 ? D(`${d.destino} ${vistos[d.destino]}`, d.altura) : D(d.destino, d.altura);
+        });
+    }
+
+    /** Todas as destinações sugeridas para o ambiente (para o usuário escolher ao editar um ponto). */
+    function opcoesDestinacaoTomada(nome) {
+        const perfil = DESTINOS_TOMADA[perfilUsoAmbiente(nome)];
+        const lista = [...(perfil.bancada || []), ...(perfil.demais || [])];
+        const reserva = perfil.reserva || D('Uso geral', 'baixa');
+        if (!lista.some(d => d.destino === reserva.destino)) lista.push(reserva);
+        if (!lista.some(d => d.destino === 'Uso geral')) lista.push(D('Uso geral', 'baixa'));
+        return lista;
+    }
+
     /** Iz (A) da seção no método B1 com 3 condutores carregados. */
     function izMetodoB1TresCondutores(secaoMm2) {
         const iz = IZ_METODO_B1_3C[secaoMm2];
@@ -1157,6 +1256,9 @@
         classificarAmbiente,
         tomadasMinimas,
         potenciasTomadas,
+        perfilUsoAmbiente,
+        destinacoesTomadas,
+        opcoesDestinacaoTomada,
         izMetodoB1TresCondutores,
         dimensionarAlimentador,
         correnteIdrComercial,

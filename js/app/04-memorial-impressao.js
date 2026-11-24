@@ -575,6 +575,8 @@
             // NBR 5410 item 9.5.2.2.1: quantidade mínima de tomadas pela função do ambiente (js/nbr5410.js)
             const qtdTugs = NBR5410.tomadasMinimas(c.nome, c.area, c.perimetro);
             const potsTugs = NBR5410.potenciasTomadas(c.nome, qtdTugs, 0);
+            // destinação de cada tomada pelo uso do ambiente (geladeira, cabeceira, TV...)
+            const destinosTugs = NBR5410.destinacoesTomadas(c.nome, qtdTugs, 0);
             const margem = Math.max(4, Math.min(14, Math.min(w, h) * 0.25));
 
             // 1. PONTO DE ILUMINAÇÃO CENTRAL NBR 5410 (PERSISTENTE EM state.pontosEletricos)
@@ -636,10 +638,11 @@
                     comodoId: c.id,
                     pavimentoId: c.pavimentoId || 'terreo',
                     tipo: 'TUG',
-                    nome: `TUG ${c.nome} ${i + 1}`,
+                    nome: `TUG ${destinosTugs[i].destino}`,
+                    destino: destinosTugs[i].destino,
                     pot: potsTugs[i] || 100,                 // item 9.5.2.2.2
                     tensao: 127,
-                    altura: c.tipo === 'servico' ? 'media' : 'baixa',
+                    altura: destinosTugs[i].altura,
                     x: pt.x,
                     y: pt.y
                 });

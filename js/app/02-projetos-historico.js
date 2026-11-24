@@ -1304,6 +1304,7 @@
         // =========================================================================
 
         function aoMudarTipoPontoModal(tipo) {
+            if (typeof atualizarDestinoTomadaModal === 'function') atualizarDestinoTomadaModal(tipo);
             const txtNome = document.getElementById('txtModalPontoNome');
             const numPot = document.getElementById('numModalPontoPot');
             const selTensao = document.getElementById('selModalPontoTensao');
