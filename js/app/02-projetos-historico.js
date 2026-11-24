@@ -942,113 +942,40 @@
                 ultimaModificacao: new Date().toISOString()
             };
 
-            state.escadas = [];
-
-            if (tpl === 'em_branco') {
-                // Projeto limpo do zero
-                state.pavimentos = [
-                    { id: 'terreo', nome: 'Pavimento Térreo', nivel: 0, alturaPeDireito: 2.8, temLajePiso: true, tipoLajePiso: 'concreto', espessuraLajePiso: 0.20, temLajeTeto: true, tipoLajeTeto: 'concreto', espessuraLajeTeto: 0.15, tipoPassagemCabos: 'teto' }
-                ];
+            // Modelo montado em metros (js/modelos-projeto.js): terreno e recuos do próprio
+            // modelo, cômodos encostados dentro da área construível, cargas específicas em
+            // posição relativa ao cômodo — na escala atual. Antes as posições eram pixels
+            // fixos (pensados para 40 px/m) e o lote do projeto anterior permanecia.
+            const modelo = ModelosProjeto.montar(tpl, { escala: state.escala || 40, origem: { x: 40, y: 40 } });
+            state.terreno = modelo.terreno;
+            state.pavimentos = modelo.pavimentos;
+            state.pavimentoAtivoId = 'terreo';
+            state.comodos = modelo.comodos;
+            state.pontosEletricos = modelo.pontos;
+            state.escadas = modelo.escadas;
+            state.qdtPos = modelo.qdtPos;
+            state.prumadaPos = modelo.prumadaPos;
+            state.prumadaAtiva = modelo.pavimentos.length > 1;
+            state.alimentacaoExterna = Object.assign({}, state.alimentacaoExterna || {}, modelo.alimentacao, { distanciaManual: null });
+            // nada do projeto anterior permanece no desenho
+            state.eletrodutoWaypoints = {};
+            state.transicoes = [];
+            state.linhasMaoLivre = [];
+            state.linhaAtual = null;
+            state.cadUnderlay = [];
+            state.comprimentosManuaisCircuitos = {};
+            state.circuitosOcultos = [];
+            state.circuitoDestaque = 'todos';
+            state.modoIsolarCircuito = false;
+            state.comodoEmEdicaoId = null;
+            state.pontoSelecionadoId = null;
+            state.caboHoverInstalacoes = null;
+            state.comodosFixados = false;
+            // pontos mínimos da NBR 5410 (luz, interruptor e tomadas) e portas entre cômodos vizinhos
+            state.comodos.forEach(c => gerarPontosEletricosParaComodo(c));
+            if (typeof detectarProximidadeComodos === 'function') {
+                state.pavimentos.forEach(pv => { state.pavimentoAtivoId = pv.id; detectarProximidadeComodos(); });
                 state.pavimentoAtivoId = 'terreo';
-                state.comodos = [];
-                state.pontosEletricos = [];
-                state.eletrodutoWaypoints = {};
-                state.transicoes = [];
-                state.escadas = [];
-                state.qdtPos = { x: 40, y: 40, w: 45, h: 26 };
-                state.prumadaPos = { x: 85, y: 45, w: 20, h: 20 };
-            } else if (tpl === 'casa_terrea') {
-                // Modelo Casa Térrea 4 Cômodos NBR 5410
-                state.pavimentos = [
-                    { id: 'terreo', nome: 'Pavimento Térreo', nivel: 0, alturaPeDireito: 2.8, temLajePiso: true, tipoLajePiso: 'concreto', espessuraLajePiso: 0.20, temLajeTeto: true, tipoLajeTeto: 'concreto', espessuraLajeTeto: 0.15, tipoPassagemCabos: 'teto' }
-                ];
-                state.pavimentoAtivoId = 'terreo';
-                state.comodos = [
-                    { id: 101, pavimentoId: 'terreo', nome: 'Sala de Estar', largura: 5.0, comprimento: 4.0, area: 20.0, perimetro: 18.0, x: 100, y: 80, tipo: 'geral' },
-                    { id: 102, pavimentoId: 'terreo', nome: 'Cozinha', largura: 4.0, comprimento: 3.0, area: 12.0, perimetro: 14.0, x: 300, y: 80, tipo: 'servico' },
-                    { id: 103, pavimentoId: 'terreo', nome: 'Dormitório', largura: 4.0, comprimento: 3.5, area: 14.0, perimetro: 15.0, x: 100, y: 240, tipo: 'geral' },
-                    { id: 104, pavimentoId: 'terreo', nome: 'Banheiro', largura: 2.5, comprimento: 2.0, area: 5.0, perimetro: 9.0, x: 260, y: 240, tipo: 'servico' }
-                ];
-                state.pontosEletricos = [
-                    // Iluminação
-                    { id: 'pt_luz_101', comodoId: 101, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Sala 100W', pot: 100, tensao: 127, altura: 'teto', x: 200, y: 160 },
-                    { id: 'pt_luz_102', comodoId: 102, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Cozinha 100W', pot: 100, tensao: 127, altura: 'teto', x: 380, y: 140 },
-                    { id: 'pt_luz_103', comodoId: 103, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Quarto 100W', pot: 100, tensao: 127, altura: 'teto', x: 180, y: 310 },
-                    { id: 'pt_luz_104', comodoId: 104, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Banheiro 100W', pot: 100, tensao: 127, altura: 'teto', x: 310, y: 280 },
-                    // Tomadas Sala
-                    { id: 'pt_1', comodoId: 101, pavimentoId: 'terreo', tipo: 'TUG', nome: 'Smart TV 55"', pot: 120, tensao: 127, altura: 'media', x: 110, y: 120 },
-                    { id: 'pt_2', comodoId: 101, pavimentoId: 'terreo', tipo: 'TUG', nome: 'Tomada Geral Sofá', pot: 100, tensao: 127, altura: 'baixa', x: 280, y: 220 },
-                    // Tomadas Cozinha
-                    { id: 'pt_3', comodoId: 102, pavimentoId: 'terreo', tipo: 'TUG', nome: 'Geladeira Frost Free', pot: 300, tensao: 127, altura: 'media', x: 320, y: 180 },
-                    { id: 'pt_4', comodoId: 102, pavimentoId: 'terreo', tipo: 'TUG', nome: 'Micro-ondas', pot: 1200, tensao: 127, altura: 'media', x: 440, y: 180 },
-                    // Banheiro Chuveiro TUE
-                    { id: 'pt_5', comodoId: 104, pavimentoId: 'terreo', tipo: 'TUE', nome: 'Chuveiro Blindado', pot: 5500, tensao: 220, altura: 'alta', x: 340, y: 300 }
-                ];
-                state.eletrodutoWaypoints = {
-                    1: [{ x: 120, y: 60 }],
-                    2: [{ x: 260, y: 60 }]
-                };
-            } else if (tpl === 'sobrado') {
-                // Modelo Sobrado com 2 pavimentos, escada arquitetônica e prumada
-                state.pavimentos = [
-                    { id: 'terreo', nome: 'Pavimento Térreo', nivel: 0, alturaPeDireito: 2.8, temLajePiso: true, tipoLajePiso: 'concreto', espessuraLajePiso: 0.20, temLajeTeto: true, tipoLajeTeto: 'concreto', espessuraLajeTeto: 0.15, tipoPassagemCabos: 'teto' },
-                    { id: 'superior', nome: '1º Pavimento (Superior)', nivel: 1, alturaPeDireito: 2.8, temLajePiso: true, tipoLajePiso: 'concreto', espessuraLajePiso: 0.20, temLajeTeto: true, tipoLajeTeto: 'concreto', espessuraLajeTeto: 0.15, tipoPassagemCabos: 'teto' }
-                ];
-                state.pavimentoAtivoId = 'terreo';
-                state.comodos = [
-                    // Térreo
-                    { id: 201, pavimentoId: 'terreo', nome: 'Living / Sala', largura: 5.5, comprimento: 4.0, area: 22.0, perimetro: 19.0, x: 100, y: 80, tipo: 'geral' },
-                    { id: 202, pavimentoId: 'terreo', nome: 'Cozinha Gourmet', largura: 4.0, comprimento: 4.0, area: 16.0, perimetro: 16.0, x: 320, y: 80, tipo: 'servico' },
-                    { id: 203, pavimentoId: 'terreo', nome: 'Lavabo', largura: 2.0, comprimento: 1.8, area: 3.6, perimetro: 7.6, x: 100, y: 240, tipo: 'geral' },
-                    // Superior
-                    { id: 204, pavimentoId: 'superior', nome: 'Suíte Master', largura: 4.5, comprimento: 4.0, area: 18.0, perimetro: 17.0, x: 100, y: 80, tipo: 'geral' },
-                    { id: 205, pavimentoId: 'superior', nome: 'Dormitório 2', largura: 4.0, comprimento: 3.5, area: 14.0, perimetro: 15.0, x: 280, y: 80, tipo: 'geral' },
-                    { id: 206, pavimentoId: 'superior', nome: 'Banheiro Social', largura: 2.5, comprimento: 2.0, area: 5.0, perimetro: 9.0, x: 280, y: 220, tipo: 'servico' }
-                ];
-                state.pontosEletricos = [
-                    // Térreo
-                    { id: 'pt_luz_201', comodoId: 201, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Living 150W', pot: 150, tensao: 127, altura: 'teto', x: 210, y: 160 },
-                    { id: 'pt_luz_202', comodoId: 202, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Cozinha 100W', pot: 100, tensao: 127, altura: 'teto', x: 400, y: 160 },
-                    { id: 'pt_201', comodoId: 201, pavimentoId: 'terreo', tipo: 'TUG', nome: 'Tomada Home Theater', pot: 500, tensao: 127, altura: 'baixa', x: 120, y: 150 },
-                    // Superior
-                    { id: 'pt_luz_204', comodoId: 204, pavimentoId: 'superior', tipo: 'ILUM', nome: 'Plafon Suíte 100W', pot: 100, tensao: 127, altura: 'teto', x: 190, y: 160 },
-                    { id: 'pt_204_ar', comodoId: 204, pavimentoId: 'superior', tipo: 'TUE', nome: 'Ar Condicionado 12k', pot: 1150, tensao: 220, altura: 'alta', x: 260, y: 100 }
-                ];
-                state.escadas = [
-                    {
-                        id: 'escada_sobrado_1',
-                        comodoId: 201,
-                        comodoNome: 'Living / Sala',
-                        pavimentoOrigemId: 'terreo',
-                        pavimentoDestinoId: 'superior',
-                        x: 120,
-                        y: 110,
-                        largura: 0.95,
-                        comprimento: 2.60,
-                        direcao: 'H_DIR',
-                        orientacao: 'H',
-                        numDegraus: 16
-                    }
-                ];
-            } else if (tpl === 'apartamento') {
-                // Modelo Apartamento Studio
-                state.pavimentos = [
-                    { id: 'terreo', nome: 'Apartamento Studio', nivel: 0, alturaPeDireito: 2.7, temLajePiso: true, tipoLajePiso: 'concreto', espessuraLajePiso: 0.18, temLajeTeto: true, tipoLajeTeto: 'concreto', espessuraLajeTeto: 0.15, tipoPassagemCabos: 'teto' }
-                ];
-                state.pavimentoAtivoId = 'terreo';
-                state.comodos = [
-                    { id: 301, pavimentoId: 'terreo', nome: 'Living / Dormitório', largura: 6.0, comprimento: 4.5, area: 27.0, perimetro: 21.0, x: 100, y: 80, tipo: 'geral' },
-                    { id: 302, pavimentoId: 'terreo', nome: 'Cozinha Americana', largura: 3.5, comprimento: 2.5, area: 8.75, perimetro: 12.0, x: 340, y: 80, tipo: 'servico' },
-                    { id: 303, pavimentoId: 'terreo', nome: 'Banheiro', largura: 2.2, comprimento: 2.0, area: 4.4, perimetro: 8.4, x: 340, y: 180, tipo: 'servico' }
-                ];
-                state.pontosEletricos = [
-                    // Dois pontos de luz na sala studio
-                    { id: 'pt_luz_301a', comodoId: 301, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Spot Sala Estar', pot: 60, tensao: 127, altura: 'teto', x: 170, y: 170 },
-                    { id: 'pt_luz_301b', comodoId: 301, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Spot Espaço Dormitório', pot: 60, tensao: 127, altura: 'teto', x: 280, y: 170 },
-                    { id: 'pt_luz_302', comodoId: 302, pavimentoId: 'terreo', tipo: 'ILUM', nome: 'Plafon Cozinha', pot: 100, tensao: 127, altura: 'teto', x: 410, y: 130 },
-                    { id: 'pt_301_tv', comodoId: 301, pavimentoId: 'terreo', tipo: 'TUG', nome: 'Tomada TV', pot: 120, tensao: 127, altura: 'media', x: 110, y: 130 },
-                    { id: 'pt_301_ar', comodoId: 301, pavimentoId: 'terreo', tipo: 'TUE', nome: 'Ar Condicionado Inverter', pot: 1150, tensao: 220, altura: 'alta', x: 320, y: 100 }
-                ];
             }
 
             setFiltro3d('todos');
@@ -1057,6 +984,7 @@
             renderListaComodosSidebar();
             renderizarBotoesUnidadesQDT();
             atualizarTudo();
+            if (typeof resetarZoomCad === 'function') resetarZoomCad(true);   // enquadra o novo lote inteiro
             reconstruirCena3D();
             resetarCamera3D();
             salvarProjetoAtualNoLocalStorage();
