@@ -529,8 +529,9 @@
                 state.linhasMaoLivre.push({
                     tipo: 'texto',
                     texto: texto.trim(),
-                    x: 120,
-                    y: 120,
+                    // no centro da área visível da planta
+                    x: (() => { const cv = document.getElementById('cadCanvas'); return cv ? larguraLogicaCanvas(cv) / 2 - 40 : 120; })(),
+                    y: (() => { const cv = document.getElementById('cadCanvas'); return cv ? alturaLogicaCanvas(cv) / 2 : 120; })(),
                     cor: '#38bdf8',
                     tamanho: 14,
                     pavimentoId: state.pavimentoAtivoId

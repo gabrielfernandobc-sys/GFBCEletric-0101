@@ -132,6 +132,9 @@
                             p.x = (pivotX + (p.x - pivotX) * ratio);
                             p.y = (pivotY + (p.y - pivotY) * ratio);
                         });
+                    } else if (linha && linha.tipo === 'texto') {      // anotação de texto
+                        linha.x = (pivotX + (linha.x - pivotX) * ratio);
+                        linha.y = (pivotY + (linha.y - pivotY) * ratio);
                     }
                 });
             }
@@ -248,6 +251,9 @@
                             p.x += dx;
                             p.y += dy;
                         });
+                    } else if (linha && linha.tipo === 'texto') {      // anotação de texto
+                        linha.x += dx;
+                        linha.y += dy;
                     }
                 });
             }
@@ -336,7 +342,7 @@
             const canvas = ids.map(id => document.getElementById(id)).find(c => c && c.offsetParent) || document.getElementById(ids[0]);
             const cx = caixaConteudoProjeto();
             if (!canvas || !cx) return null;
-            const w = canvas.width, h = canvas.height;
+            const w = larguraLogicaCanvas(canvas), h = alturaLogicaCanvas(canvas);
             if (w < 100 || h < 100) return null;
             const margem = 24;
             const larg = Math.max(1, cx.maxX - cx.minX), alt = Math.max(1, cx.maxY - cx.minY);
@@ -390,8 +396,8 @@
             const projCenterX = (minX + maxX) / 2;
             const projCenterY = (minY + maxY) / 2;
 
-            const canvasCenterX = canvas.width / 2;
-            const canvasCenterY = canvas.height / 2;
+            const canvasCenterX = larguraLogicaCanvas(canvas) / 2;
+            const canvasCenterY = alturaLogicaCanvas(canvas) / 2;
 
             const shiftX = Math.round(canvasCenterX - projCenterX);
             const shiftY = Math.round(canvasCenterY - projCenterY);
@@ -446,8 +452,8 @@
                 // Em tela cheia + CTRL: executa o zoom suave centrado no cursor do mouse
                 e.preventDefault();
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                 const mouseX = (e.clientX - rect.left) * scaleX;
                 const mouseY = (e.clientY - rect.top) * scaleY;
 
@@ -800,8 +806,8 @@
                 if (e.touches.length === 1) {
                     const t = e.touches[0];
                     const rect = canvas.getBoundingClientRect();
-                    const scaleX = canvas.width / rect.width;
-                    const scaleY = canvas.height / rect.height;
+                    const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                    const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                     const mx = (t.clientX - rect.left) * scaleX;
                     const my = (t.clientY - rect.top) * scaleY;
 
@@ -846,8 +852,8 @@
                     };
 
                     const rect = canvas.getBoundingClientRect();
-                    const scaleX = canvas.width / rect.width;
-                    const scaleY = canvas.height / rect.height;
+                    const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                    const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                     const midX = (currentMid.x - rect.left) * scaleX;
                     const midY = (currentMid.y - rect.top) * scaleY;
 
@@ -1289,8 +1295,13 @@
             });
 
             btnClear.addEventListener('click', () => {
-                state.linhasMaoLivre = state.linhasMaoLivre.filter(l => l.pavimentoId !== state.pavimentoAtivoId);
+                // traços são listas de pontos (pavimento no 1º ponto); anotações são objetos.
+                // Antes o filtro olhava l.pavimentoId nos traços e não removia nada.
+                const doAndar = l => (Array.isArray(l) ? (l[0] && l[0].pavimentoId) : (l && l.pavimentoId)) === state.pavimentoAtivoId;
+                const qtd = state.linhasMaoLivre.filter(doAndar).length;
+                state.linhasMaoLivre = state.linhasMaoLivre.filter(l => !doAndar(l));
                 desenharCAD();
+                mostrarNotificacaoToast(qtd ? `${qtd} traço(s)/anotação(ões) removidos deste andar.` : 'Não há traços a mão livre neste andar.', qtd ? 'sucesso' : 'info');
             });
         }
 

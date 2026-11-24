@@ -117,8 +117,8 @@
 
             canvas.addEventListener('mousedown', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                 const mx = (e.clientX - rect.left) * scaleX;
                 const my = (e.clientY - rect.top) * scaleY;
 
@@ -273,8 +273,8 @@
 
             canvas.addEventListener('mousemove', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                 const mx = (e.clientX - rect.left) * scaleX;
                 const my = (e.clientY - rect.top) * scaleY;
 
@@ -535,8 +535,8 @@
 
             canvas.addEventListener('dblclick', (e) => {
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                 const mx = (e.clientX - rect.left) * scaleX;
                 const my = (e.clientY - rect.top) * scaleY;
 
@@ -566,8 +566,8 @@
             canvas.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                const scaleX = larguraLogicaCanvas(canvas) / rect.width;
+                const scaleY = alturaLogicaCanvas(canvas) / rect.height;
                 const mx = (e.clientX - rect.left) * scaleX;
                 const my = (e.clientY - rect.top) * scaleY;
 

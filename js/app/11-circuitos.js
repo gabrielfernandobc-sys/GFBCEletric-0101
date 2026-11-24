@@ -35,10 +35,7 @@
             if (tipo === 'cad') {
                 const canvas = document.getElementById('cadCanvas');
                 if (canvas) {
-                    canvas.dataset.origW = canvas.width;
-                    canvas.dataset.origH = canvas.height;
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+                    ajustarResolucaoCanvas(canvas, window.innerWidth, window.innerHeight);
                     canvas.style.height = window.innerHeight + 'px';
                     centralizarProjetoNoCanvas('cadCanvas');
                     desenharCAD();
@@ -46,10 +43,7 @@
             } else if (tipo === 'instalacoes') {
                 const canvas = document.getElementById('instalacoesCanvas');
                 if (canvas) {
-                    canvas.dataset.origW = canvas.width;
-                    canvas.dataset.origH = canvas.height;
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+                    ajustarResolucaoCanvas(canvas, window.innerWidth, window.innerHeight);
                     canvas.style.height = window.innerHeight + 'px';
                     centralizarProjetoNoCanvas('instalacoesCanvas');
                     desenharInstalacoes();
@@ -91,17 +85,13 @@
             if (tipo === 'cad') {
                 const canvas = document.getElementById('cadCanvas');
                 if (canvas) {
-                    canvas.width = parseInt(canvas.dataset.origW) || 900;
-                    canvas.height = parseInt(canvas.dataset.origH) || 520;
-                    canvas.style.height = '520px';
+                    canvas.style.height = '520px';          // o desenho reajusta a resolução ao tamanho exibido
                     centralizarProjetoNoCanvas('cadCanvas');
                     desenharCAD();
                 }
             } else if (tipo === 'instalacoes') {
                 const canvas = document.getElementById('instalacoesCanvas');
                 if (canvas) {
-                    canvas.width = parseInt(canvas.dataset.origW) || 1120;
-                    canvas.height = parseInt(canvas.dataset.origH) || 620;
                     canvas.style.height = '620px';
                     centralizarProjetoNoCanvas('instalacoesCanvas');
                     desenharInstalacoes();
@@ -182,16 +172,14 @@
             if (viewportFullscreenAtivo === 'cad') {
                 const canvas = document.getElementById('cadCanvas');
                 if (canvas) {
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+                    ajustarResolucaoCanvas(canvas, window.innerWidth, window.innerHeight);
                     canvas.style.height = window.innerHeight + 'px';
                     desenharCAD();
                 }
             } else if (viewportFullscreenAtivo === 'instalacoes') {
                 const canvas = document.getElementById('instalacoesCanvas');
                 if (canvas) {
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight;
+                    ajustarResolucaoCanvas(canvas, window.innerWidth, window.innerHeight);
                     canvas.style.height = window.innerHeight + 'px';
                     desenharInstalacoes();
                 }
