@@ -101,6 +101,7 @@
             },
             protecao: {
                 'disj1p': { unit: 14.50, customizado: false, fonte: 'Mercado DIN', refInternet: { min: 12.90, medio: 15.80, max: 19.50, fonte: 'Leroy Merlin / Steck / Siemens', url: 'https://www.leroymerlin.com.br/materiais-eletricos' } },
+                'disj3p': { unit: 62.00, customizado: false, fonte: 'Mercado DIN', refInternet: { min: 54.00, medio: 66.00, max: 82.00, fonte: 'Leroy Merlin / Steck / Siemens', url: 'https://www.leroymerlin.com.br/materiais-eletricos' } },
                 'disj2p': { unit: 32.00, customizado: false, fonte: 'Mercado DIN', refInternet: { min: 28.50, medio: 34.90, max: 42.00, fonte: 'Leroy Merlin / Steck / Siemens', url: 'https://www.leroymerlin.com.br/materiais-eletricos' } },
                 'disjGeral1p': { unit: 25.00, customizado: false, fonte: 'Tabela de referência', refInternet: { min: 22.00, medio: 28.00, max: 35.00, fonte: 'SINAPI / CEF', url: 'https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/' } },
                 'disjGeral2p': { unit: 48.00, customizado: false, fonte: 'Tabela de referência', refInternet: { min: 42.00, medio: 52.00, max: 65.00, fonte: 'SINAPI / CEF', url: 'https://www.caixa.gov.br/poder-publico/modernizacao-gestao/sinapi/' } },
@@ -495,6 +496,7 @@
             const itensProt = [
                 { id: 'disj1p', nome: 'Disjuntor DIN Monopolar (1P) Curva C', norma: 'NBR IEC 60898', padrao: 14.50 },
                 { id: 'disj2p', nome: 'Disjuntor DIN Bipolar (2P) Curva C', norma: 'NBR IEC 60898', padrao: 32.00 },
+                { id: 'disj3p', nome: 'Disjuntor DIN Tripolar (3P) Curva C', norma: 'NBR IEC 60898', padrao: 62.00 },
                 { id: 'disjGeral1p', nome: 'Disjuntor Geral Monopolar (1P)', norma: 'NBR IEC 60898', padrao: 25.00 },
                 { id: 'disjGeral2p', nome: 'Disjuntor Geral Bipolar (2P)', norma: 'NBR IEC 60898', padrao: 48.00 },
                 { id: 'disjGeral3p', nome: 'Disjuntor Geral Tripolar (3P)', norma: 'NBR IEC 60898', padrao: 75.00 },
@@ -747,6 +749,7 @@
                     { nome: 'Eletroduto Corrugado DN 32 mm (1")', unid: 'm', ref: PRECOS_PADRAO_MATERIAIS.eletrodutos['32']?.refInternet },
                     { nome: 'Disjuntor DIN Monopolar Curva C', unid: 'un', ref: PRECOS_PADRAO_MATERIAIS.protecao['disj1p']?.refInternet },
                     { nome: 'Disjuntor DIN Bipolar Curva C', unid: 'un', ref: PRECOS_PADRAO_MATERIAIS.protecao['disj2p']?.refInternet },
+                    { nome: 'Disjuntor DIN Tripolar Curva C', unid: 'un', ref: PRECOS_PADRAO_MATERIAIS.protecao['disj3p']?.refInternet },
                     { nome: 'Interruptor Diferencial Residual (IDR) 30mA', unid: 'un', ref: PRECOS_PADRAO_MATERIAIS.protecao['idr']?.refInternet },
                     { nome: 'Dispositivo Contra Surtos (DPS) 275V 20kA', unid: 'un', ref: PRECOS_PADRAO_MATERIAIS.protecao['dps']?.refInternet },
                     { nome: 'Tomada 2P+T 10A / 250V (NBR 14136)', unid: 'un', ref: PRECOS_PADRAO_MATERIAIS.aparelhagem['tomada10a']?.refInternet },
@@ -1164,7 +1167,14 @@
                         registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Pino de aterramento central (NBR 14136)');
                     }
                 } else if (circ.tipo === 'TUE') {
-                    if (circ.polos === '2P') {
+                    if (circ.polos === '3P') {
+                        // Cargas trifásicas 3F+N 220 V (carregador veicular trifásico)
+                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, 'Fase 1 dos circuitos trifásicos 220V');
+                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, 'Fase 2 dos circuitos trifásicos 220V');
+                        registrarCaboCor(bitola, 'Condutor Fase 3 (T)', 'Branco / Cinza', '#94a3b8', rota, ref, prc, 'Fase 3 dos circuitos trifásicos 220V');
+                        registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, 'Neutro do circuito trifásico (eletrônica do aparelho)');
+                        registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Aterramento obrigatório da carcaça do aparelho TUE');
+                    } else if (circ.polos === '2P') {
                         // Cargas 220V bifásicas (Chuveiro, Torneira, Ar, Forno)
                         registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, 'Fase 1 para aparelhos de alta potência 220V');
                         registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, 'Fase 2 para aparelhos de alta potência 220V');
@@ -1437,21 +1447,24 @@
                 const ampStr = circ.disj || '20 A';
                 const key = `${pol}_${ampStr}_CurvaC`;
                 if (!mapDisjuntores[key]) {
+                    const tri = pol === '3P', bi = pol === '2P';
+                    const desc = tri ? 'Tripolar (3P)' : (bi ? 'Bipolar (2P)' : 'Monopolar (1P)');
+                    const chavePreco = tri ? ['disj3p', 62.0] : (bi ? ['disj2p', 32.0] : ['disj1p', 14.5]);
                     mapDisjuntores[key] = {
-                        tipo: `Disjuntor Termomagnético ${pol === '2P' ? 'Bipolar (2P)' : 'Monopolar (1P)'}`,
+                        tipo: `Disjuntor Termomagnético ${desc}`,
                         polos: pol,
-                        polosDesc: pol === '2P' ? 'Bipolar (2P)' : 'Monopolar (1P)',
+                        polosDesc: desc,
                         curva: 'Curva C (5 a 10×In)',
                         correnteStr: ampStr,
                         correnteA: parseInt(ampStr) || 20,
-                        tensao: pol === '2P' ? '220V / 400V' : '127V / 230V',
+                        tensao: (tri || bi) ? '220V / 400V' : '127V / 230V',
                         icn: '3 kA (NBR IEC 60898)',
                         qtdProjeto: 0,
                         reserva: 0,
                         qtdTotal: 0,
-                        precoUnit: (typeof obterPrecoMaterial === 'function') ? (pol === '2P' ? obterPrecoMaterial('protecao', 'disj2p', 32.0) : obterPrecoMaterial('protecao', 'disj1p', 14.5)) : (pol === '2P' ? 32.0 : 14.5),
+                        precoUnit: (typeof obterPrecoMaterial === 'function') ? obterPrecoMaterial('protecao', chavePreco[0], chavePreco[1]) : chavePreco[1],
                         circuitos: [],
-                        funcao: pol === '2P' ? 'Proteção individual de circuitos bifásicos 220V' : 'Proteção individual de circuitos terminais 127V'
+                        funcao: tri ? 'Proteção individual de circuitos trifásicos 220V (3F+N)' : (bi ? 'Proteção individual de circuitos bifásicos 220V' : 'Proteção individual de circuitos terminais 127V')
                     };
                 }
                 mapDisjuntores[key].qtdProjeto += 1;

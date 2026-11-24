@@ -2,6 +2,13 @@
    Biblioteca de cargas/aparelhos, sugestões de TUE por cômodo e o objeto global `state`.
    Script clássico (escopo global compartilhado): os módulos de js/app/ são
    carregados em ordem numérica pelo index.html e dependem dessa ordem. */
+        /** Tensão para exibição: "3F 220V" na carga trifásica, "220V"/"127V" nas demais. */
+        function rotuloTensao(obj) {
+            if (!obj) return '';
+            const tri = (typeof NBR5410 !== 'undefined') ? NBR5410.ehCargaTrifasica(obj) : Number(obj.fases) === 3;
+            return `${tri ? '3F ' : ''}${obj.tensao}V`;
+        }
+
         // =========================================================================
         // BIBLIOTECA EXTENSIVA DE CARGAS E APARELHOS DO MERCADO BRASILEIRO (NBR 5410)
         // =========================================================================
@@ -113,6 +120,8 @@
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Furadeira de Bancada / Serra Oficina', tipo: 'TUE', pot: 1200, tensao: 220, altura: 'media', icon: 'fa-toolbox', desc: 'Maquinário de bancada e marcenaria' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Cortador de Grama Elétrico / Roçadeira', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-scissors', desc: 'Ponto externo para jardinagem pesada' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 3,7 kW (16 A / 220V)', tipo: 'TUE', pot: 3520, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Wallbox de menor potência: 16 A × 220 V' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', tipo: 'TUE', pot: 6096, tensao: 220, fases: 3, altura: 'media', icon: 'fa-car-battery', desc: 'Modelo de 11 kW limitado a 16 A por fase: na rede 127/220 V entrega √3 × 220 V × 16 A ≈ 6,1 kW (11 kW só em 230/400 V). Circuito 3F+N+PE; confira se o modelo aceita 220 V entre fases, siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', tipo: 'TUE', pot: 12193, tensao: 220, fases: 3, altura: 'media', icon: 'fa-car-battery', desc: 'Modelo de 22 kW limitado a 32 A por fase: na rede 127/220 V entrega √3 × 220 V × 32 A ≈ 12,2 kW (22 kW só em 230/400 V). Circuito 3F+N+PE; confira se o modelo aceita 220 V entre fases, siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Deslizante Pesado ½ cv', tipo: 'TUE', pot: 850, tensao: 220, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador para portões pesados (≈3,9 A)' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Máquina de Solda Inversora 160 A', tipo: 'TUE', pot: 5000, tensao: 220, altura: 'media', icon: 'fa-bolt', desc: 'Solda eletrodo revestido: tomada 220V de 32 A' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Central de Cerca Elétrica / Alarme', tipo: 'TUE', pot: 50, tensao: 127, altura: 'alta', icon: 'fa-shield-halved', desc: 'Ponto dedicado para central de segurança' },
@@ -180,7 +189,7 @@
         function tueDoCatalogo(nome, padraoSelecionado, obs) {
             const it = SUGESTOES_CARGAS_BR.find(i => i.nome === nome);
             if (!it) throw new Error(`Aparelho "${nome}" não consta de SUGESTOES_CARGAS_BR.`);
-            return { nome: it.nome, pot: it.pot, tensao: it.tensao, altura: it.altura, padraoSelecionado, icon: it.icon, obs };
+            return { nome: it.nome, pot: it.pot, tensao: it.tensao, fases: it.fases === 3 ? 3 : undefined, altura: it.altura, padraoSelecionado, icon: it.icon, obs };
         }
 
         function obterTuesSugeridasPorComodo(c) {
@@ -263,6 +272,8 @@
 
             if (ehGaragem) {
                 tues.push(tueDoCatalogo('Carregador Veicular Wallbox 7 kW (32 A / 220V)', true, 'Recarga veicular Tipo 2'));
+                tues.push(tueDoCatalogo('Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', false, 'Recarga trifásica (exige entrada trifásica)'));
+                tues.push(tueDoCatalogo('Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', false, 'Recarga trifásica rápida (exige entrada trifásica)'));
                 tues.push(tueDoCatalogo('Motor Portão Eletrônico Garagem 220V', true, 'Automatizador portão basculante'));
                 tues.push(tueDoCatalogo('Lavadora de Alta Pressão Externa (Wap)', false, 'Tomada externa IP55 com tampa'));
                 tues.push(tueDoCatalogo('Compressor de Ar para Oficina 2 cv', false, 'Oficina / Ferramentas'));

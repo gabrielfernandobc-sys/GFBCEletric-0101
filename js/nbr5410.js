@@ -111,6 +111,9 @@
 
     // Fator de demanda aplicado às cargas que não são aquecimento nem ar-condicionado.
     const FD_OUTRAS_CARGAS = 0.70;
+    // Recarga de veículo elétrico: cada ponto à corrente nominal (IEC 60364-7-722.311 / NBR 17019)
+    const FD_RECARGA_VEICULAR = 1.0;
+    const ehRecargaVeicular = nome => /carregador|wallbox|recarga veicular|ve[ií]culo el[eé]trico/i.test(nome || '');
 
     // =========================================================================
     // 2. FUNÇÕES AUXILIARES
@@ -141,8 +144,27 @@
     }
 
     /** Iz corrigida = Iz(B1) × FCA × FCT. */
-    function izCorrigida(secaoMm2, fca, fct) {
-        return izMetodoB1(secaoMm2) * fca * fct;
+    function izCorrigida(secaoMm2, fca, fct, condutoresCarregados) {
+        // circuito trifásico (3 fases carregadas): coluna de 3 condutores da Tabela 36
+        const base = condutoresCarregados === 3 ? IZ_METODO_B1_3C[secaoMm2] : izMetodoB1(secaoMm2);
+        if (base === undefined) throw new Error(`Seção ${secaoMm2} mm² não consta da Tabela 36 (B1, 3 condutores).`);
+        return base * fca * fct;
+    }
+
+    /** Carga trifásica (3F): campo fases = 3 ou "trifásico"/"3F" no nome do aparelho. */
+    function ehCargaTrifasica(ponto) {
+        if (!ponto) return false;
+        if (Number(ponto.fases) === 3) return true;
+        return /trif[aá]sic|(^|[^a-z0-9])3f([^a-z0-9]|$)/i.test(String(ponto.nome || ''));
+    }
+
+    /**
+     * Corrente de projeto da carga (A): monofásica ou bifásica Ib = P / V;
+     * trifásica equilibrada Ib = P / (√3 · V), com V a tensão entre fases.
+     */
+    function correnteDaCarga(potW, tensaoV, fases) {
+        const P = Number(potW) || 0, V = Number(tensaoV) || 220;
+        return Number(fases) === 3 ? P / (Math.sqrt(3) * V) : P / V;
     }
 
     /** Seção mínima do condutor de proteção (PE) — NBR 5410 Tabela 58. */
@@ -183,12 +205,15 @@
     }
 
     /**
-     * Queda de tensão em circuito monofásico (fase-neutro ou fase-fase, ida e volta):
-     * ΔV = 2 · ρ · L · Ib / S
+     * Queda de tensão no circuito:
+     *   monofásico (fase-neutro ou fase-fase, ida e volta): ΔV = 2 · ρ · L · Ib / S
+     *   trifásico equilibrado (entre fases):               ΔV = √3 · ρ · L · Ib / S
+     * @param {number} [fases=1] 3 para circuito trifásico
      * @returns {{volts: number, pct: number}}
      */
-    function calcularQuedaTensao(ib, comprimentoM, secaoMm2, tensaoV) {
-        const volts = (2 * RESISTIVIDADE_COBRE_70C * comprimentoM * ib) / secaoMm2;
+    function calcularQuedaTensao(ib, comprimentoM, secaoMm2, tensaoV, fases) {
+        const k = Number(fases) === 3 ? Math.sqrt(3) : 2;
+        const volts = (k * RESISTIVIDADE_COBRE_70C * comprimentoM * ib) / secaoMm2;
         return { volts, pct: (volts / tensaoV) * 100 };
     }
 
@@ -229,11 +254,13 @@
      * coerente com o quantitativo de materiais do app:
      *   Iluminação: F + N + Retorno + PE   |   1P: F + N + PE   |   2P: F + F + PE
      *   TUE 2P de ar-condicionado/forno: + N (comando 127 V)
+     *   3P (trifásico): F + F + F + N + PE (carregador veicular e eletrônica pedem o neutro)
      */
     function condutoresDoCircuito(circ, secaoFase, secaoPE) {
         const pe = secaoPE !== undefined ? secaoPE : secaoProtecao(secaoFase);
         const nome = (circ.nome || '').toLowerCase();
         if (circ.tipo === 'Iluminação') return [secaoFase, secaoFase, secaoFase, pe];
+        if (circ.polos === '3P') return [secaoFase, secaoFase, secaoFase, secaoFase, pe];
         if (circ.polos === '2P') {
             const lista = [secaoFase, secaoFase, pe];
             if (circ.tipo === 'TUE' && tueComNeutro(nome)) lista.push(secaoFase);
@@ -332,9 +359,11 @@
             alertas.push(`Corrente de projeto ${ib.toFixed(1)} A acima do maior disjuntor previsto (${maiorDisj} A): divida a carga em mais circuitos.`);
         }
 
-        // 2. Seção pela capacidade de condução corrigida
+        // 2. Seção pela capacidade de condução corrigida (trifásico: 3 condutores carregados)
+        const fases = circ.polos === '3P' ? 3 : 1;
+        const carregados = fases === 3 ? 3 : 2;
         const secaoMin = (circ.tipo === 'Iluminação') ? SECAO_MINIMA_ILUMINACAO : SECAO_MINIMA_FORCA;
-        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= secaoMin && izCorrigida(s, fca, fct) >= inDisj);
+        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= secaoMin && izCorrigida(s, fca, fct, carregados) >= inDisj);
         if (idx === -1) {
             idx = SECOES_PADRONIZADAS.length - 1;
             alertas.push(`Nenhuma seção até ${SECOES_PADRONIZADAS[idx]} mm² atende In ${inDisj} A com FCA ${fca.toFixed(2)} × FCT ${fct.toFixed(2)}.`);
@@ -342,10 +371,10 @@
 
         // 3. Queda de tensão
         const distParaDeltaV = circ.ehManual ? circ.rota : (circ.distanciaCritica || circ.rota);
-        let queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao);
+        let queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao, fases);
         while (queda.pct > QUEDA_TENSAO_MAX_PCT && idx < SECOES_PADRONIZADAS.length - 1) {
             idx++;
-            queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao);
+            queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao, fases);
         }
         const quedaOk = queda.pct <= QUEDA_TENSAO_MAX_PCT;
         if (!quedaOk) {
@@ -353,7 +382,7 @@
         }
 
         const secaoNum = SECOES_PADRONIZADAS[idx];
-        const iz = izCorrigida(secaoNum, fca, fct);
+        const iz = izCorrigida(secaoNum, fca, fct, carregados);
 
         circ.disj = `${inDisj} A`;
         circ.cabo = formatarSecao(secaoNum);
@@ -781,7 +810,13 @@
         ordem.forEach(i => {
             const c = lista[i];
             const pot = Number(c.potVal) || 0;
-            if (c.polos === '2P' && fases.length >= 2) {
+            if (c.polos === '3P' && fases.length === 3) {
+                // trifásico equilibrado: um terço da potência em cada fase
+                fases.forEach(f => { carga[f] += pot / 3; });
+                resultado[i] = fases.join(' + ');
+                return;
+            }
+            if ((c.polos === '2P' || c.polos === '3P') && fases.length >= 2) {
                 // critério: menor carga máxima; empate → menor soma dos quadrados (mais equilibrado)
                 let melhor = pares[0], melhorMax = Infinity, melhorQuad = Infinity;
                 pares.forEach(par => {
@@ -853,11 +888,18 @@
         let potArCondKW = 0, qtdArCond = 0;
         const aparelhosAr = [];
         let potOutrasKW = 0;
+        // Parcela e: recarga de veículos elétricos — cada ponto de recarga à corrente nominal
+        // (fator de demanda 1, IEC 60364-7-722.311 / NBR 17019), salvo gerenciamento de carga
+        let potVeKW = 0;
+        const aparelhosVe = [];
 
         tues.forEach(pt => {
             const nome = (pt.nome || '').toLowerCase();
             const kw = pt.pot / 1000.0;
-            if (nome.includes('chuveiro') || nome.includes('torneira') || nome.includes('aquecedor') || nome.includes('boiler') || nome.includes('forno') || nome.includes('cooktop')) {
+            if (ehRecargaVeicular(nome)) {
+                potVeKW += kw;
+                aparelhosVe.push({ nome: pt.nome, potKW: kw });
+            } else if (nome.includes('chuveiro') || nome.includes('torneira') || nome.includes('aquecedor') || nome.includes('boiler') || nome.includes('forno') || nome.includes('cooktop')) {
                 potAquecKW += kw;
                 qtdAparelhosAquec++;
                 aparelhosAquec.push({ nome: pt.nome, potKW: kw });
@@ -880,10 +922,11 @@
         const demandaArKW = potArCondKW * fdAr;
 
         const demandaOutrasKW = potOutrasKW * FD_OUTRAS_CARGAS;
+        const demandaVeKW = potVeKW * FD_RECARGA_VEICULAR;
 
         // Demanda total
-        const demandaTotalKW = demandaIlumTugKW + demandaAquecKW + demandaArKW + demandaOutrasKW;
-        const cargaInstaladaTotalKW = potIlumTugKW + potAquecKW + potArCondKW + potOutrasKW;
+        const demandaTotalKW = demandaIlumTugKW + demandaAquecKW + demandaArKW + demandaOutrasKW + demandaVeKW;
+        const cargaInstaladaTotalKW = potIlumTugKW + potAquecKW + potArCondKW + potOutrasKW + potVeKW;
         const fatorDemandaGlobal = cargaInstaladaTotalKW > 0 ? (demandaTotalKW / cargaInstaladaTotalKW) : 0.6;
         const demandaTotalkVA = demandaTotalKW / FATOR_POTENCIA_RESIDENCIAL;
 
@@ -914,6 +957,7 @@
             parcelaB: { potKW: potAquecKW, demKW: demandaAquecKW, qtd: qtdAparelhosAquec, fd: fdAquec, itens: aparelhosAquec },
             parcelaC: { potKW: potArCondKW, demKW: demandaArKW, qtd: qtdArCond, fd: fdAr, itens: aparelhosAr },
             parcelaD: { potKW: potOutrasKW, demKW: demandaOutrasKW },
+            parcelaE: { potKW: potVeKW, demKW: demandaVeKW, qtd: aparelhosVe.length, fd: FD_RECARGA_VEICULAR, itens: aparelhosVe },
             categoriaAtend
         };
     }
@@ -1148,6 +1192,7 @@
     /** Fases de um circuito a partir do campo `fase` ("R", "R + S"). */
     function fasesDoCircuito(c) {
         const f = String((c && c.fase) || '').toUpperCase().match(/[RST]/g) || [];
+        if (c && c.polos === '3P') return f.length >= 3 ? f.slice(0, 3) : ['R', 'S', 'T'];
         if (c && c.polos === '2P') return f.length >= 2 ? f.slice(0, 2) : ['R', 'S'];
         return f.length ? [f[0]] : ['R'];
     }
@@ -1209,12 +1254,19 @@
             const porChave = new Map();
             g.circs.forEach(c => {
                 const fs = fasesDoCircuito(c);
-                const chave = c.polos === '2P' ? fs.slice().sort().join('+') : fs[0];
+                const chave = (c.polos === '2P' || c.polos === '3P') ? fs.slice().sort().join('+') : fs[0];
                 if (!porChave.has(chave)) porChave.set(chave, []);
                 porChave.get(chave).push(c.num);
             });
             if (!porChave.size) fasesSistema.forEach(f => porChave.set(f, []));
             [...porChave.keys()].sort((a, b) => (a.length - b.length) || a.localeCompare(b)).forEach(chave => {
+                const fasesChave = chave.split('+');
+                if (fasesChave.length === 3) {
+                    // circuito trifásico (3F+N): IDR tetrapolar próprio
+                    const c4 = correnteIdrComercial(inGeral, '4P') || IDR_CORRENTES_COMERCIAIS['4P'][IDR_CORRENTES_COMERCIAIS['4P'].length - 1];
+                    idrs.push(Object.assign({}, base, { id: `${g.id}_RST`, nome: `${g.rotulo} R+S+T (trifásico)`, polos: '4P', corrente: c4, polosLetras: ['N', 'R', 'S', 'T'], circuitos: porChave.get(chave) }));
+                    return;
+                }
                 const letras = chave.includes('+') ? chave.split('+') : ['N', chave];
                 idrs.push(Object.assign({}, base, {
                     id: `${g.id}_${chave.replace('+', '')}`,
@@ -1273,6 +1325,8 @@
         ehCargaResistiva,
         selecionarProtecaoTUE,
         calcularQuedaTensao,
+        correnteDaCarga,
+        ehCargaTrifasica,
         taxaMaximaOcupacao,
         areaExternaCondutor,
         tueComNeutro,

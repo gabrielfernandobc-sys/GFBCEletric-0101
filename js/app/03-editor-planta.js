@@ -1055,10 +1055,11 @@
 
         // Sugestão de proteção e bitola para um aparelho, calculada pela NBR 5410 com as
         // premissas do projeto (FCA/FCT) e trecho curto (a queda de tensão real depende da rota)
-        function sugestaoProtecaoAparelho(pot, tensao) {
+        function sugestaoProtecaoAparelho(pot, tensao, fases) {
             const v = Number(tensao) || 220;
-            const c = NBR5410.dimensionarCircuito({ tipo: 'TUE', nome: '', tensao: v, ibVal: (Number(pot) || 0) / v, rota: 10, ehManual: true, polos: v >= 220 ? '2P' : '1P' }, obterParametrosNBR());
-            return `Cabo ${c.cabo} • Disj. ${c.disjuntor}A`;
+            const tri = Number(fases) === 3;
+            const c = NBR5410.dimensionarCircuito({ tipo: 'TUE', nome: '', tensao: v, ibVal: NBR5410.correnteDaCarga(pot, v, tri ? 3 : 1), rota: 10, ehManual: true, polos: tri ? '3P' : (v >= 220 ? '2P' : '1P') }, obterParametrosNBR());
+            return `Cabo ${c.cabo} • Disj. ${c.disjuntor}A${tri ? ' 3P' : ''}`;
         }
 
         function atualizarIndicadoresPrumada() {
@@ -1958,7 +1959,7 @@
                 itens.forEach(it => {
                     const opt = document.createElement('option');
                     opt.value = it.index;
-                    opt.textContent = `${it.nome} (${it.pot}W - ${it.tensao}V - ${it.tipo})`;
+                    opt.textContent = `${it.nome} (${it.pot}W - ${rotuloTensao(it)} - ${it.tipo})`;
                     optGroup.appendChild(opt);
                 });
                 sel.appendChild(optGroup);
@@ -1973,7 +1974,7 @@
                 document.getElementById('txtCargaNome').value = item.nome;
                 document.getElementById('selCargaTipo').value = item.tipo;
                 document.getElementById('numCargaPot').value = item.pot;
-                document.getElementById('selCargaTensao').value = item.tensao;
+                document.getElementById('selCargaTensao').value = item.fases === 3 ? '220-3F' : String(item.tensao);
             });
         }
 
@@ -1991,6 +1992,7 @@
                 const tipo = selTipo.value;
                 const pot = parseFloat(numPot.value);
                 const tensao = parseInt(selTensao.value, 10) || 220;
+                const fases = selTensao.value === '220-3F' ? 3 : undefined;      // trifásico 3F+N, 220 V entre fases
 
                 if (!nome) {
                     alert('Por favor, informe o nome do equipamento.');
@@ -2009,6 +2011,7 @@
                     tipo,
                     potencia: pot,
                     tensao,
+                    ...(fases ? { fases } : {}),
                     altura: tipo === 'TUE' ? 'alta' : 'media'
                 });
 
@@ -2040,7 +2043,7 @@
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                         <span class="font-mono text-amber-300 font-bold">${cg.potencia}W</span>
-                        <span class="text-[9px] text-slate-400 font-mono">${cg.tensao}V</span>
+                        <span class="text-[9px] text-slate-400 font-mono">${rotuloTensao(cg)}</span>
                         <button type="button" onclick="removerCargaDoFormulario('${cg.id}')" class="text-slate-500 hover:text-red-400 p-0.5 transition" title="Remover esta carga">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
@@ -2310,7 +2313,7 @@
             if (c) iniciarEdicaoComodo(c.id);
         }
 
-        function inserirPontoRapido(tipo, pot, tensao, altura, nomeExtra) {
+        function inserirPontoRapido(tipo, pot, tensao, altura, nomeExtra, fases) {
             const c = _pontoRapidoAlvo.comodo;
             if (!c) return;
 
@@ -2322,6 +2325,7 @@
                 nome: nomeExtra || `${tipo} ${c.nome}`,
                 pot: pot,
                 tensao: tensao,
+                ...(Number(fases) === 3 ? { fases: 3 } : {}),
                 altura: altura,
                 x: _pontoRapidoAlvo.x,
                 y: _pontoRapidoAlvo.y

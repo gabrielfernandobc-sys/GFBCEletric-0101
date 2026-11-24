@@ -258,6 +258,29 @@
                     ` : '<span class="text-slate-500 text-[11px] italic">Nenhum aparelho de ar-condicionado cadastrado.</span>'}
                 </div>
 
+                ${c.parcelaE && c.parcelaE.qtd > 0 ? `
+                <!-- PARCELA E: RECARGA DE VEÍCULOS ELÉTRICOS -->
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <div class="flex justify-between items-center border-b border-slate-850 pb-2">
+                        <h5 class="font-bold text-emerald-400 flex items-center gap-2">
+                            <i class="fa-solid fa-car-battery"></i> Parcela (e) — Recarga de Veículos Elétricos
+                        </h5>
+                        <div class="text-right">
+                            <span class="text-slate-400 text-[10px]">Pontos: <strong class="text-white font-mono">${c.parcelaE.qtd} un.</strong> (${c.parcelaE.potKW.toFixed(2)} kW)</span>
+                            <span class="mx-2 text-slate-600">•</span>
+                            <span class="text-emerald-400 text-[10px]">Demanda: <strong class="font-mono text-emerald-300">${c.parcelaE.demKW.toFixed(2)} kW</strong> (${(c.parcelaE.fd * 100).toFixed(0)}%)</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${c.parcelaE.itens.map(it => `
+                            <span class="bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-lg text-[11px] text-slate-300 flex items-center gap-1.5 font-mono">
+                                <i class="fa-solid fa-plug-circle-bolt text-emerald-400 text-[10px]"></i> ${it.nome}: <strong>${it.potKW.toFixed(2)} kW</strong>
+                            </span>
+                        `).join('')}
+                    </div>
+                    <p class="text-[10px] text-slate-500">Cada ponto de recarga entra a plena carga (fator 1), como pede a IEC 60364-7-722 (base da NBR 17019), a menos que haja gerenciamento de carga.</p>
+                </div>` : ''}
+
                 <!-- ENTRADA DE SERVIÇO HOMOLOGADA -->
                 <div class="bg-gradient-to-r from-emerald-950/40 via-slate-950 to-slate-950 p-4 rounded-xl border border-emerald-500/50 space-y-2">
                     <h5 class="font-bold text-emerald-400 flex items-center gap-2">

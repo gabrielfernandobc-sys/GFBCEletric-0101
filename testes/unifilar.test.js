@@ -89,6 +89,11 @@ test('interruptor inteligente (automação) recebe neutro: fase, neutro e retorn
     assert.deepEqual(tr.find(t => t.pontoId === 's2').condutores.map(c => c.tipo), ['F', 'R']);   // convencional: sem neutro
 });
 
+test('circuito trifásico leva três fases e neutro', () => {
+    assert.deepEqual(U.condutoresCircuito(7, '3P').map(c => c.tipo), ['F', 'F', 'F', 'N']);
+    assert.deepEqual(U.condutoresCircuito(7, '2P').map(c => c.tipo), ['F', 'F']);
+});
+
 test('geometria: curva passa pelas pontas e a tangente no meio é paralela à corda', () => {
     const a = { x: 0, y: 0 }, b = { x: 100, y: 0 };
     const c = U.curva(a, b);
