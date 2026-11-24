@@ -1842,6 +1842,15 @@
                     botoes[visao].classList.remove('bg-slate-900', 'text-slate-300');
                     botoes[visao].classList.add('bg-amber-500', 'text-slate-950', 'active', 'shadow');
                 }
+                // o conteúdo da visão fica abaixo dos indicadores: no celular a troca não
+                // aparecia na tela e parecia que o botão não funcionava. Rola até ele.
+                const alvo = paineis[visao];
+                if (alvo) {
+                    const topo = alvo.getBoundingClientRect().top;
+                    if (topo > window.innerHeight * 0.6 || topo < 0) {
+                        requestAnimationFrame(() => alvo.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+                    }
+                }
             }
         }
 
@@ -2275,6 +2284,9 @@
                         </td>
                     </tr>
                 `;
+                if (_categoriaMaterialFiltroAtiva === 'todos' && typeof linhasMaoDeObraListaGeral === 'function') {
+                    linhasMaoDeObraListaGeral(termoBusca).forEach(tr => corpo.appendChild(tr));
+                }
                 return;
             }
 
@@ -2359,6 +2371,11 @@
                 `;
                 corpo.appendChild(tr);
             });
+
+            // Mão de obra lançada automaticamente na lista geral (seção própria, fora do total de material)
+            if (_categoriaMaterialFiltroAtiva === 'todos' && typeof linhasMaoDeObraListaGeral === 'function') {
+                linhasMaoDeObraListaGeral(termoBusca).forEach(tr => corpo.appendChild(tr));
+            }
         }
 
         function copiarListaComprasTexto() {
