@@ -199,31 +199,63 @@
 
 
     
+        // =========================================================================
+        // CANVAS NÍTIDO EM TELAS DE ALTA DENSIDADE (celular, retina)
+        // O canvas tem largura × devicePixelRatio pixels reais; o desenho e as
+        // coordenadas continuam em pixels CSS ("lógicos") com ctx.setTransform(dpr).
+        // =========================================================================
+        function dprCanvas() {
+            return Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+        }
+        function larguraLogicaCanvas(canvas) {
+            return canvas.width / (Number(canvas.dataset.dpr) || 1);
+        }
+        function alturaLogicaCanvas(canvas) {
+            return canvas.height / (Number(canvas.dataset.dpr) || 1);
+        }
+        /** Ajusta a resolução real do canvas ao tamanho exibido (cssW × cssH) e à densidade da tela. */
+        function ajustarResolucaoCanvas(canvas, cssW, cssH) {
+            const dpr = dprCanvas();
+            const w = Math.round(cssW * dpr), h = Math.round(cssH * dpr);
+            if (canvas.width !== w || canvas.height !== h || Number(canvas.dataset.dpr) !== dpr) {
+                canvas.width = w;
+                canvas.height = h;
+                canvas.dataset.dpr = String(dpr);
+            }
+        }
+        /** Contexto 2D já escalado para desenhar em pixels lógicos. */
+        function contextoCanvasNitido(canvas) {
+            const ctx = canvas.getContext('2d');
+            const dpr = Number(canvas.dataset.dpr) || 1;
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            return ctx;
+        }
+
         function desenharCAD() {
             const _telemetryStart = performance.now();
             const canvas = document.getElementById('cadCanvas');
             if (!canvas) return;
             const container = canvas.parentElement;
             if (container) {
-                const rect = container.getBoundingClientRect();
-                const displayW = Math.round(rect.width);
-                const displayH = Math.round(rect.height);
-                if (displayW > 100 && displayH > 100 && (canvas.width !== displayW || canvas.height !== displayH)) {
-                    canvas.width = displayW;
-                    canvas.height = displayH;
-                }
+                // tamanho exibido do próprio canvas (o container tem borda: usar a caixa dele
+                // deslocava os toques/cliques em ~1%)
+                const rect = canvas.getBoundingClientRect();
+                const displayW = rect.width;
+                const displayH = rect.height;
+                if (displayW > 100 && displayH > 100) ajustarResolucaoCanvas(canvas, displayW, displayH);
             }
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ctx = contextoCanvasNitido(canvas);
+            const larguraCanvas = larguraLogicaCanvas(canvas), alturaCanvas = alturaLogicaCanvas(canvas);
+            ctx.clearRect(0, 0, larguraCanvas, alturaCanvas);
 
             // 1. Grid
             ctx.strokeStyle = '#1e293b';
             ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 40) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            for (let x = 0; x < larguraCanvas; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, alturaCanvas); ctx.stroke();
             }
-            for (let y = 0; y < canvas.height; y += 40) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            for (let y = 0; y < alturaCanvas; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(larguraCanvas, y); ctx.stroke();
             }
 
             // 1.1 DESENHO DO TERRENO TOTAL (LOTE)
@@ -332,6 +364,16 @@
                 ctx.moveTo(linha[0].x, linha[0].y);
                 for (let i = 1; i < linha.length; i++) ctx.lineTo(linha[i].x, linha[i].y);
                 ctx.stroke();
+            });
+
+            // 5b. Anotações de texto (botão "Texto"): antes eram filtradas junto com os traços e nunca apareciam
+            (state.linhasMaoLivre || []).filter(a => a && !Array.isArray(a) && a.tipo === 'texto' && a.pavimentoId === state.pavimentoAtivoId).forEach(a => {
+                ctx.save();
+                ctx.font = `bold ${a.tamanho || 14}px sans-serif`;
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = a.cor || '#38bdf8';
+                ctx.fillText(a.texto, a.x, a.y);
+                ctx.restore();
             });
 
             // 6. Desenho dos Cômodos do Andar Ativo
@@ -685,16 +727,16 @@
             if (!canvas) return;
             const container = canvas.parentElement;
             if (container) {
-                const rect = container.getBoundingClientRect();
-                const displayW = Math.round(rect.width);
-                const displayH = Math.round(rect.height);
-                if (displayW > 100 && displayH > 100 && (canvas.width !== displayW || canvas.height !== displayH)) {
-                    canvas.width = displayW;
-                    canvas.height = displayH;
-                }
+                // tamanho exibido do próprio canvas (o container tem borda: usar a caixa dele
+                // deslocava os toques/cliques em ~1%)
+                const rect = canvas.getBoundingClientRect();
+                const displayW = rect.width;
+                const displayH = rect.height;
+                if (displayW > 100 && displayH > 100) ajustarResolucaoCanvas(canvas, displayW, displayH);
             }
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const ctx = contextoCanvasNitido(canvas);
+            const larguraCanvas = larguraLogicaCanvas(canvas), alturaCanvas = alturaLogicaCanvas(canvas);
+            ctx.clearRect(0, 0, larguraCanvas, alturaCanvas);
             // Diagrama unifilar NBR 5444 (padrão) ou representação colorida por tipo
             const usarUnifilar = typeof Unifilar !== 'undefined' && typeof usarDiagramaUnifilar === 'function' && usarDiagramaUnifilar();
             const claroUni = usarUnifilar && document.body.classList.contains('theme-woca-light');
@@ -702,11 +744,11 @@
             // Grid
             ctx.strokeStyle = claroUni ? '#e2e8f0' : '#1e293b';
             ctx.lineWidth = 1;
-            for (let x = 0; x < canvas.width; x += 40) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            for (let x = 0; x < larguraCanvas; x += 40) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, alturaCanvas); ctx.stroke();
             }
-            for (let y = 0; y < canvas.height; y += 40) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            for (let y = 0; y < alturaCanvas; y += 40) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(larguraCanvas, y); ctx.stroke();
             }
 
             // DESENHO DO TERRENO TOTAL (LOTE) NA REPRESENTAÇÃO DE CABOS

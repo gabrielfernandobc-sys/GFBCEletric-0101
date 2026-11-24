@@ -31,17 +31,18 @@
                 luzes += Math.max(1, pontos.filter(p => p.comodoId === c.id && p.tipo === 'ILUM').length);
                 interruptores += Math.max(1, pontos.filter(p => p.comodoId === c.id && p.tipo === 'INTERRUPTOR').length);
             });
-            const quadros = (state.regimeImovel === 'imoveis_separados' && Array.isArray(state.imoveis) && state.imoveis.length) ? state.imoveis.length : 1;
+            const temProjeto = comodos.length > 0;            // projeto vazio: nada a instalar
+            const quadros = !temProjeto ? 0 : ((state.regimeImovel === 'imoveis_separados' && Array.isArray(state.imoveis) && state.imoveis.length) ? state.imoveis.length : 1);
             const circuitos = (state.circuitosCalculados || []).length;
             const idrs = (state.planoIdr && state.planoIdr.idrs) ? state.planoIdr.idrs.length : 0;
             const dps = (state.quantitativoMateriaisDetalhado || []).filter(m => /\(DPS\)/.test(m.item)).reduce((s, m) => s + (Number(m.qtdCalculada) || 0), 0);
             return {
                 tomadas: contar('TUG'), luzes, interruptores, especificos: contar('TUE'), luminarias: luzes,
                 quadros,
-                dispositivos: circuitos + quadros /* disjuntor geral */ + idrs + dps,
-                alimentadorMetros: (state.alimentadorNBR && state.alimentadorNBR.comprimento) || 0,
-                incluirAterramento: cfg.incluirAterramento !== false,
-                incluirPadrao: !!cfg.incluirPadrao,
+                dispositivos: temProjeto ? circuitos + quadros /* disjuntor geral */ + idrs + dps : 0,
+                alimentadorMetros: temProjeto ? ((state.alimentadorNBR && state.alimentadorNBR.comprimento) || 0) : 0,
+                incluirAterramento: temProjeto && cfg.incluirAterramento !== false,
+                incluirPadrao: temProjeto && !!cfg.incluirPadrao,
                 areaConstruida: comodos.reduce((s, c) => s + (Number(c.area) || 0), 0),
                 totalMaterial: Number(totalMaterial) || 0
             };
@@ -130,6 +131,7 @@
             else if (campo === 'regiao') { cfg.regiao = String(valor || '').slice(0, 60); renderizarTabelaMaoDeObraModal(); return; }
             else cfg[campo] = valor;
             atualizarOrcamentoMaoDeObra();
+            if (typeof filtrarTabelaMateriais === 'function') filtrarTabelaMateriais();
         }
 
         function editarPrecoServicoMaoDeObra(id, valor) {
@@ -137,6 +139,7 @@
             if (!isFinite(n) || n < 0) { mostrarNotificacaoToast('Informe um valor válido.', 'aviso'); renderizarMaoDeObra(); return; }
             configMaoDeObra().tabela[id] = n;
             atualizarOrcamentoMaoDeObra();
+            if (typeof filtrarTabelaMateriais === 'function') filtrarTabelaMateriais();
         }
 
         // ------------------------------------------------------------------
@@ -261,4 +264,39 @@
                     <tr style="border-top: 2px solid #0f172a; font-weight: bold;"><td style="padding: 4px 8px;">TOTAL GERAL</td><td style="padding: 4px 8px; text-align: right;">${formatarReaisMO(t.total)}</td></tr>
                 </table>
                 <p style="font-size: 7pt; color: #64748b; margin-top: 4px;">Mão de obra: valores de referência ${escHtml(MaoDeObra.REGIAO_TABELA)} (${escHtml(MaoDeObra.DATA_TABELA)}), aproximados — confirme com profissionais da região ou no SINAPI.</p>`;
+        }
+
+        /** Linhas da mão de obra para a Lista Geral (mesmo formato das linhas de material). */
+        function linhasMaoDeObraListaGeral(termoBusca) {
+            const r = state.orcamentoMaoDeObra;
+            if (!r || !r.itens.length) return [];
+            const termo = String(termoBusca || '').toLowerCase();
+            const itens = r.itens.filter(i => !termo || ('mão de obra ' + i.servico).toLowerCase().includes(termo));
+            if (!itens.length) return [];
+            const linhas = [];
+            const cab = document.createElement('tr');
+            cab.className = 'bg-gradient-to-r from-violet-950/60 via-slate-900 to-transparent border-t-2 border-b border-violet-500/40';
+            cab.innerHTML = `<td colspan="9" class="p-2.5 pl-4 text-xs font-bold text-violet-300">
+                <i class="fa-solid fa-helmet-safety mr-2"></i> Mão de obra — lançada automaticamente (${escHtml(MaoDeObra.MODOS[r.modo])})
+                <button type="button" onclick="trocarVisaoMateriais('maoDeObra')" class="ml-2 text-[10px] font-semibold text-violet-200 underline hover:text-white">editar valores</button>
+            </td>`;
+            linhas.push(cab);
+            itens.forEach((i, k) => {
+                const tr = document.createElement('tr');
+                tr.className = (k % 2 === 0 ? 'bg-slate-950/40' : 'bg-slate-900/30') + ' hover:bg-slate-800/50 transition';
+                const qtd = Number(i.qtd).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+                tr.innerHTML = `
+                    <td class="cel-categoria p-3 align-top"><span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold border bg-violet-500/15 text-violet-300 border-violet-500/30">Mão de Obra</span></td>
+                    <td class="cel-item p-3 align-top"><strong class="text-white block font-semibold text-xs">${escHtml(i.servico)}</strong>
+                        <span class="text-[11px] text-slate-400 block mt-0.5 leading-snug">Serviço de instalação (não entra no total de material)</span></td>
+                    <td class="cel-espec p-3 align-top text-slate-400 text-[11px] leading-snug font-mono">Referência ${escHtml(MaoDeObra.REGIAO_TABELA)} (${escHtml(MaoDeObra.DATA_TABELA)}), editável</td>
+                    <td data-rotulo="Projeto" class="cel-num p-3 align-top text-right font-mono text-slate-300">${qtd}</td>
+                    <td data-rotulo="Sobra" class="cel-num p-3 align-top text-right font-mono text-slate-500 text-[11px]">—</td>
+                    <td data-rotulo="Total" class="cel-num p-3 align-top text-right font-mono font-bold text-violet-300 text-xs">${qtd}</td>
+                    <td data-rotulo="Unid." class="cel-num p-3 align-top text-center text-slate-400 font-mono text-xs">${escHtml(i.unidade)}</td>
+                    <td data-rotulo="Preço unit." class="cel-preco p-3 align-top text-right text-xs"><span class="font-mono font-bold text-violet-300 whitespace-nowrap">${formatarReaisMO(i.preco)}</span></td>
+                    <td data-rotulo="Subtotal" class="cel-subtotal p-3 align-top text-right font-mono font-bold text-white text-xs">${formatarReaisMO(i.subtotal)}</td>`;
+                linhas.push(tr);
+            });
+            return linhas;
         }
