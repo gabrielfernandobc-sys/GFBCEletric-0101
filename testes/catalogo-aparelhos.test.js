@@ -28,8 +28,24 @@ test('todo aparelho tem dados completos, nome único e ícone existente', () => 
     }
 });
 
-test('nenhum aparelho monofásico passa de 63 A (limite prático de um circuito residencial)', () => {
-    for (const it of CATALOGO) assert.ok(it.pot / it.tensao <= 63, `${it.nome}: ${(it.pot / it.tensao).toFixed(1)} A`);
+const corrente = it => it.fases === 3 ? it.pot / (Math.sqrt(3) * it.tensao) : it.pot / it.tensao;
+
+test('nenhum aparelho passa de 63 A por fase (limite prático de um circuito residencial)', () => {
+    for (const it of CATALOGO) assert.ok(corrente(it) <= 63, `${it.nome}: ${corrente(it).toFixed(1)} A`);
+});
+
+test('carregadores trifásicos de 11 e 22 kW: 16 A e 32 A por fase em 220 V entre fases', () => {
+    const c11 = CATALOGO.find(i => /Wallbox 11 kW trifásico/.test(i.nome));
+    const c22 = CATALOGO.find(i => /Wallbox 22 kW trifásico/.test(i.nome));
+    assert.equal(c11.fases, 3); assert.equal(c22.fases, 3);
+    assert.ok(Math.abs(corrente(c11) - 16) < 0.01, corrente(c11));
+    assert.ok(Math.abs(corrente(c22) - 32) < 0.01, corrente(c22));
+    assert.ok(CATALOGO.filter(i => i.fases === 3).every(i => /trifásico/.test(i.nome)), 'o nome indica o trifásico');
+    // na garagem aparecem como opção (não marcados por padrão)
+    const garagem = sugerir({ nome: 'Garagem', tipo: '' });
+    const t = garagem.filter(x => /trifásico/.test(x.nome));
+    assert.equal(t.length, 2);
+    t.forEach(x => { assert.equal(x.fases, 3); assert.equal(x.padraoSelecionado, false); });
 });
 
 test('wallbox de 32 A em 220 V tem 7,04 kW (não 7,4 kW, que é 230 V)', () => {

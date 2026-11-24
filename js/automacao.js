@@ -231,11 +231,18 @@
     const ehCargaNaoComandada = n => /cooktop|fog[aã]o|forno|micro|lava[-\s]?lou|geladeira|refrigerador|freezer|adega|cervejeira|chopeira|elevador|plataforma|nobreak|workstation|rack|ice maker|gelo/i.test(n || '');
     const ehAquecimentoOuMotor = n => /chuveiro|torneira|ducha|aquecedor|boiler|sauna|piso aquecido|toalheiro|bomba|piscina|cascata|irriga|pressurizador|hidromassagem|banheira|jacuzzi|carregador|wallbox|lareira/i.test(n || '');
 
-    /** Contator modular para a corrente da carga (categoria AC-1) e sua largura em módulos DIN. */
-    function contatorPara(ib) {
-        const tabela = [{ a: 20, mod: 1 }, { a: 25, mod: 1 }, { a: 40, mod: 2 }, { a: 63, mod: 3 }];
+    /**
+     * Contator modular para a corrente da carga (categoria AC-1) e sua largura em módulos DIN:
+     * 2NA para cargas mono/bifásicas, 4NA para trifásicas (3F+N).
+     */
+    function contatorPara(ib, fases) {
+        const tri = Number(fases) === 3;
+        const tabela = tri
+            ? [{ a: 20, mod: 2 }, { a: 25, mod: 2 }, { a: 40, mod: 3 }, { a: 63, mod: 4 }]
+            : [{ a: 20, mod: 1 }, { a: 25, mod: 1 }, { a: 40, mod: 2 }, { a: 63, mod: 3 }];
         const req = Number(ib) * 1.1;            // corrente AC-1 com folga sobre a corrente da carga
-        return tabela.find(t => t.a >= req) || tabela[tabela.length - 1];
+        const t = tabela.find(x => x.a >= req) || tabela[tabela.length - 1];
+        return { a: t.a, mod: t.mod, contatos: tri ? '4NA' : '2NA' };
     }
 
     /**
@@ -304,7 +311,8 @@
             pts.filter(pt => pt.tipo === 'TUE').forEach(pt => {
                 const nome = pt.nome || '';
                 const tensao = Number(pt.tensao) || 220;
-                const ib = (Number(pt.pot) || 0) / tensao;
+                const tri = Number(pt.fases) === 3 || /trif[aá]sic/i.test(nome);
+                const ib = (Number(pt.pot) || 0) / (tri ? Math.sqrt(3) * tensao : tensao);
                 if (ehArCondicionado(nome)) {
                     add('controle_ir', c, pt.x, pt.y, { origemPontoId: pt.id, detalhe: nome });
                 } else if (ehCortinaTue(nome)) {
@@ -314,7 +322,7 @@
                 } else if (ehCargaNaoComandada(nome)) {
                     // sem comando remoto (segurança)
                 } else if (nivel >= 3 || (nivel === 2 && ehAquecimentoOuMotor(nome))) {
-                    add('rele_potencia', c, pt.x, pt.y, { origemPontoId: pt.id, detalhe: nome, ib: arred(ib, 1), tensao });
+                    add('rele_potencia', c, pt.x, pt.y, Object.assign({ origemPontoId: pt.id, detalhe: nome, ib: arred(ib, 1), tensao }, tri ? { fases: 3 } : {}));
                 }
             });
 
@@ -765,14 +773,17 @@
         const alertas = [];
         const addItem = (id, nome, qtd, modulos, preco, extra) => { if (qtd > 0) itens.push(Object.assign({ id, nome, qtd, modulos, preco }, extra || {})); };
 
-        // contatores para cargas acima de 16 A (vale para todas as tecnologias)
+        // contatores para cargas acima de 16 A e para as trifásicas, que um relé comum não chaveia
+        // (vale para todas as tecnologias)
         const contatores = {};
-        devs.filter(d => d.tipo === 'rele_potencia' && Number(d.ib) > 16).forEach(d => {
-            const ct = contatorPara(d.ib);
-            contatores[ct.a] = contatores[ct.a] || { ct, lista: [] };
-            contatores[ct.a].lista.push(d);
+        devs.filter(d => d.tipo === 'rele_potencia' && (Number(d.ib) > 16 || Number(d.fases) === 3)).forEach(d => {
+            const ct = contatorPara(d.ib, d.fases);
+            const k = ct.a + ct.contatos;
+            contatores[k] = contatores[k] || { ct, lista: [] };
+            contatores[k].lista.push(d);
         });
-        Object.values(contatores).forEach(({ ct, lista }) => addItem('contator' + ct.a, `Contator modular ${ct.a} A 2NA (AC-1) — comandado pela automação`, lista.length, ct.mod, ct.a <= 25 ? 120 : (ct.a <= 40 ? 210 : 340), { grupo: 'potencia' }));
+        Object.values(contatores).forEach(({ ct, lista }) => addItem('contator' + ct.a + ct.contatos, `Contator modular ${ct.a} A ${ct.contatos} (AC-1) — comandado pela automação`, lista.length, ct.mod,
+            (ct.a <= 25 ? 120 : (ct.a <= 40 ? 210 : 340)) * (ct.contatos === '4NA' ? 1.6 : 1), { grupo: 'potencia' }));
 
         if (!ehCabeada(tec)) {
             const modulos = itens.reduce((s, i) => s + i.qtd * i.modulos, 0);
@@ -1158,9 +1169,6 @@
         });
         // itens do painel / DIN (contatores e, no cabeado, atuadores, fontes, proteção)
         (p.painel && p.painel.itens || []).forEach(i => add('auto_' + i.id, i.nome, i.modulos ? `${i.modulos} módulo(s) DIN cada` : (i.grupo === 'campo' ? 'Instalado no ponto (caixa 4x2/teto)' : ''), i.qtd, i.unidade || 'un', i.preco, i.grupo === 'potencia' ? 'Comando de cargas acima de 16 A' : 'Painel de automação', i.unidade === 'm' ? 0.1 : 0));
-        if (!cabeada && devs.some(d => d.tipo === 'rele_potencia' && Number(d.ib) > 16)) {
-            // o relé de potência das cargas > 16 A comanda a bobina do contator
-        }
         if (cabeada && p.painel && p.painel.caixa && p.local === 'separado') {
             add('auto_caixa_' + p.painel.caixa.modulos, `Quadro de automação de embutir ${p.painel.caixa.modulos} módulos DIN (${p.painel.caixa.fileiras} fileiras) com porta`, 'Separado do QDC, com placa de montagem', 1, 'un', 180 + p.painel.caixa.modulos * 6, 'Painel de automação');
         }

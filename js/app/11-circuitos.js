@@ -433,7 +433,9 @@
                 tues.forEach(tue => {
                     totTue += tue.pot;
                     const tensao = tue.tensao || 220;
-                    const ib = tue.pot / tensao;
+                    // trifásico (3F+N, 220 V entre fases): Ib = P / (√3 · V)
+                    const tri = NBR5410.ehCargaTrifasica(tue);
+                    const ib = NBR5410.correnteDaCarga(tue.pot, tensao, tri ? 3 : 1);
 
                     const ehResistivo = NBR5410.ehCargaResistiva(tue.nome);
                     const { cabo, disj } = NBR5410.selecionarProtecaoTUE(ib);
@@ -449,13 +451,13 @@
                         tipo: 'TUE',
                         tensao: tensao,
                         potVal: tue.pot,
-                        pot: `${tue.pot} W (${tensao}V)`,
+                        pot: `${tue.pot} W (${tri ? '3F ' : ''}${tensao}V)`,
                         ibVal: ib,
                         ib: `${ib.toFixed(1)} A`,
                         cabo: cabo,
                         disj: disj,
                         curva: ehResistivo ? 'B' : 'C',
-                        polos: tensao === 220 ? '2P' : '1P',
+                        polos: tri ? '3P' : (tensao === 220 ? '2P' : '1P'),
                         rotaCad: tueInfo.rotaFisica,
                         distanciaCritica: tueInfo.distanciaCritica
                     });
@@ -775,6 +777,10 @@
 
                 // Dimensionamento normativo (Ib ≤ In ≤ Iz, queda de tensão, eletroduto, IDR) — js/nbr5410.js
                 NBR5410.dimensionarCircuito(circ, obterParametrosNBR());
+                if (circ.polos === '3P' && distFases.sistema !== 'trifasico') {
+                    circ.alertas.push('Circuito trifásico (3F+N) exige alimentação trifásica: altere o sistema de alimentação do Ponto de Entrada para trifásico ou use um aparelho monofásico/bifásico.');
+                    circ.conforme = false;
+                }
                 if (distFases.sistema === 'monofasico' && circ.polos === '2P') {
                     circ.alertas.push('Sistema monofásico não tem duas fases: com rede de 220 V fase-neutro o circuito é monopolar (F+N); com rede de 127 V, use aparelho de 127 V ou altere o sistema para bifásico.');
                     circ.conforme = false;

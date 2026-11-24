@@ -146,6 +146,7 @@
                         nome: tue.nome,
                         pot: tue.pot,
                         tensao: tue.tensao || 220,
+                        ...(Number(tue.fases) === 3 ? { fases: 3 } : {}),
                         altura: tue.altura || 'alta',
                         x: Math.round(tx),
                         y: Math.round(ty),
@@ -164,6 +165,7 @@
                             tipo: 'TUE',
                             potencia: tue.pot,
                             tensao: tue.tensao || 220,
+                            ...(Number(tue.fases) === 3 ? { fases: 3 } : {}),
                             altura: tue.altura || 'alta'
                         });
                     }
@@ -305,8 +307,9 @@
                 sugeridas.forEach((tue, idx) => {
                     const jaInstalada = tuesExistentes.some(ex => ex.nome.toLowerCase() === tue.nome.toLowerCase());
                     const idCheck = `chk_tue_${c.id}_${idx}`;
-                    const ib = (tue.pot / tue.tensao).toFixed(1);
-                    const caboSug = sugestaoProtecaoAparelho(tue.pot, tue.tensao);
+                    const triTue = NBR5410.ehCargaTrifasica(tue);
+                    const ib = NBR5410.correnteDaCarga(tue.pot, tue.tensao, triTue ? 3 : 1).toFixed(1);
+                    const caboSug = sugestaoProtecaoAparelho(tue.pot, tue.tensao, triTue ? 3 : 1);
 
                     htmlCard += `
                         <label for="${idCheck}" class="flex items-start gap-2.5 p-2.5 rounded-xl border transition cursor-pointer select-none ${jaInstalada ? 'bg-slate-900/40 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-700/80 hover:border-blue-500/50 hover:bg-slate-900/90'}">
@@ -315,6 +318,7 @@
                                 data-tue-nome="${tue.nome}" 
                                 data-pot="${tue.pot}" 
                                 data-tensao="${tue.tensao}" 
+                                data-fases="${triTue ? 3 : 1}" 
                                 data-altura="${tue.altura}" 
                                 class="mt-1 rounded text-blue-500 bg-slate-950 border-slate-700 focus:ring-blue-400">
                             <div class="flex-1 min-w-0">
@@ -327,7 +331,7 @@
                                 <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
                                     <span class="text-amber-300 font-bold">${tue.pot} W</span>
                                     <span>•</span>
-                                    <span class="text-sky-300">${tue.tensao} V</span>
+                                    <span class="text-sky-300">${rotuloTensao(tue)}</span>
                                     <span>•</span>
                                     <span>${caboSug}</span>
                                 </div>
@@ -376,7 +380,7 @@
                         itens.forEach(it => {
                             const opt = document.createElement('option');
                             opt.value = it.index;
-                            opt.textContent = `${it.nome} (${it.pot}W - ${it.tensao}V)`;
+                            opt.textContent = `${it.nome} (${it.pot}W - ${rotuloTensao(it)})`;
                             optGroup.appendChild(opt);
                         });
                         selOutra.appendChild(optGroup);
@@ -403,8 +407,9 @@
 
             const idxCustom = 'custom_' + Date.now();
             const idCheck = `chk_tue_${comodoId}_${idxCustom}`;
-            const ib = (item.pot / item.tensao).toFixed(1);
-            const caboSug = sugestaoProtecaoAparelho(item.pot, item.tensao);
+            const triItem = NBR5410.ehCargaTrifasica(item);
+            const ib = NBR5410.correnteDaCarga(item.pot, item.tensao, triItem ? 3 : 1).toFixed(1);
+            const caboSug = sugestaoProtecaoAparelho(item.pot, item.tensao, triItem ? 3 : 1);
 
             const cardLabel = document.createElement('label');
             cardLabel.setAttribute('for', idCheck);
@@ -415,6 +420,7 @@
                     data-tue-nome="${item.nome}" 
                     data-pot="${item.pot}" 
                     data-tensao="${item.tensao}" 
+                    data-fases="${triItem ? 3 : 1}" 
                     data-altura="${item.altura || 'alta'}" 
                     class="mt-1 rounded text-blue-500 bg-slate-950 border-slate-700 focus:ring-blue-400">
                 <div class="flex-1 min-w-0">
@@ -427,7 +433,7 @@
                     <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5">
                         <span class="text-amber-300 font-bold">${item.pot} W</span>
                         <span>•</span>
-                        <span class="text-sky-300">${item.tensao} V</span>
+                        <span class="text-sky-300">${rotuloTensao(item)}</span>
                         <span>•</span>
                         <span>${caboSug}</span>
                     </div>
@@ -454,6 +460,7 @@
                     nome: cb.getAttribute('data-tue-nome'),
                     pot: parseFloat(cb.getAttribute('data-pot')) || 2200,
                     tensao: parseInt(cb.getAttribute('data-tensao'), 10) || 220,
+                    fases: cb.getAttribute('data-fases') === '3' ? 3 : undefined,
                     altura: cb.getAttribute('data-altura') || 'alta'
                 });
             });
@@ -510,6 +517,7 @@
                         tipo: 'TUE',
                         potencia: tue.pot,
                         tensao: tue.tensao,
+                        fases: tue.fases,
                         altura: tue.altura
                     });
                 };
@@ -525,6 +533,7 @@
                 tipo: cg.tipo || 'TUE',
                 potencia: cg.potencia || cg.pot || 2200,
                 tensao: cg.tensao || 220,
+                ...(Number(cg.fases) === 3 ? { fases: 3 } : {}),
                 altura: cg.altura || 'alta'
             });
             renderizarCargasFormulario();
@@ -594,7 +603,7 @@
                             <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
                                 <span class="text-amber-300 font-bold">${it.pot} W</span>
                                 <span>•</span>
-                                <span class="text-sky-300">${it.tensao} V</span>
+                                <span class="text-sky-300">${rotuloTensao(it)}</span>
                                 <span>•</span>
                                 <span class="uppercase">${it.tipo}</span>
                             </div>
@@ -613,7 +622,7 @@
             const it = SUGESTOES_CARGAS_BR[index];
             if (!it) return;
             fecharCatalogoCompletoTuesModal();
-            inserirPontoRapido(it.tipo || 'TUE', it.pot, it.tensao || 220, it.altura || 'alta', it.nome);
+            inserirPontoRapido(it.tipo || 'TUE', it.pot, it.tensao || 220, it.altura || 'alta', it.nome, it.fases);
         }
 
         // =========================================================================
@@ -636,7 +645,7 @@
                 itens.forEach(it => {
                     const opt = document.createElement('option');
                     opt.value = it.index;
-                    opt.textContent = `${it.nome} (${it.pot}W - ${it.tensao}V - ${it.tipo})`;
+                    opt.textContent = `${it.nome} (${it.pot}W - ${rotuloTensao(it)} - ${it.tipo})`;
                     optGroup.appendChild(opt);
                 });
                 sel.appendChild(optGroup);
@@ -650,7 +659,7 @@
 
             document.getElementById('txtModalPontoNome').value = item.nome;
             document.getElementById('selModalPontoTipo').value = item.tipo;
-            document.getElementById('selModalPontoTensao').value = String(item.tensao);
+            document.getElementById('selModalPontoTensao').value = item.fases === 3 ? '220-3F' : String(item.tensao);
             document.getElementById('numModalPontoPot').value = item.pot;
             if (item.altura) {
                 document.getElementById('selModalPontoAltura').value = item.altura;

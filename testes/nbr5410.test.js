@@ -243,3 +243,55 @@ test('tabelas das concessionárias são consistentes', () => {
         }
     }
 });
+
+// ---------------------------------------------------------------------------
+// Circuitos trifásicos (3F+N, 220 V entre fases) — carregadores veiculares de 11 e 22 kW
+// ---------------------------------------------------------------------------
+test('trifásico: corrente da carga P / (√3·V) e reconhecimento da carga', () => {
+    assert.ok(Math.abs(N.correnteDaCarga(12193, 220, 3) - 32) < 0.01);
+    assert.ok(Math.abs(N.correnteDaCarga(6096, 220, 3) - 16) < 0.01);
+    assert.equal(N.correnteDaCarga(2200, 220), 10);                       // bifásico: P / V
+    assert.equal(N.ehCargaTrifasica({ fases: 3 }), true);
+    assert.equal(N.ehCargaTrifasica({ nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)' }), true);
+    assert.equal(N.ehCargaTrifasica({ nome: 'Bomba 3F 2 cv' }), true);
+    assert.equal(N.ehCargaTrifasica({ nome: 'Chuveiro Elétrico 220V' }), false);
+});
+
+test('trifásico: 3 condutores carregados (Tabela 36, col. 3) e queda √3·ρ·L·I/S', () => {
+    const base = { tipo: 'TUE', nome: 'Carregador trifásico', tensao: 220, ibVal: 16, rota: 15, ehManual: true };
+    const tri = N.dimensionarCircuito(Object.assign({}, base, { polos: '3P' }), { circuitosAgrupados: 3, temperaturaAmbiente: 30 });
+    const bi = N.dimensionarCircuito(Object.assign({}, base, { polos: '2P' }), { circuitosAgrupados: 3, temperaturaAmbiente: 30 });
+    assert.equal(tri.disjuntor, 16);
+    // 2,5 mm² com 3 carregados: 21 A × 0,70 = 14,7 A < 16 A → 4 mm² (28 × 0,70 = 19,6 A)
+    assert.equal(tri.secaoMm2, 4);
+    assert.ok(Math.abs(tri.izCorrigida - 19.6) < 1e-9);
+    assert.equal(bi.secaoMm2, 2.5);                                       // 2 carregados: 24 × 0,70 = 16,8 A
+    assert.equal(tri.condutores.length, 5);                               // F + F + F + N + PE
+    const q3 = N.calcularQuedaTensao(16, 15, 4, 220, 3), q1 = N.calcularQuedaTensao(16, 15, 4, 220);
+    assert.ok(Math.abs(q3.volts / q1.volts - Math.sqrt(3) / 2) < 1e-9);
+    assert.ok(Math.abs(tri.deltaVVolts - q3.volts) < 1e-9);
+    assert.ok(tri.conforme);
+});
+
+test('trifásico: um terço da carga em cada fase e IDR tetrapolar próprio no esquema bipolar', () => {
+    const circs = [{ num: 1, potVal: 6000, polos: '3P', tipo: 'TUE' }, { num: 2, potVal: 1000, polos: '1P', tipo: 'TUG' }];
+    const d = N.distribuirFases(circs, 'trifasico');
+    assert.equal(d.fases[0], 'R + S + T');
+    assert.equal(d.cargaPorFase.R + d.cargaPorFase.S + d.cargaPorFase.T, 7000);
+    assert.ok(Object.values(d.cargaPorFase).every(v => v >= 2000));
+    const numerados = circs.map((c, i) => Object.assign({}, c, { fase: d.fases[i] }));
+    const plano = N.planejarIdrs({ circuitos: numerados, sistema: 'trifasico', configIdr: 'idr_geral', esquema: 'TN-S', inGeral: 63, modelo: { polos: '2P' } });
+    const idr3 = plano.idrs.find(i => i.circuitos.includes(1));
+    assert.deepEqual(idr3.polosLetras, ['N', 'R', 'S', 'T']);
+    assert.equal(idr3.polos, '4P');
+    assert.ok(!idr3.circuitos.includes(2));
+});
+
+test('demanda: recarga de veículo elétrico entra a plena carga (fator 1)', () => {
+    const tues = [{ nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', pot: 12193 }, { nome: 'Motor de portão', pot: 1000 }];
+    const d = N.calcularDemanda(1000, 2000, tues, 'trifasico', 'cpfl');
+    assert.equal(d.parcelaE.qtd, 1);
+    assert.ok(Math.abs(d.parcelaE.demKW - 12.193) < 1e-9);
+    assert.ok(Math.abs(d.parcelaD.demKW - 0.7) < 1e-9);               // portão segue em "outras cargas"
+    assert.ok(d.demandaTotalKW >= 12.193 + 0.7);
+});

@@ -89,7 +89,7 @@
                     <td class="p-2.5 text-white font-medium">${c.nome}</td>
                     <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[9px] font-bold bg-${e.cor}-500/20 text-${e.cor}-300 border border-${e.cor}-500/30">${e.rotulo}</span></td>
                     <td class="p-2.5 font-mono text-slate-300">${c.pot}</td>
-                    <td class="p-2.5 font-mono text-slate-400">${c.tensao} V</td>
+                    <td class="p-2.5 font-mono text-slate-400">${c.polos === '3P' ? '3F ' : ''}${c.tensao} V</td>
                     <td class="p-2.5 font-mono text-sky-400 font-bold">${c.ibVal.toFixed(1)} A</td>
                     <td class="p-2.5 font-mono text-slate-300">DJ ${c.disjuntor}A</td>
                     <td class="p-2.5 font-mono font-bold text-${e.cor}-400">${c.cabo.replace('.', ',')}</td>
@@ -445,7 +445,7 @@
                     <td style="padding: 5px;">${c.nome}${alerta}</td>
                     <td style="padding: 5px;">${rotulo}</td>
                     <td style="padding: 5px;">${c.pot}</td>
-                    <td style="padding: 5px;">${c.tensao} V</td>
+                    <td style="padding: 5px;">${c.polos === '3P' ? '3F ' : ''}${c.tensao} V</td>
                     <td style="padding: 5px;">${c.ibVal.toFixed(1)} A</td>
                     <td style="padding: 5px;">DJ ${c.disjuntor}A</td>
                     <td style="padding: 5px; font-weight: bold;">${c.cabo.replace('.', ',')}</td>
@@ -683,6 +683,7 @@
                             nome: cg.nome,
                             pot: cg.potencia,
                             tensao: cg.tensao || 220,
+                            ...(Number(cg.fases) === 3 ? { fases: 3 } : {}),
                             altura: cg.altura || 'alta',
                             x: c.x + w - 24,
                             y: c.y + 24 + idx * 22

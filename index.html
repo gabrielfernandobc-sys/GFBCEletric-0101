@@ -1293,7 +1293,7 @@
                             <label class="text-[11px] font-semibold text-slate-400">Sistema:</label>
                             <select id="selSistemaEntrada" class="bg-slate-900 border border-slate-700 text-amber-300 rounded-lg p-1.5 text-xs font-bold outline-none focus:ring-1 focus:ring-amber-400">
                                 <option value="bifasico">Bifásico 127/220V (2 Fases + Neutro + Terra = 4 Condutores)</option>
-                                <option value="trifasico">Trifásico 220/380V (3 Fases + Neutro + Terra = 5 Condutores)</option>
+                                <option value="trifasico">Trifásico 127/220V (3 Fases + Neutro + Terra = 5 Condutores)</option>
                                 <option value="monofasico">Monofásico 127V ou 220V (Fase + Neutro + Terra = 3 Condutores)</option>
                             </select>
                         </div>
@@ -3308,6 +3308,7 @@
                                 <select id="selCargaTensao" class="bg-slate-900 border border-slate-800 text-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-sky-400 outline-none">
                                     <option value="220">220 V</option>
                                     <option value="127">127 V</option>
+                                    <option value="220-3F">220 V trifásico (3F+N)</option>
                                 </select>
                             </div>
                             <button type="button" id="btnAdicionarCarga" class="w-full bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-sky-300 font-bold py-1.5 px-3 rounded-lg border border-slate-700 transition flex items-center justify-center gap-1.5 text-xs">
@@ -3835,6 +3836,7 @@
                         <select id="selModalPontoTensao" class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-amber-400">
                             <option value="127">127 V</option>
                             <option value="220">220 V</option>
+                            <option value="220-3F">220 V trifásico (3F+N)</option>
                         </select>
                     </div>
                 </div>

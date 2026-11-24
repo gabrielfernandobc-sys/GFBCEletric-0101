@@ -166,7 +166,8 @@ test('painel: atuadores em 4/8/12 canais, módulos e caixa comercial', () => {
     assert.deepEqual(A.agruparCanais(9).map(g => g.c), [12]);
     assert.deepEqual(A.agruparCanais(13).map(g => g.c), [12, 4]);
     assert.deepEqual(A.agruparCanais(0), []);
-    assert.deepEqual(A.contatorPara(34.1), { a: 40, mod: 2 });
+    assert.deepEqual(A.contatorPara(34.1), { a: 40, mod: 2, contatos: '2NA' });
+    assert.deepEqual(A.contatorPara(32, 3), { a: 40, mod: 3, contatos: '4NA' });       // carregador trifásico 32 A/fase
     assert.deepEqual(A.caixaComercial(13), { modulos: 24, fileiras: 2 });
     const fileiras = A.distribuirEmFileiras([{ polos: 8 }, { polos: 6 }, { polos: 4 }]);
     assert.deepEqual(fileiras.map(f => f.map(i => i.polos)), [[8, 4], [6]]);          // o de 4 aproveita a sobra da 1ª
@@ -198,6 +199,21 @@ test('painel: atuadores em 4/8/12 canais, módulos e caixa comercial', () => {
     assert.ok(zig.itens.every(i => i.grupo === 'potencia'));
     // DIN em trechos de até 12 módulos
     A.itensDinDoPainel(knx).forEach(i => assert.ok(i.polos >= 1 && i.polos <= 12));
+});
+
+test('carregador trifásico: relé de potência com a corrente por fase e contator 4NA', () => {
+    const pts = pontos.concat([{ id: 'w22', tipo: 'TUE', nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', pot: 12193, tensao: 220, fases: 3, x: 400, y: 100, comodoId: 5 }]);
+    const devs = A.levantarDispositivos({ comodos, pontos: pts, pavimentos, escala: ESC, nivel: 'intermediario' });
+    const w = devs.find(d => d.origemPontoId === 'w22');
+    assert.equal(w.tipo, 'rele_potencia');
+    assert.equal(w.fases, 3);
+    assert.ok(Math.abs(w.ib - 32) < 0.1, w.ib);
+    const painel = A.montarPainel({ tecnologia: 'zigbee', dispositivos: devs });
+    assert.ok(painel.itens.some(i => /Contator modular 40 A 4NA/.test(i.nome) && i.modulos === 3));
+    // trifásico de 16 A/fase também vai a contator 4NA (relé inteligente comum chaveia uma fase só)
+    const p16 = pontos.concat([{ id: 'w11', tipo: 'TUE', nome: 'Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', pot: 6096, tensao: 220, fases: 3, x: 400, y: 100, comodoId: 5 }]);
+    const d16 = A.levantarDispositivos({ comodos, pontos: p16, pavimentos, escala: ESC, nivel: 'intermediario' });
+    assert.ok(A.montarPainel({ tecnologia: 'zigbee', dispositivos: d16 }).itens.some(i => /Contator modular 20 A 4NA/.test(i.nome)));
 });
 
 test('painel: integrado ao QDC ou separado', () => {

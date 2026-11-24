@@ -1405,7 +1405,7 @@
 
                     ctx.fillStyle = '#94a3b8';
                     ctx.font = `${Math.round(7.5 * scaleVisual)}px monospace`;
-                    ctx.fillText(`${pt.pot}W (${pt.tensao}V)`, pt.x + offsetLabelX, pt.y + 7 * scaleVisual);
+                    ctx.fillText(`${pt.pot}W (${rotuloTensao(pt)})`, pt.x + offsetLabelX, pt.y + 7 * scaleVisual);
                 }
             });
 

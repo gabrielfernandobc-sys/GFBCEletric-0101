@@ -67,6 +67,7 @@
 
     /** Condutores de um circuito no eletroduto (sem o de proteção, que é um só por trecho). */
     function condutoresCircuito(num, polos) {
+        if (polos === '3P') return [{ tipo: 'F', circ: num }, { tipo: 'F', circ: num }, { tipo: 'F', circ: num }, { tipo: 'N', circ: num }];
         return polos === '2P' ? [{ tipo: 'F', circ: num }, { tipo: 'F', circ: num }] : [{ tipo: 'F', circ: num }, { tipo: 'N', circ: num }];
     }
 

@@ -425,7 +425,7 @@
             const circPorNum = new Map(circuitos.map(c => [c.num, c]));
             const incluirCircuito = (c, fonteIdr, grupoIdr) => {
                 if (!c) return;
-                const p = (c.polos === '2P') ? 2 : 1;
+                const p = (c.polos === '3P') ? 3 : ((c.polos === '2P') ? 2 : 1);
                 modulosUsados += p;
                 dispositivos.push({
                     id: `c_${c.num}`, tipo: 'circuito', dados: c, polos: p,
@@ -610,6 +610,7 @@
         function qdtFasesDoCircuito(c) {
             const txt = String((c && c.fase) || '').replace(/fase/ig, '').toUpperCase();
             const f = txt.match(/[RST]/g) || [];
+            if (c && c.polos === '3P') return f.length >= 3 ? f.slice(0, 3) : ['R', 'S', 'T'];
             if (c && c.polos === '2P') return f.length >= 2 ? f.slice(0, 2) : ['R', 'S'];
             return f.length ? [f[0]] : ['R'];
         }
@@ -849,7 +850,7 @@
                     ${manopla('bg-slate-300', L - 16)}
                     <span class="text-[11px] font-black text-white font-mono leading-none">${c.disj}</span>
                     <span class="text-[7px] font-bold text-amber-400">Curva ${c.curva}</span>
-                    <span class="text-[6px] text-slate-400 font-mono truncate w-full px-0.5">${w === 2 ? '2P • ' : ''}${qdtFasesDoCircuito(c).join('+')}</span>`;
+                    <span class="text-[6px] text-slate-400 font-mono truncate w-full px-0.5">${w >= 2 ? w + 'P • ' : ''}${qdtFasesDoCircuito(c).join('+')}</span>`;
             } else if (item.tipo === 'automacao') {
                 el.className = `${base} border-violet-500/70`;
                 el.title = item.nome || 'Automação';

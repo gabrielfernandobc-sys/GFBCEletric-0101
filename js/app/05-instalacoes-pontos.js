@@ -96,7 +96,7 @@
                         </div>
                         <div class="text-right shrink-0">
                             <span class="font-mono text-[10px] font-bold ${badgeColor} block">${pt.pot}W</span>
-                            <span class="text-[9px] text-slate-400 block">${pt.tensao}V</span>
+                            <span class="text-[9px] text-slate-400 block">${rotuloTensao(pt)}</span>
                         </div>
                     </div>
                 `;
@@ -298,7 +298,7 @@
                             else if (pontoHover.tipo === 'TUE') icone = '⚡';
                             else if (pontoHover.tipo === 'INTERRUPTOR') icone = '🔘';
                             if (tit) tit.innerHTML = `${icone} ${pontoHover.nome}`;
-                            if (sub) sub.innerHTML = `<span class="font-mono text-amber-300 font-bold">${pontoHover.pot}W</span> • ${pontoHover.tensao}V • ${pontoHover.tipo} • Altura: ${pontoHover.altura || 'média'}${comodoNome ? ' • <span class="text-slate-400">' + comodoNome + '</span>' : ''}`;
+                            if (sub) sub.innerHTML = `<span class="font-mono text-amber-300 font-bold">${pontoHover.pot}W</span> • ${rotuloTensao(pontoHover)} • ${pontoHover.tipo} • Altura: ${pontoHover.altura || 'média'}${comodoNome ? ' • <span class="text-slate-400">' + comodoNome + '</span>' : ''}`;
                             
                             tooltip.style.left = Math.min(rect.width - 240, Math.max(10, e.clientX - rect.left + 16)) + 'px';
                             tooltip.style.top = Math.min(rect.height - 70, Math.max(10, e.clientY - rect.top + 16)) + 'px';
@@ -600,7 +600,7 @@
                 badge.className = `px-2.5 py-1 rounded-lg text-xs font-bold uppercase ${pt.tipo === 'TUE' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}`;
             }
             if (nome) nome.textContent = pt.nome;
-            if (det) det.textContent = `${pt.pot} Watts • ${pt.tensao}V • Altura: ${pt.altura || 'média'}`;
+            if (det) det.textContent = `${pt.pot} Watts • ${rotuloTensao(pt)} • Altura: ${pt.altura || 'média'}`;
             desenharInstalacoes();
         }
 
@@ -620,7 +620,9 @@
                 e.preventDefault();
                 const nome = document.getElementById('txtModalPontoNome').value.trim();
                 const tipo = document.getElementById('selModalPontoTipo').value;
-                const tensao = parseInt(document.getElementById('selModalPontoTensao').value, 10);
+                const valTensao = document.getElementById('selModalPontoTensao').value;
+                const tensao = parseInt(valTensao, 10);
+                const fases = (valTensao === '220-3F' && tipo === 'TUE') ? 3 : undefined;   // trifásico 3F+N
                 const pot = parseFloat(document.getElementById('numModalPontoPot').value) || 0;
                 const altura = document.getElementById('selModalPontoAltura').value;
                 const selDestino = document.getElementById('selModalPontoDestino');
@@ -635,6 +637,7 @@
                         p.pot = pot;
                         p.altura = altura;
                         if (destino) p.destino = destino; else delete p.destino;
+                        if (fases) p.fases = 3; else delete p.fases;
                     }
                 } else {
                     const comodosAndar = state.comodos.filter(c => c.pavimentoId === state.pavimentoAtivoId);
@@ -670,6 +673,7 @@
                         tensao,
                         altura,
                         ...(destino ? { destino } : {}),
+                        ...(fases ? { fases } : {}),
                         x: posX,
                         y: posY
                     });
@@ -734,7 +738,7 @@
             titulo.innerHTML = `<i class="fa-solid ${iconTipo}"></i> Editar Ponto (${pt.tipo})`;
             document.getElementById('txtModalPontoNome').value = pt.nome;
             document.getElementById('selModalPontoTipo').value = pt.tipo;
-            document.getElementById('selModalPontoTensao').value = pt.tensao;
+            document.getElementById('selModalPontoTensao').value = (pt.tipo === 'TUE' && NBR5410.ehCargaTrifasica(pt)) ? '220-3F' : String(pt.tensao);
             document.getElementById('numModalPontoPot').value = pt.pot;
             document.getElementById('selModalPontoAltura').value = pt.altura || (pt.tipo === 'ILUM' ? 'teto' : 'media');
             const comodoPt = state.comodos.find(c => String(c.id) === String(pt.comodoId)) || null;
