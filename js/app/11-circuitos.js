@@ -216,7 +216,8 @@
                 pe, passagem, sobra, prumada,
                 vQuadro: NBR5410.trechoVertical(passagem, pe, NBR5410.ALTURA_CENTRO_QUADRO),   // do quadro até a laje (ou ao piso)
                 vLuz: NBR5410.trechoVertical(passagem, pe, pe),                                 // pela laje: 0; pelo piso: sobe até o teto
-                vPonto: altura => NBR5410.trechoVertical(passagem, pe, NBR5410.alturaDoPonto(altura, pe)),
+                // alturaM: altura exata do ponto quando informada (ex.: tomada do motor da cortina a 2,20 m)
+                vPonto: (altura, alturaM) => NBR5410.trechoVertical(passagem, pe, isFinite(Number(alturaM)) && alturaM !== null && alturaM !== undefined ? Number(alturaM) : NBR5410.alturaDoPonto(altura, pe)),
                 // interruptor: pela laje desce até 1,20 m; pelo piso sobe até ele e o retorno segue até a luz no teto
                 vInterruptor: passagem === 'chao' ? pe : pe - NBR5410.ALTURAS_PONTO.media
             };
@@ -259,14 +260,18 @@
                 let maxDistTug = 0;
                 tugs.forEach(pt => {
                     const distH = (Math.hypot(pt.x - luzX, pt.y - luzY) / escala) * F_curva;
-                    const trecho = distH + pv.vPonto(pt.altura || 'baixa') + (sobraCaixa * 2);
+                    const trecho = distH + pv.vPonto(pt.altura || 'baixa', pt.alturaM) + (sobraCaixa * 2);
                     somaTrechosTugs += trecho;
                     if (trecho > maxDistTug) maxDistTug = trecho;
                 });
 
                 let somaTrechosInterr = 0;
                 let maxDistInterr = 0;
-                const listaSw = (interrs.length > 0) ? interrs : [{ x: c.x + 12, y: c.y + h - 12 }];
+                // automação cabeada: a luz vem do atuador e o interruptor vira pulsador (cabo de barramento,
+                // orçado na automação) — o circuito de iluminação não leva fase e retorno até ele
+                const fiacaoAut = (typeof fiacaoCabeadaAutomacao === 'function') ? fiacaoCabeadaAutomacao() : null;
+                const listaSw = (fiacaoAut && fiacaoAut.comodosLuz.has(String(c.id))) ? []
+                    : ((interrs.length > 0) ? interrs : [{ x: c.x + 12, y: c.y + h - 12 }]);
                 listaSw.forEach(sw => {
                     const distH = (Math.hypot(sw.x - luzX, sw.y - luzY) / escala) * F_curva;
                     const trecho = distH + pv.vInterruptor + (sobraCaixa * 2);
@@ -278,7 +283,7 @@
                 tues.forEach(tue => {
                     const distH = (Math.hypot(tue.x - luzX, tue.y - luzY) / escala) * F_curva;
                     // circuito exclusivo: quadro → laje (ou piso) → caixa da TUE, sem passar pela descida da luz
-                    const trecho = distHorizQdt + pv.vQuadro + pv.prumada + distH + pv.vPonto(tue.altura || 'media') + (sobraCaixa * 2);
+                    const trecho = distHorizQdt + pv.vQuadro + pv.prumada + distH + pv.vPonto(tue.altura || 'media', tue.alturaM) + (sobraCaixa * 2);
                     trechosTue[tue.id] = {
                         rotaFisica: Math.ceil(trecho),
                         distanciaCritica: Math.ceil(trecho)

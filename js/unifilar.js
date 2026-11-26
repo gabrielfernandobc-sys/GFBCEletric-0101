@@ -72,9 +72,9 @@
     }
 
     function ordenarCondutores(lista) {
-        const ordem = { F: 0, N: 1, R: 2, T: 3 };
-        // proteção (um só por eletroduto) por último
-        const chave = c => c.tipo === 'T' ? Infinity : (c.circ || 0);
+        const ordem = { F: 0, N: 1, R: 2, T: 3, B: 4 };
+        // proteção (um só por eletroduto) e cabo de barramento por último
+        const chave = c => c.tipo === 'T' ? Infinity : (c.tipo === 'B' ? Number.MAX_SAFE_INTEGER : (c.circ || 0));
         return lista.slice().sort((a, b) => (chave(a) - chave(b)) || (ordem[a.tipo] - ordem[b.tipo]));
     }
 
@@ -91,6 +91,11 @@
      * @param {Object} p.polosPorCircuito          '1P' | '2P' por número de circuito
      * @param {boolean} p.encadearTugs             tomadas ligadas em sequência (true) ou radiais
      * @param {Set|Array} [p.interruptoresComNeutro] ids dos interruptores inteligentes (exigem neutro na caixa)
+     * @param {Set|Array} [p.interruptoresBarramento] ids dos interruptores que viraram pulsadores de automação
+     *                     cabeada: o trecho luminária → interruptor leva só o cabo do pulsador (barramento ou comando)
+     * @param {boolean}   [p.luzPorAtuador]    a luz do cômodo é comandada pelo atuador do painel: o trecho
+     *                     quadro → luminária leva o retorno vindo do atuador no lugar da fase
+     * @param {string}    [p.rotuloBarramento] 'KNX', 'RS-485' ou 'Comando 24 V'
      * @returns {Array<{tipo, de, para, via?, condutores, pontoId?}>}
      */
     function montarTrechosComodo(p) {
@@ -109,8 +114,15 @@
 
         // luminária → interruptores: fase + retorno(s) do comando (+ neutro no interruptor inteligente)
         const comNeutro = new Set(p.interruptoresComNeutro || []);
+        const pulsadores = new Set(p.interruptoresBarramento || []);
         interr.forEach(s => {
             const letra = letraDe(s);
+            if (pulsadores.has(s.id)) {
+                // automação cabeada: sem fase nem retorno; só o cabo do pulsador até o barramento/painel
+                trechos.push({ tipo: 'interruptor', de: luz, para: s, pontoId: s.id, barramento: true,
+                    condutores: [{ tipo: 'B', rotulo: p.rotuloBarramento || 'Barramento' }] });
+                return;
+            }
             const cond = [{ tipo: 'F', circ: L }, { tipo: 'R', circ: L, letra }];
             if (ehThreeWay(s)) cond.push({ tipo: 'R', circ: L, letra });
             if (comNeutro.has(s.id)) cond.push({ tipo: 'N', circ: L });
@@ -152,7 +164,9 @@
         const circsComodo = new Set();
         if (L != null) circsComodo.add(L);
         tugs.concat(tues).forEach(t => { const n = circDe(t); if (n != null) circsComodo.add(n); });
-        const principal = [].concat(...[...circsComodo].sort((a, b) => a - b).map(n => n === L ? condutoresCircuito(n, '1P') : condutoresCircuito(n, polos[n])));
+        // luz comandada pelo atuador: o retorno (letra do comando) vem do painel junto com o neutro
+        const condutoresLuz = n => p.luzPorAtuador ? [{ tipo: 'R', circ: n, letra: p.letra || 'a' }, { tipo: 'N', circ: n }] : condutoresCircuito(n, '1P');
+        const principal = [].concat(...[...circsComodo].sort((a, b) => a - b).map(n => n === L ? condutoresLuz(n) : condutoresCircuito(n, polos[n])));
         if (principal.length) principal.push({ tipo: 'T' });
         trechos.unshift({ tipo: 'principal', de: p.quadro, para: luz, via: p.rotaQuadro || [], condutores: principal });
 
