@@ -23,7 +23,11 @@
             repetidores: null,            // null = sugeridos pela simulação
             painel: { modo: 'auto', tipoLampada: 'led_corte' },
             nobreak: { exigido: false, autonomiaMin: 60, tipo: 'interativo', desmarcadas: [] },
-            mapa: { pavimentoId: null, camada: 'calor' }
+            mapa: { pavimentoId: null, camada: 'calor' },
+            tipoGas: 'glp',                // detector de gás: 'glp' (0,30 m do piso) | 'gn' (alto)
+            cameraAlimentacao: 'poe',      // câmeras e vídeo-porteiro: 'poe' (switch do rack) | 'tomada'
+            origensDescartadas: [],        // pontos cujo dispositivo o usuário removeu da lista editada
+            avisoRemovidos: 0              // dispositivos que saíram porque o ponto de origem foi apagado
         };
 
         function obterConfigAutomacao() {
@@ -71,7 +75,11 @@
                     exigido: !!nb.exigido, autonomiaMin: num(nb.autonomiaMin, 5, 600, 60), tipo: nb.tipo === 'online' ? 'online' : 'interativo',
                     desmarcadas: Array.isArray(nb.desmarcadas) ? nb.desmarcadas.filter(x => /^[A-Za-z]{1,30}$/.test(x)) : []
                 },
-                mapa: { pavimentoId: null, camada: (o.mapa && o.mapa.camada === 'pontos') ? 'pontos' : 'calor' }
+                mapa: { pavimentoId: null, camada: (o.mapa && o.mapa.camada === 'pontos') ? 'pontos' : 'calor' },
+                tipoGas: o.tipoGas === 'gn' ? 'gn' : 'glp',
+                cameraAlimentacao: o.cameraAlimentacao === 'tomada' ? 'tomada' : 'poe',
+                origensDescartadas: Array.isArray(o.origensDescartadas) ? o.origensDescartadas.filter(x => x != null).map(x => String(x).slice(0, 120)).slice(0, 1000) : [],
+                avisoRemovidos: Math.max(0, Math.min(9999, Math.round(Number(o.avisoRemovidos) || 0)))
             };
         }
 
@@ -100,18 +108,30 @@
             const cfgChave = Object.assign({}, cfg, { mapa: null });     // trocar a camada do mapa não refaz a simulação
             const chave = JSON.stringify([cfgChave, esc, state.qdtPos, pavs.map(p => [p.id, p.nivel, p.alturaPeDireito, p.espessuraLajePiso]),
                 comodos.map(c => [c.id, c.nome, c.x, c.y, c.largura, c.comprimento, c.pavimentoId]),
-                pontos.map(p => [p.id, p.tipo, p.nome, p.destino, p.pot, p.tensao, Math.round(p.x), Math.round(p.y), p.comodoId]),
+                pontos.map(p => [p.id, p.tipo, p.nome, p.destino, p.pot, p.tensao, p.fases, p.altura, p.alturaM, Math.round(p.x), Math.round(p.y), p.comodoId]),
                 state.unifilar ? [state.unifilar.ilumPorComodo, state.unifilar.porPonto] : null]);
             if (_cacheAutomacao.chave === chave) return _cacheAutomacao.resultado;
 
-            const dispositivos = (cfg.dispositivos || A.levantarDispositivos({ comodos, pontos, pavimentos: pavs, escala: esc, nivel: cfg.nivel }))
-                .filter(d => comodos.some(c => String(c.id) === String(d.comodoId)));
+            // lista automática pelo nível, ou a editada à mão sincronizada com os pontos atuais
+            const automaticos = A.levantarDispositivos({ comodos, pontos, pavimentos: pavs, escala: esc, nivel: cfg.nivel });
+            let sugestoesNovas = [];
+            let listaBase = automaticos;
+            if (cfg.dispositivos) {
+                const sinc = A.sincronizarDispositivos(cfg.dispositivos, pontos, automaticos, cfg.origensDescartadas);
+                if (sinc.mudou) {
+                    cfg.dispositivos = sinc.lista;                        // posições atuais e pontos apagados fora
+                    cfg.avisoRemovidos = (cfg.avisoRemovidos || 0) + sinc.removidos.length;
+                }
+                listaBase = sinc.lista;
+                sugestoesNovas = sinc.novos;
+            }
+            const dispositivos = listaBase.filter(d => comodos.some(c => String(c.id) === String(d.comodoId)));
             const geo = A.geometriaPlanta({ comodos, pavimentos: pavs, escala: esc });
             const pavBase = pavimentoBaseAutomacao();
             const qdc = { x: ((state.qdtPos.x || 0) + (state.qdtPos.w || 0) / 2) / esc, y: ((state.qdtPos.y || 0) + (state.qdtPos.h || 0) / 2) / esc, pavId: pavBase };
 
             // dispositivos de rádio em metros (câmeras e vídeo-porteiro vão pela rede IP)
-            const radio = dispositivos.filter(d => A.TIPOS[d.tipo].alimentacao !== 'ip').map(d => ({
+            const radio = dispositivos.filter(d => A.TIPOS[d.tipo].dados !== 'ip').map(d => ({
                 id: d.id, x: d.x / esc, y: d.y / esc, pavId: d.pavimentoId || pavBase, roteador: !!A.TIPOS[d.tipo].roteador
             }));
             // contexto do projeto para as prioridades
@@ -141,6 +161,13 @@
             let repetidores = [];
             if (!cabeada) repetidores = cfg.repetidores || A.sugerirRepetidores(sim, hub, candidatos, radio, 8).repetidores;
             const rede = A.simularRede(sim, hub, repetidores, radio);
+
+            // pontos de alimentação: tomada vinculada, sugerida, PoE, fonte 12 V ou rack
+            const alimentacao = A.planejarAlimentacao({
+                dispositivos, pontos, comodos, escala: esc, tecnologia: tecId, rack: cabeada ? qdc : hub,
+                repetidores: cabeada ? [] : repetidores, servidorLocal: cfg.servidorLocal, tipoGas: cfg.tipoGas,
+                cameraAlimentacao: cfg.cameraAlimentacao, incluirNoProjeto: cfg.incluirNoProjeto, niveis: geo.niveis
+            });
 
             // painel, canais e barramento
             const comodoDe = id => comodos.find(c => String(c.id) === String(id));
@@ -182,7 +209,7 @@
             const nobreak = A.dimensionarNobreak({ exigido: cfg.nobreak.exigido, cargas: cargasNobreak, autonomiaMin: cfg.nobreak.autonomiaMin, tipo: cfg.nobreak.tipo });
             const cenas = A.sugerirCenas(dispositivos, nomeComodoAutomacao);
             const numRep = cabeada ? 0 : repetidores.length;
-            const materiais = A.listaMateriais({ tecnologia: tecId, dispositivos, painel, repetidores: numRep, nobreak, metrosBarramento: barramento ? barramento.metros : 0, metrosNeutro, servidorLocal: cfg.servidorLocal, local: localPainel.local });
+            const materiais = A.listaMateriais({ tecnologia: tecId, dispositivos, painel, repetidores: numRep, nobreak, metrosBarramento: barramento ? barramento.metros : 0, metrosNeutro, servidorLocal: cfg.servidorLocal, local: localPainel.local, alimentacao });
             const maoDeObra = A.quantidadesMaoDeObra({ tecnologia: tecId, dispositivos, repetidores: numRep, nobreak, metrosBarramento: barramento ? barramento.metros : 0, servidorLocal: cfg.servidorLocal, cenas });
             const memorial = A.gerarMemorial({ tecnologia: tecId, nivel: cfg.nivel, dispositivos, ranking: cfg.tecnologia === 'auto' ? ranking : ranking.filter(r => r.id === tecId), escolhaManual: cfg.tecnologia !== 'auto',
                 rede, repetidores: numRep, material: cfg.materialParede, barramento, painel, localPainel, nobreak, cenas, metrosNeutro, local: localPainel.local });
@@ -195,7 +222,7 @@
             const tensaoRack = nobreak ? nobreak.circuito.tensao : 127;
 
             const resultado = {
-                cfg, tec, tecId, cabeada, dispositivos, radio, geo, sim, hub, repetidores, rede, candidatos, qdc, ctx, prioridades, ranking,
+                cfg, tec, tecId, cabeada, dispositivos, sugestoesNovas, radio, geo, sim, hub, repetidores, rede, alimentacao, candidatos, qdc, ctx, prioridades, ranking,
                 painel, localPainel, barramento, metrosNeutro, cargasNobreak, nobreak, cenas, materiais, maoDeObra, memorial, impacto,
                 rack: { pos: rack, rota: rotaRack, potVA: potRack, tensao: tensaoRack },
                 painelSupply: cabeada && !(nobreak && cargasNobreak.some(c => c.id === 'fonteBarramento' && c.selecionada))
@@ -248,6 +275,21 @@
             return new Set(r.dispositivos.filter(d => Automacao.TIPOS[d.tipo].neutro && d.origemPontoId != null && ['modulo_rele', 'interruptor', 'dimmer'].includes(d.tipo)).map(d => d.origemPontoId));
         }
 
+        /**
+         * Fiação da automação cabeada (KNX, RS-485, relés) incluída no projeto: interruptores que viraram
+         * pulsadores, cômodos cuja luz vem do atuador do painel e o rótulo do cabo. null fora desse caso.
+         */
+        function fiacaoCabeadaAutomacao() {
+            const r = obterResultadoAutomacao();
+            if (!r || !r.cabeada) return null;
+            const luz = ['modulo_rele', 'interruptor', 'dimmer'];
+            return {
+                pulsadores: new Set(r.dispositivos.filter(d => luz.includes(d.tipo) && d.origemPontoId != null).map(d => d.origemPontoId)),
+                comodosLuz: new Set(r.dispositivos.filter(d => luz.includes(d.tipo)).map(d => String(d.comodoId))),
+                rotulo: r.tecId === 'knx' ? 'KNX' : (r.tecId === 'rs485' ? 'RS-485' : 'Comando 24 V')
+            };
+        }
+
         /** Miolo visual de um dispositivo DIN de automação (quadro e painel). */
         function mioloDispositivoAutomacao(item, w) {
             const curto = String(item.nome || '').replace(/\(.*?\)/g, '').replace(/KNX|RS-485\/Modbus|RS-485/g, m => m).trim();
@@ -285,7 +327,9 @@
             else if (campo === 'nobreakTipo') cfg.nobreak.tipo = valor === 'online' ? 'online' : 'interativo';
             else if (campo === 'mapaPavimento') cfg.mapa.pavimentoId = valor;
             else if (campo === 'mapaCamada') cfg.mapa.camada = valor;
-            aplicarMudancaAutomacao(['incluir', 'nobreakExigido', 'nobreakAutonomia', 'nobreakTipo', 'painelModo', 'tipoLampada', 'tecnologia', 'nivel', 'servidorLocal'].includes(campo));
+            else if (campo === 'tipoGas') cfg.tipoGas = valor === 'gn' ? 'gn' : 'glp';
+            else if (campo === 'cameraAlimentacao') cfg.cameraAlimentacao = valor === 'tomada' ? 'tomada' : 'poe';
+            aplicarMudancaAutomacao(['incluir', 'nobreakExigido', 'nobreakAutonomia', 'nobreakTipo', 'painelModo', 'tipoLampada', 'tecnologia', 'nivel', 'servidorLocal', 'tipoGas', 'cameraAlimentacao'].includes(campo));
         }
 
         function alterarPrioridadeAutomacao(criterio, valor) {
@@ -317,8 +361,35 @@
         function removerDispositivoAutomacao(id) {
             const lista = listaEditavelAutomacao();
             const i = lista.findIndex(d => d.id === id);
-            if (i >= 0) lista.splice(i, 1);
+            if (i >= 0) {
+                const d = lista.splice(i, 1)[0];
+                // o ponto de origem não volta como "sugestão nova"
+                const cfg = obterConfigAutomacao();
+                if (d.origemPontoId != null && !cfg.origensDescartadas.includes(String(d.origemPontoId))) cfg.origensDescartadas.push(String(d.origemPontoId));
+            }
             aplicarMudancaAutomacao(true);
+        }
+
+        /** Inclui na lista editada as sugestões novas (todas ou a de um ponto). */
+        function incluirSugestoesNovasAutomacao(origemPontoId) {
+            const novas = calcularAutomacao().sugestoesNovas.filter(d => origemPontoId == null || String(d.origemPontoId) === String(origemPontoId));
+            if (!novas.length) return;
+            const lista = listaEditavelAutomacao();
+            novas.forEach(d => { if (!lista.some(x => String(x.origemPontoId) === String(d.origemPontoId))) lista.push(JSON.parse(JSON.stringify(d))); });
+            aplicarMudancaAutomacao(true);
+            mostrarNotificacaoToast(`${novas.length} dispositivo(s) incluído(s) na lista.`, 'sucesso');
+        }
+
+        /** Descarta uma sugestão nova (o ponto não vira dispositivo). */
+        function descartarSugestaoNovaAutomacao(origemPontoId) {
+            const cfg = obterConfigAutomacao();
+            if (!cfg.origensDescartadas.includes(String(origemPontoId))) cfg.origensDescartadas.push(String(origemPontoId));
+            aplicarMudancaAutomacao(false);
+        }
+
+        function dispensarAvisoRemovidosAutomacao() {
+            obterConfigAutomacao().avisoRemovidos = 0;
+            aplicarMudancaAutomacao(false);
         }
 
         function adicionarDispositivoAutomacao(comodoId, tipo) {
@@ -339,6 +410,8 @@
             if (cfg.dispositivos && !confirm('Descartar as alterações manuais e refazer o levantamento pelo nível escolhido?')) return;
             cfg.dispositivos = null;
             cfg.repetidores = null;
+            cfg.origensDescartadas = [];
+            cfg.avisoRemovidos = 0;
             aplicarMudancaAutomacao(true);
         }
 
@@ -348,6 +421,26 @@
             cfg.repetidores = null;
             aplicarMudancaAutomacao(true);
             mostrarNotificacaoToast('Hub e repetidores reposicionados pela simulação.', 'info');
+        }
+
+        /** Cria no projeto elétrico as TUGs sugeridas para alimentar os dispositivos. */
+        function lancarPontosAlimentacaoAutomacao() {
+            const r = calcularAutomacao();
+            const sug = r.alimentacao.sugestoes;
+            if (!sug.length) { mostrarNotificacaoToast('Todos os dispositivos já têm ponto de alimentação.', 'info'); return; }
+            sug.forEach((sp, i) => {
+                state.pontosEletricos.push({
+                    id: `pt_aut_${Date.now()}_${i}`, tipo: 'TUG', nome: sp.nome, destino: sp.destino, pot: sp.pot, tensao: sp.tensao,
+                    altura: sp.altura, ...(sp.alturaM ? { alturaM: sp.alturaM } : {}), x: sp.x, y: sp.y,
+                    comodoId: sp.comodoId, pavimentoId: sp.pavimentoId, origemAutomacao: true
+                });
+            });
+            _cacheAutomacao.chave = null;
+            if (typeof atualizarTudo === 'function') atualizarTudo();
+            if (typeof reconstruirCena3D === 'function') reconstruirCena3D();
+            renderizarAbaAutomacao();
+            if (typeof salvarProjetoSilencioso === 'function') salvarProjetoSilencioso();
+            mostrarNotificacaoToast(`${sug.length} ponto(s) de alimentação lançado(s) no projeto elétrico.`, 'sucesso');
         }
 
         function aplicarMudancaAutomacao(afetaProjeto) {
@@ -418,10 +511,12 @@
                         .map(([t, v, i]) => `<div class="bg-slate-950/70 border border-slate-800 rounded-xl p-2.5 min-w-0"><span class="text-[10px] text-slate-400 flex items-center gap-1"><i class="fa-solid ${i} text-violet-400"></i>${t}</span><span class="block text-sm font-black text-white font-mono truncate" title="${escHtml(String(v))}">${escHtml(String(v))}</span></div>`).join('')}
                 </div>
                 ${cfg.incluirNoProjeto ? '' : '<p class="text-[11px] text-amber-300/90"><i class="fa-solid fa-circle-info"></i> A automação ainda não entra no quadro, nos circuitos, no orçamento nem no memorial. Marque "Incluir no projeto elétrico" quando o levantamento estiver pronto.</p>'}
+                ${cfg.incluirNoProjeto && r.alimentacao.semPonto ? `<p class="text-[12px] font-bold text-red-200 bg-red-500/15 border border-red-500/40 rounded-xl p-2.5"><i class="fa-solid fa-plug-circle-xmark"></i> ${r.alimentacao.semPonto} dispositivo(s) ligado(s) na rede elétrica ainda sem ponto de alimentação no projeto: veja "Pontos de alimentação" e lance os pontos sugeridos.</p>` : ''}
             </section>`;
 
             raiz.innerHTML = cabecalho +
                 secaoLevantamentoAutomacao(r) +
+                secaoAlimentacaoAutomacao(r) +
                 secaoComparacaoAutomacao(r) +
                 secaoSugestaoAutomacao(r) +
                 secaoAlcanceAutomacao(r) +
@@ -444,7 +539,7 @@
                 const itens = devs.map(d => {
                     const t = A.TIPOS[d.tipo];
                     const est = r.rede.porDispositivo[d.id];
-                    const alc = !r.rede.aplicavel || t.alimentacao === 'ip' ? '' : (est && est.ok ? `<span class="text-emerald-400" title="Margem ${fmtAut(est.margemDb, 0)} dB, ${est.saltos} salto(s)"><i class="fa-solid fa-signal"></i></span>` : '<span class="text-red-400" title="Fora de alcance na simulação"><i class="fa-solid fa-triangle-exclamation"></i></span>');
+                    const alc = !r.rede.aplicavel || t.dados === 'ip' ? '' : (est && est.ok ? `<span class="text-emerald-400" title="Margem ${fmtAut(est.margemDb, 0)} dB, ${est.saltos} salto(s)"><i class="fa-solid fa-signal"></i></span>` : '<span class="text-red-400" title="Fora de alcance na simulação"><i class="fa-solid fa-triangle-exclamation"></i></span>');
                     return `<li class="flex items-center justify-between gap-2 py-1 border-b border-slate-800/60 last:border-0">
                         <span class="flex items-center gap-2 min-w-0"><i class="fa-solid ${t.icone} text-violet-300 w-4 text-center"></i>
                             <span class="min-w-0"><span class="block text-[11px] font-semibold text-white truncate">${escHtml(t.nome)}${t.neutro && !r.cabeada ? ' <span class="text-[9px] text-sky-300">(neutro)</span>' : ''}</span><span class="block text-[10px] text-slate-400 truncate">${escHtml(d.detalhe || '')}</span></span></span>
@@ -460,13 +555,62 @@
                     <select onchange="adicionarDispositivoAutomacao(${argJsEmAtributo(c.id)}, this.value); this.value=''" class="w-full bg-slate-900 border border-slate-700 text-slate-300 rounded-lg p-1.5 text-[11px]"><option value="">+ Adicionar dispositivo…</option>${opcoesTipo}</select>
                 </div>`;
             }).join('');
-            const corpo = `
+            const cfgL = r.cfg;
+            const nomePt = d => { const pt = (state.pontosEletricos || []).find(x => String(x.id) === String(d.origemPontoId)); return pt ? (pt.nome || pt.tipo) : ''; };
+            const avisos = `
+                ${cfgL.avisoRemovidos ? `<div class="flex flex-wrap items-center justify-between gap-2 bg-amber-500/10 border border-amber-500/40 rounded-xl p-2.5 text-[12px] text-amber-200">
+                    <span><i class="fa-solid fa-circle-minus"></i> ${cfgL.avisoRemovidos} dispositivo(s) saíram da lista editada porque o ponto de origem foi apagado do projeto.</span>
+                    <button onclick="dispensarAvisoRemovidosAutomacao()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700">Entendi</button></div>` : ''}
+                ${r.sugestoesNovas.length ? `<div class="bg-sky-500/10 border border-sky-500/40 rounded-xl p-3 space-y-2 text-[12px] text-sky-100">
+                    <div class="flex flex-wrap items-center justify-between gap-2"><span><i class="fa-solid fa-wand-magic-sparkles"></i> <strong>${r.sugestoesNovas.length} sugestão(ões) nova(s)</strong>: pontos lançados depois da edição que o nível ${escHtml(Automacao.NIVEIS[cfgL.nivel])} transformaria em dispositivo. As suas edições continuam valendo.</span>
+                        <button onclick="incluirSugestoesNovasAutomacao()" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold">Incluir todas</button></div>
+                    <ul class="space-y-1">${r.sugestoesNovas.map(d => `<li class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/50 rounded-lg px-2 py-1"><span><i class="fa-solid ${Automacao.TIPOS[d.tipo].icone} text-sky-300"></i> ${escHtml(Automacao.TIPOS[d.tipo].nome)} — ${escHtml(nomeComodoAutomacao(d.comodoId))} <span class="text-slate-400">(${escHtml(nomePt(d))})</span></span>
+                        <span class="flex gap-1.5"><button onclick="incluirSugestoesNovasAutomacao(${argJsEmAtributo(d.origemPontoId)})" class="px-2 py-0.5 rounded bg-sky-700 hover:bg-sky-600 text-white font-bold text-[11px]">Incluir</button><button onclick="descartarSugestaoNovaAutomacao(${argJsEmAtributo(d.origemPontoId)})" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px]">Ignorar</button></span></li>`).join('')}</ul>
+                </div>` : ''}`;
+            const corpo = avisos + `
                 <div class="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
                     <span>Interruptores viram módulos/interruptores inteligentes, tomadas viram tomadas inteligentes e as TUEs ganham controle IR ou relé de potência. Sensores, fechaduras, câmeras e cortinas entram conforme o cômodo e o nível.</span>
                     <button onclick="regerarLevantamentoAutomacao()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700"><i class="fa-solid fa-rotate"></i> Refazer pelo nível</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">${linhas}</div>`;
             return cardAut('1. Levantamento por cômodo', 'fa-list-check', corpo);
+        }
+
+        // ---------- 2. Pontos de alimentação ----------
+        function secaoAlimentacaoAutomacao(r) {
+            const cfg = r.cfg;
+            const al = r.alimentacao;
+            const ROT = {
+                vinculado: ['Tomada vinculada', 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'],
+                sugerido: ['Ponto sugerido', 'bg-red-500/15 text-red-200 border-red-500/40'],
+                poe: ['PoE do rack', 'bg-sky-500/15 text-sky-300 border-sky-500/40'],
+                fonte12v: ['Fonte 12 V', 'bg-sky-500/15 text-sky-300 border-sky-500/40'],
+                rack: ['Tomada do rack', 'bg-violet-500/15 text-violet-300 border-violet-500/40']
+            };
+            const linhas = al.itens.filter(i => ROT[i.situacao]).sort((a, b) => (a.situacao === 'sugerido' ? -1 : 0) - (b.situacao === 'sugerido' ? -1 : 0)).map(i => `
+                <tr class="${i.situacao === 'sugerido' ? 'bg-red-500/5' : ''} align-top">
+                    <td class="p-2 text-white font-semibold">${escHtml(i.nome)}</td>
+                    <td class="p-2 text-slate-300">${escHtml(i.comodo || '—')}</td>
+                    <td class="p-2"><span class="inline-block px-2 py-0.5 rounded-lg border text-[10px] font-bold whitespace-nowrap ${ROT[i.situacao][1]}">${ROT[i.situacao][0]}</span><span class="block text-[11px] text-slate-300 mt-1">${escHtml(i.ponto || '')}</span></td>
+                    <td class="p-2 text-slate-400">${escHtml(i.motivo || '')}</td>
+                </tr>`).join('');
+            const res = al.resumo;
+            const corpo = `
+                <p class="text-[11px] text-slate-400">Todo dispositivo ligado na rede elétrica precisa de um ponto: a tomada do cômodo (até 1,5 m, na altura certa e sem destinação reservada), PoE, a fonte de 12 V ou a tomada do rack. ${res.origem} usam o ponto de origem (interruptor com neutro, TUG ou TUE) e ${res.bateria} funcionam a bateria.</p>
+                <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                    <label class="text-slate-400">Detector de gás:
+                        <select onchange="alterarAutomacao('tipoGas', this.value)" class="ml-1 bg-slate-950 border border-slate-700 text-white rounded-lg p-1.5"><option value="glp" ${cfg.tipoGas !== 'gn' ? 'selected' : ''}>GLP (botijão) — 0,30 m do piso</option><option value="gn" ${cfg.tipoGas === 'gn' ? 'selected' : ''}>Gás natural (rede) — alto</option></select></label>
+                    <label class="text-slate-400">Câmeras e vídeo-porteiro:
+                        <select onchange="alterarAutomacao('cameraAlimentacao', this.value)" class="ml-1 bg-slate-950 border border-slate-700 text-white rounded-lg p-1.5"><option value="poe" ${cfg.cameraAlimentacao !== 'tomada' ? 'selected' : ''}>PoE pelo switch do rack</option><option value="tomada" ${cfg.cameraAlimentacao === 'tomada' ? 'selected' : ''}>Tomada alta</option></select></label>
+                    <span class="flex-1"></span>
+                    <button onclick="lancarPontosAlimentacaoAutomacao()" ${al.sugestoes.length ? '' : 'disabled'} class="px-3 py-1.5 rounded-lg font-bold ${al.sugestoes.length ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-800 text-slate-500 cursor-not-allowed'}"><i class="fa-solid fa-plug-circle-plus"></i> Lançar pontos sugeridos no projeto elétrico (${al.sugestoes.length})</button>
+                </div>
+                ${al.semPonto ? `<p class="text-[12px] text-red-200"><i class="fa-solid fa-triangle-exclamation"></i> ${al.semPonto} dispositivo(s) sem ponto de alimentação. Lance os pontos sugeridos ou ligue-os numa tomada existente do cômodo.</p>` : '<p class="text-[12px] text-emerald-300"><i class="fa-solid fa-circle-check"></i> Todos os dispositivos ligados na rede elétrica têm ponto previsto.</p>'}
+                <div class="overflow-x-auto rounded-xl border border-slate-800"><table class="w-full text-[11px] text-slate-300 min-w-[720px]">
+                    <thead class="bg-slate-950 text-[10px] uppercase text-slate-400"><tr><th class="p-2 text-left">Dispositivo</th><th class="p-2 text-left">Cômodo</th><th class="p-2 text-left">Ponto vinculado ou sugerido</th><th class="p-2 text-left">Motivo</th></tr></thead>
+                    <tbody class="divide-y divide-slate-800">${linhas || '<tr><td colspan="4" class="p-3 text-slate-500">Nenhum dispositivo precisa de ponto próprio.</td></tr>'}</tbody>
+                </table></div>`;
+            return cardAut('2. Pontos de alimentação', 'fa-plug-circle-bolt', corpo, 'id="secaoAlimentacaoAutomacao"');
         }
 
         // ---------- 2. Comparação ----------
@@ -494,7 +638,7 @@
                     </table>
                 </div>
                 <p class="text-[10px] text-slate-500">"Via ponte/hub": funciona por meio de um hub, ponte (bridge) ou do Home Assistant. Faixas de custo de referência (${A.DATA_REFERENCIA}).</p>`;
-            return cardAut('2. Comparação de tecnologias', 'fa-table-columns', corpo);
+            return cardAut('3. Comparação de tecnologias', 'fa-table-columns', corpo);
         }
 
         // ---------- 3. Sugestão ----------
@@ -540,7 +684,7 @@
                         </div>
                     </div>
                 </div>`;
-            return cardAut('3. Sugestão da melhor tecnologia', 'fa-scale-balanced', corpo);
+            return cardAut('4. Sugestão da melhor tecnologia', 'fa-scale-balanced', corpo);
         }
 
         // ---------- 4. Alcance ----------
@@ -579,7 +723,7 @@
                     <span class="flex items-center gap-1"><span class="text-violet-300">★</span>Hub / rack</span><span class="flex items-center gap-1"><span class="text-sky-300">◆</span>Repetidor</span>
                     <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>No alcance</span><span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Fora de alcance</span><span class="flex items-center gap-1"><span class="w-2.5 h-2.5 bg-amber-400"></span>Quadro (QDC)</span>
                 </div>`;
-            return cardAut('4. Teste de alcance de sensores e hubs (simulação)', 'fa-tower-broadcast', corpo);
+            return cardAut('5. Teste de alcance de sensores e hubs (simulação)', 'fa-tower-broadcast', corpo);
         }
 
         function nomeComodoPorPosicaoAutomacao(r, q) {
@@ -678,10 +822,10 @@
             r.dispositivos.filter(d => (d.pavimentoId || pavimentoBaseAutomacao()) === pavId).forEach(d => {
                 const t = A.TIPOS[d.tipo];
                 const est = r.rede.porDispositivo[d.id];
-                const ok = !r.rede.aplicavel || t.alimentacao === 'ip' || (est && est.ok);
+                const ok = !r.rede.aplicavel || t.dados === 'ip' || (est && est.ok);
                 const [px, py] = P(d.x / esc, d.y / esc);
                 ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI * 2);
-                ctx.fillStyle = t.alimentacao === 'ip' ? '#38bdf8' : (ok ? '#34d399' : '#ef4444'); ctx.fill();
+                ctx.fillStyle = t.dados === 'ip' ? '#38bdf8' : (ok ? '#34d399' : '#ef4444'); ctx.fill();
                 ctx.lineWidth = 1.5; ctx.strokeStyle = '#020617'; ctx.stroke();
                 ctx.fillStyle = '#020617'; ctx.font = 'bold 7px sans-serif';
                 ctx.fillText(({ modulo_rele: 'M', interruptor: 'I', dimmer: 'D', tomada: 'T', controle_ir: 'IR', rele_potencia: 'R', sensor_presenca: 'P', sensor_abertura: 'A', sensor_fumaca: 'F', sensor_gas: 'G', sensor_vazamento: 'V', fechadura: 'L', camera: 'C', videoporteiro: 'VP', cortina: 'CT', modulo_portao: 'PT', sirene: 'S' })[d.tipo] || '•', px, py + 2.5);
@@ -748,7 +892,7 @@
                 </div>`;
             const decisao = `<p class="text-[12px] text-slate-200 bg-slate-950/60 border border-slate-800 rounded-xl p-3"><i class="fa-solid fa-diagram-project text-violet-400"></i> <strong>${r.localPainel.local === 'integrado' ? 'Painel integrado ao QDC' : 'Quadro de automação separado'}.</strong> ${escHtml(r.localPainel.justificativa)}</p>`;
             if (!p.cabeado && !p.itens.length) {
-                return cardAut('5. Painel de automação', 'fa-table-cells', controles + decisao + `<p class="text-[12px] text-slate-400">Com ${escHtml(r.tec.nome)} não há painel: módulos, sensores e tomadas inteligentes ficam nas caixas dos pontos. O painel com atuadores, fonte do barramento e entradas aparece quando a tecnologia é cabeada (KNX, RS-485 ou relés).</p>`);
+                return cardAut('6. Painel de automação', 'fa-table-cells', controles + decisao + `<p class="text-[12px] text-slate-400">Com ${escHtml(r.tec.nome)} não há painel: módulos, sensores e tomadas inteligentes ficam nas caixas dos pontos. O painel com atuadores, fonte do barramento e entradas aparece quando a tecnologia é cabeada (KNX, RS-485 ou relés).</p>`);
             }
             const resumo = p.cabeado ? `
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
@@ -765,7 +909,7 @@
                     <div class="overflow-x-auto rounded-xl border border-slate-800"><table class="w-full text-[11px] text-slate-300"><thead class="bg-slate-950 text-[10px] uppercase text-slate-400"><tr><th class="p-2 text-left">Composição</th><th class="p-2">Qtd</th><th class="p-2">Mód. cada</th><th class="p-2">Mód. total</th></tr></thead><tbody class="divide-y divide-slate-800">${tabelaItens}</tbody></table></div>
                     <div class="overflow-x-auto rounded-xl border border-slate-800 max-h-96"><table class="w-full text-[11px] text-slate-300"><thead class="bg-slate-950 text-[10px] uppercase text-slate-400 sticky top-0"><tr><th class="p-1.5 text-left">Atuador</th><th class="p-1.5">Canal</th><th class="p-1.5 text-left">Carga / ponto da planta</th><th class="p-1.5">Circuito</th></tr></thead><tbody class="divide-y divide-slate-800">${tabelaCanais || '<tr><td colspan="4" class="p-2 text-slate-500">Sem canais.</td></tr>'}</tbody></table></div>
                 </div>`;
-            return cardAut('5. Painel de automação', 'fa-table-cells', corpo);
+            return cardAut('6. Painel de automação', 'fa-table-cells', corpo);
         }
 
         /** Desenho do painel com os mesmos trilhos DIN e dispositivos do desenho do quadro. */
@@ -825,7 +969,7 @@
                     <label class="flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer ${cfg.nobreak.exigido ? 'border-violet-500 bg-violet-500/10 text-white' : 'border-slate-700 text-slate-300'}"><input type="radio" name="radNobreakAut" ${cfg.nobreak.exigido ? 'checked' : ''} onchange="alterarAutomacao('nobreakExigido', true)" class="accent-violet-500"> Exigido pela especificação</label>
                 </div>`;
             if (!cfg.nobreak.exigido) {
-                return cardAut('6. Nobreak', 'fa-car-battery', opc + '<p class="text-[12px] text-slate-400">Sem nobreak: ele não entra no orçamento, no memorial nem no quadro.</p>');
+                return cardAut('7. Nobreak', 'fa-car-battery', opc + '<p class="text-[12px] text-slate-400">Sem nobreak: ele não entra no orçamento, no memorial nem no quadro.</p>');
             }
             const nb = r.nobreak;
             const cargas = r.cargasNobreak.map(c => `<label class="flex items-center justify-between gap-2 bg-slate-950/60 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px]"><span class="flex items-center gap-2"><input type="checkbox" ${c.selecionada ? 'checked' : ''} onchange="alternarCargaNobreak('${c.id}', this.checked)" class="accent-violet-500">${escHtml(c.nome)}</span><span class="font-mono text-slate-300">${c.potW} W</span></label>`).join('');
@@ -850,7 +994,7 @@
                         ${(nb.alertas || []).map(a => `<p class="text-[11px] text-amber-300">${escHtml(a)}</p>`).join('')}
                     </div>
                 </div>`;
-            return cardAut('6. Nobreak', 'fa-car-battery', corpo);
+            return cardAut('7. Nobreak', 'fa-car-battery', corpo);
         }
 
         // ---------- 7. Orçamento ----------
@@ -885,14 +1029,14 @@
                     <button onclick="trocarAba('materiais'); setTimeout(() => { if (typeof filtrarTabelaMateriais === 'function') filtrarTabelaMateriais('automacao'); }, 80)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700"><i class="fa-solid fa-boxes-stacked"></i> Ver no orçamento</button>
                     <button onclick="trocarAba('materiais'); setTimeout(() => { if (typeof abrirModalPesquisaPrecosInternet === 'function') abrirModalPesquisaPrecosInternet(); }, 80)" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold border border-slate-700"><i class="fa-solid fa-magnifying-glass-dollar"></i> Pesquisar preços</button>
                 </div>`;
-            return cardAut('7. Orçamento da automação', 'fa-cart-shopping', corpo);
+            return cardAut('8. Orçamento da automação', 'fa-cart-shopping', corpo);
         }
 
         // ---------- 8. Impacto ----------
         function secaoImpactoAutomacao(r) {
             const corpo = `<ul class="space-y-2 text-[12px] text-slate-200">${r.impacto.linhas.map(l => `<li class="flex gap-2"><i class="fa-solid fa-plug-circle-bolt text-amber-400 mt-0.5"></i><span>${escHtml(l)}</span></li>`).join('')}</ul>
                 <p class="text-[11px] text-slate-400">${r.cfg.incluirNoProjeto ? 'Refletido no projeto: o neutro aparece no trecho luminária → interruptor da aba Instalações, os circuitos do rack/painel entram na tabela de circuitos e os módulos DIN no desenho do quadro.' : 'Inclua a automação no projeto para refletir estas mudanças no quadro, nos circuitos e na fiação.'}</p>`;
-            return cardAut('8. Impacto na parte elétrica', 'fa-plug-circle-bolt', corpo);
+            return cardAut('9. Impacto na parte elétrica', 'fa-plug-circle-bolt', corpo);
         }
 
         // ---------- 9. Entregáveis ----------
@@ -908,7 +1052,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">${cenas}</div>
                 <h3 class="text-xs font-black text-white">Memorial de automação</h3>
                 <div class="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">${memorial}</div>`;
-            return cardAut('9. Entregáveis', 'fa-file-signature', corpo);
+            return cardAut('10. Entregáveis', 'fa-file-signature', corpo);
         }
 
         function textoMemorialAutomacao(r) {

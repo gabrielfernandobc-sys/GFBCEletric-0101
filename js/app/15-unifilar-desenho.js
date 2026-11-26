@@ -96,10 +96,11 @@
             if (!status.visivel) return;
             ctx.save();
             ctx.globalAlpha = status.opacidade;
-            const cor = status.destacado ? pal.destaque : (ehPiso ? pal.piso : pal.linha);
+            // cabo de barramento/comando da automação cabeada: roxo e pontilhado
+            const cor = tr.barramento ? '#a78bfa' : (status.destacado ? pal.destaque : (ehPiso ? pal.piso : pal.linha));
             ctx.strokeStyle = cor;
             ctx.lineWidth = (status.destacado ? 2.6 : 1.5) * escalaV;
-            ctx.setLineDash(ehPiso ? [7, 4] : []);             // piso: tracejado; teto/parede: contínuo
+            ctx.setLineDash(tr.barramento ? [2, 3] : (ehPiso ? [7, 4] : []));   // piso: tracejado; teto/parede: contínuo
             let meio;
             ctx.beginPath();
             if (tr.via && tr.via.length) {
@@ -119,7 +120,15 @@
             }
             ctx.stroke();
             ctx.setLineDash([]);
-            if (Math.hypot(tr.para.x - tr.de.x, tr.para.y - tr.de.y) > 28) {
+            if (tr.barramento) {
+                // rótulo do cabo do pulsador (KNX, RS-485 ou comando)
+                const rot = (tr.condutores[0] && tr.condutores[0].rotulo) || 'Barramento';
+                ctx.fillStyle = cor;
+                ctx.font = `bold ${Math.round(8 * escalaV)}px monospace`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(rot, meio.x - meio.ty * 11 * escalaV, meio.y + meio.tx * 11 * escalaV);
+            } else if (Math.hypot(tr.para.x - tr.de.x, tr.para.y - tr.de.y) > 28) {
                 desenharCondutoresUnifilar(ctx, meio, tr.condutores, cor, escalaV);
             }
             if (mostrarAlcas && tr.via) {
@@ -235,8 +244,10 @@
             const pal = paletaUnifilar();
             const escalaV = Math.min(1.4, Math.max(0.8, (state.escala || 35) / 35));
             const mapa = state.unifilar || { ilumPorComodo: {}, porPonto: {}, polos: {} };
-            // interruptores inteligentes (automação incluída no projeto) recebem neutro
+            // interruptores inteligentes (automação incluída no projeto) recebem neutro; na automação
+            // cabeada viram pulsadores e a luz passa a vir do atuador do painel
             const neutroInterruptores = (typeof idsInterruptoresComNeutro === 'function') ? idsInterruptoresComNeutro() : new Set();
+            const fiacaoCabeada = (typeof fiacaoCabeadaAutomacao === 'function') ? fiacaoCabeadaAutomacao() : null;
             const quadro = { x: state.qdtPos.x + state.qdtPos.w / 2, y: state.qdtPos.y + state.qdtPos.h / 2 };
             const status = (chave, idx) => (typeof obterStatusVisibilidadeCircuito === 'function')
                 ? obterStatusVisibilidadeCircuito(chave, idx) : { visivel: true, destacado: false, opacidade: 1 };
@@ -256,7 +267,10 @@
                     pontos, letra: letraComodo, circIlum,
                     circPorPonto: mapa.porPonto, polosPorCircuito: mapa.polos,
                     encadearTugs: c.passagemTomadas === 'horizontal' || (!c.passagemTomadas && pontos.filter(pt => pt.tipo === 'TUG').length > 1),
-                    interruptoresComNeutro: neutroInterruptores
+                    interruptoresComNeutro: neutroInterruptores,
+                    interruptoresBarramento: fiacaoCabeada ? fiacaoCabeada.pulsadores : null,
+                    luzPorAtuador: !!(fiacaoCabeada && fiacaoCabeada.comodosLuz.has(String(c.id))),
+                    rotuloBarramento: fiacaoCabeada ? fiacaoCabeada.rotulo : null
                 });
                 trechos.forEach(tr => {
                     const st = tr.tipo === 'principal' ? status(`comodo_${idx + 1}`, idx) : status(chaveStatus[tr.tipo], idx);

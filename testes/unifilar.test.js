@@ -105,3 +105,24 @@ test('geometria: curva passa pelas pontas e a tangente no meio é paralela à co
     assert.equal(pts.length, 11);
     assert.deepEqual(pts[10], { x: 100, y: 0 });
 });
+
+test('automação cabeada: interruptor vira pulsador (cabo do barramento) e a luz recebe o retorno do atuador', () => {
+    const pontos = [
+        { id: 's1', tipo: 'INTERRUPTOR', nome: 'Interruptor Simples', comando: 'a', x: 10, y: 10 },
+        { id: 't1', tipo: 'TUG', x: 150, y: 10 }
+    ];
+    const tr = U.montarTrechosComodo(Object.assign({}, base, { pontos, circPorPonto: { t1: 4 }, polosPorCircuito: { 4: '1P' },
+        interruptoresBarramento: new Set(['s1']), luzPorAtuador: true, rotuloBarramento: 'KNX' }));
+    const sw = tr.find(t => t.pontoId === 's1');
+    assert.equal(sw.barramento, true);
+    assert.deepEqual(sw.condutores.map(c => c.tipo), ['B']);               // sem fase e sem retorno
+    assert.equal(sw.condutores[0].rotulo, 'KNX');
+    const principal = tr.find(t => t.tipo === 'principal');
+    const luz = principal.condutores.filter(c => c.circ === base.circIlum);
+    assert.deepEqual(luz.map(c => c.tipo), ['N', 'R']);                    // retorno do atuador + neutro, sem fase
+    assert.ok(principal.condutores.some(c => c.circ === 4 && c.tipo === 'F'));   // a TUG continua com fase e neutro
+    // sem automação cabeada: nada muda
+    const conv = U.montarTrechosComodo(Object.assign({}, base, { pontos, circPorPonto: { t1: 4 }, polosPorCircuito: { 4: '1P' } }));
+    assert.deepEqual(conv.find(t => t.pontoId === 's1').condutores.map(c => c.tipo), ['F', 'R']);
+    assert.deepEqual(conv.find(t => t.tipo === 'principal').condutores.filter(c => c.circ === base.circIlum).map(c => c.tipo), ['F', 'N']);
+});

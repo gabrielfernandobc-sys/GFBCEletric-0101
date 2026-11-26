@@ -1053,6 +1053,7 @@
 
             // Helper para adicionar item de material com margem (+10% norma) e preços médios SINAPI/varejo
             function addItem(cat, catId, nome, espec, qtdCalc, unid, precoUnit, aplicacao, margemPct = 0.10, chaveItem = '') {
+                if (!(Number(qtdCalc) > 0)) return;   // item sem quantidade não entra na lista
                 const margem = Math.ceil(qtdCalc * margemPct);
                 const qtdTotal = qtdCalc + margem;
                 let fonte = (typeof obterFontePrecoMaterial === 'function') ? obterFontePrecoMaterial(catId, chaveItem) : 'Tabela de referência';
@@ -1145,7 +1146,18 @@
                 const prc = (typeof obterPrecoCaboMetro === 'function') ? obterPrecoCaboMetro(secaoStr) : (precosCabos[secaoStr] || 2.85);
                 const ref = `C${circ.num} (${circ.nome})`;
 
-                if (circ.tipo === 'Iluminação') {
+                const fiacaoAut = (typeof fiacaoCabeadaAutomacao === 'function') ? fiacaoCabeadaAutomacao() : null;
+                const luzPorAtuador = fiacaoAut && circ.tipo === 'Iluminação' && circ.escopo && Array.isArray(circ.escopo.ids)
+                    && circ.escopo.ids.some(id => fiacaoAut.comodosLuz.has(String(id)));
+                if (luzPorAtuador) {
+                    // Automação cabeada: a luz é chaveada pelo atuador do painel. Sem fase e retorno até os
+                    // interruptores (viram pulsadores no cabo de barramento, orçado na automação):
+                    // retorno do atuador até a luminária + neutro + proteção; a fase só vai do disjuntor ao atuador.
+                    registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, 'Neutro das luminárias comandadas pelo atuador');
+                    registrarCaboCor(bitola, 'Condutor Retorno (R)', 'Amarelo', '#eab308', rota, ref, prc, 'Retorno do atuador (painel de automação) até as luminárias');
+                    registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Proteção e aterramento de carcaças e luminárias');
+                    registrarCaboCor(bitola, 'Condutor Fase (F)', 'Preto', '#1e293b', 2, ref, prc, 'Fase do disjuntor até a entrada do atuador (dentro do quadro)');
+                } else if (circ.tipo === 'Iluminação') {
                     // Neutro (Azul Claro) - NBR 5410 6.1.5.3.1
                     registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, 'Retorno de neutro para lâmpadas e luminárias');
                     // Fase (Preto) - NBR 5410 6.1.5.3.3
@@ -1237,9 +1249,12 @@
             };
 
             const quantitativoCabosPorCor = Object.values(mapCabosPorCor);
+            // reserva de compra (perdas, emendas e cortes) — premissa editável na aba do quadro
+            const parCabos = (typeof obterParametrosNBR === 'function') ? obterParametrosNBR() : {};
+            const reservaCabos = (isFinite(Number(parCabos.reservaCabosPct)) ? Number(parCabos.reservaCabosPct) : 10) / 100;
 
             quantitativoCabosPorCor.forEach(c => {
-                c.sobra = Math.ceil(c.metrosProjeto * 0.10);
+                c.sobra = Math.ceil(c.metrosProjeto * reservaCabos);
                 c.metrosTotal = c.metrosProjeto + c.sobra;
                 c.subtotal = c.metrosTotal * c.precoUnit;
                 
@@ -1307,7 +1322,7 @@
                     `${c.norma}, Cobre Classe 5, PVC 70°C Anti-chamas BWF-B`,
                     c.metrosProjeto, 'm', c.precoUnit,
                     `${c.aplicacao} - Circuitos: ${c.circuitosStr}`,
-                    0.10, c.secao.replace(' mm²', '').trim()
+                    reservaCabos, c.secao.replace(' mm²', '').trim()
                 );
             });
 
@@ -1379,7 +1394,10 @@
             const pontosNoCalculo = pontos.filter(p => (comodosParaCalcular || []).some(c => c.id === p.comodoId));
             const totTugQtd = pontosNoCalculo.filter(p => p.tipo === 'TUG').length;
             const totTueQtd = pontosNoCalculo.filter(p => p.tipo === 'TUE').length;
-            const totIntQtd = pontosNoCalculo.filter(p => p.tipo === 'INTERRUPTOR').length || totComodos;
+            // na automação cabeada os interruptores viram pulsadores (orçados na automação)
+            const pulsadoresAut = (typeof fiacaoCabeadaAutomacao === 'function' && fiacaoCabeadaAutomacao()) ? fiacaoCabeadaAutomacao().pulsadores : new Set();
+            const totIntQtd = pontosNoCalculo.filter(p => p.tipo === 'INTERRUPTOR').length || totComodos;   // caixas 4x2 (pulsadores também usam)
+            const totIntConv = Math.max(0, totIntQtd - pontosNoCalculo.filter(p => p.tipo === 'INTERRUPTOR' && pulsadoresAut.has(p.id)).length);
             const totIlumQtd = pontosNoCalculo.filter(p => p.tipo === 'ILUM').length || totComodos;
 
             const totCaixas4x2 = totTugQtd + totTueQtd + totIntQtd;
@@ -1671,14 +1689,14 @@
                 'Aparelhagem & Acabamentos', 'aparelhagem',
                 'Módulo de Interruptor Simples 10A / 250V',
                 'NBR NM 60669-1, Contatos em prata para longa durabilidade e acionamento suave',
-                Math.max(1, Math.round(totIntQtd * 0.7)), 'un', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('aparelhagem', 'interruptor_simples', 7.20) : 7.20),
+                totIntConv ? Math.max(1, Math.round(totIntConv * 0.7)) : 0, 'un', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('aparelhagem', 'interruptor_simples', 7.20) : 7.20),
                 'Acionamento individual de circuitos de iluminação dos cômodos'
             );
             addItem(
                 'Aparelhagem & Acabamentos', 'aparelhagem',
                 'Módulo de Interruptor Paralelo (Three-Way) 10A / 250V',
                 'NBR NM 60669-1, Comando de iluminação a partir de dois pontos distintos',
-                Math.max(2, Math.round(totIntQtd * 0.3)), 'un', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('aparelhagem', 'interruptor_paralelo', 10.50) : 10.50),
+                totIntConv ? Math.max(2, Math.round(totIntConv * 0.3)) : 0, 'un', (typeof obterPrecoMaterial === 'function' ? obterPrecoMaterial('aparelhagem', 'interruptor_paralelo', 10.50) : 10.50),
                 'Controle de luz em cabeceiras de cama, escadarias e extremidades de corredores'
             );
 

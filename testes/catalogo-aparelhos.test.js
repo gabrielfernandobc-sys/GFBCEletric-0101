@@ -66,3 +66,14 @@ test('sugestões por cômodo vêm do catálogo, com a mesma potência e tensão'
         }
     }
 });
+
+test('aparelhos dos modelos de Novo Projeto existem no catálogo com a mesma potência e tensão', () => {
+    const M = require('../js/modelos-projeto.js');
+    for (const id of ['casa_popular_2q', 'casa_3q_suite', 'sobrado_3suites', 'apartamento_2q']) {
+        M.MODELOS[id].comodos.forEach(c => (c.pontos || []).filter(p => p.tipo === 'TUE').forEach(p => {
+            const it = CATALOGO.find(i => i.nome === p.nome);
+            assert.ok(it, `${id}: ${p.nome} fora do catálogo`);
+            assert.equal(it.pot, p.pot, p.nome); assert.equal(it.tensao, p.tensao, p.nome);
+        }));
+    }
+});

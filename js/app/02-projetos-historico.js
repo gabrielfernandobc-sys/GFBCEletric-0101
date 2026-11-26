@@ -73,6 +73,21 @@
             if (state.projetoAtual && typeof state.projetoAtual.nome === 'string') state.projetoAtual.nome = textoSeguro(state.projetoAtual.nome);
         }
 
+        /** Nome do projeto no cabeçalho igual ao do projeto aberto. */
+        function sincronizarNomeProjetoHeader() {
+            const inp = document.getElementById('inputNomeProjetoHeader');
+            const nome = (state.projetoAtual && state.projetoAtual.nome) || '';
+            if (inp && nome && inp.value !== nome) inp.value = nome;
+        }
+        document.addEventListener('DOMContentLoaded', sincronizarNomeProjetoHeader);
+
+        /** Seletor "Sistema" do Ponto de Entrada igual ao do projeto (mono, bi ou trifásico). */
+        function sincronizarSeletorSistemaEntrada() {
+            const sel = document.getElementById('selSistemaEntrada');
+            const v = (state.alimentacaoExterna && state.alimentacaoExterna.sistema) || 'bifasico';
+            if (sel && sel.value !== v) sel.value = v;
+        }
+
         function exportarSnapshotEstado() {
             return {
                 projetoAtual: JSON.parse(JSON.stringify(state.projetoAtual)),
@@ -156,6 +171,7 @@
             if (!snapshot) return;
             snapshot = sanitizarTextosProfundo(snapshot);
             if (snapshot.projetoAtual) state.projetoAtual = JSON.parse(JSON.stringify(snapshot.projetoAtual));
+            sincronizarNomeProjetoHeader();
             if (snapshot.pavimentos) state.pavimentos = JSON.parse(JSON.stringify(snapshot.pavimentos));
             if (snapshot.pavimentoAtivoId) state.pavimentoAtivoId = snapshot.pavimentoAtivoId;
             if (snapshot.comodos) state.comodos = JSON.parse(JSON.stringify(snapshot.comodos));
@@ -198,6 +214,7 @@
             if (snapshot.modoCanaletasQuadro) state.modoCanaletasQuadro = snapshot.modoCanaletasQuadro;
             if (snapshot.modoVisualQuadro) state.modoVisualQuadro = snapshot.modoVisualQuadro;
             if (snapshot.alimentacaoExterna) state.alimentacaoExterna = { ...snapshot.alimentacaoExterna };
+            sincronizarSeletorSistemaEntrada();
             // Projetos antigos (sem parâmetros) passam a usar a premissa padrão de 3 circuitos / 30 °C
             state.parametrosNBR = { ...NBR5410.PARAMETROS_PADRAO, ...(snapshot.parametrosNBR || {}) };
             if (typeof sincronizarControlesParametrosNBR === 'function') sincronizarControlesParametrosNBR();
@@ -909,9 +926,54 @@
         // --- NOVO PROJETO COM MODELOS PRÉ-DEFINIDOS ---
 
         function abrirModalNovoProjeto() {
+            renderizarCardsModelosProjeto();
             const modal = document.getElementById('modalNovoProjeto');
             if (modal) modal.classList.remove('hidden');
         }
+
+        // Cores dos cartões de modelo (classes literais para o Tailwind compilado encontrar)
+        const COR_CARTAO_MODELO = {
+            emerald: { icone: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', etiqueta: 'bg-emerald-500/20 text-emerald-300' },
+            amber: { icone: 'bg-amber-500/20 text-amber-300 border-amber-500/40', etiqueta: 'bg-amber-500/20 text-amber-300' },
+            sky: { icone: 'bg-sky-500/20 text-sky-300 border-sky-500/40', etiqueta: 'bg-sky-500/20 text-sky-300' },
+            violet: { icone: 'bg-violet-500/20 text-violet-300 border-violet-500/40', etiqueta: 'bg-violet-500/20 text-violet-300' },
+            purple: { icone: 'bg-purple-500/20 text-purple-300 border-purple-500/40', etiqueta: 'bg-purple-500/20 text-purple-300' },
+            slate: { icone: 'bg-slate-800 text-slate-300 border-slate-700', etiqueta: 'bg-slate-800 text-slate-300' }
+        };
+        const CLASSE_CARTAO_MODELO = 'template-card border border-slate-800 bg-slate-950/60 p-3.5 rounded-xl cursor-pointer hover:border-slate-600 transition space-y-1.5';
+        const CLASSE_CARTAO_MODELO_ATIVO = 'template-card border-2 border-emerald-500 bg-emerald-950/20 p-3.5 rounded-xl cursor-pointer hover:border-emerald-400 transition space-y-1.5';
+
+        /** Cartões dos modelos de "Novo Projeto" (modal e aba Arquivos), a partir de js/modelos-projeto.js. */
+        function renderizarCardsModelosProjeto() {
+            if (typeof ModelosProjeto === 'undefined') return;
+            const sel = state.templateNovoProjetoSelecionado || 'em_branco';
+            const nomeSistema = { monofasico: 'monofásico', bifasico: 'bifásico', trifasico: 'trifásico' };
+            const cartao = (id, prefixo) => {
+                const r = ModelosProjeto.resumo(id);
+                if (!r) return '';
+                const cor = COR_CARTAO_MODELO[r.cor] || COR_CARTAO_MODELO.slate;
+                const dados = r.comodos
+                    ? `${r.comodos} cômodos • ${r.areaM2} m² • ${r.pavimentos} pav. • ${r.tues} TUE${r.tues === 1 ? '' : 's'} (${String(r.potTuesKW).replace('.', ',')} kW) • ${nomeSistema[r.sistema] || r.sistema}`
+                    : 'Sem cômodos • 1 pavimento';
+                return `<div onclick="selecionarTemplateNovoProjeto(${argJsEmAtributo(id)})" id="${prefixo}${escHtml(id)}" data-tpl="${escHtml(id)}" class="${id === sel ? CLASSE_CARTAO_MODELO_ATIVO : CLASSE_CARTAO_MODELO}">
+                    <div class="flex items-start justify-between gap-2">
+                        <span class="font-bold text-white text-[13px] flex items-start gap-2 leading-snug">
+                            <span class="w-7 h-7 shrink-0 rounded-lg border flex items-center justify-center ${cor.icone}"><i class="fa-solid ${escHtml(r.icone)} text-xs"></i></span>
+                            ${escHtml(r.nome)}
+                        </span>
+                        ${r.etiqueta ? `<span class="shrink-0 text-[9px] px-2 py-0.5 rounded-full font-bold ${cor.etiqueta}">${escHtml(r.etiqueta)}</span>` : ''}
+                    </div>
+                    <p class="text-slate-400 text-[11px] leading-snug">${escHtml(r.descricao)}</p>
+                    <p class="text-[10px] font-mono text-slate-500">${escHtml(dados)}</p>
+                </div>`;
+            };
+            const ids = ModelosProjeto.ORDEM.filter(id => ModelosProjeto.MODELOS[id]);
+            const modal = document.getElementById('gradeModelosNovoProjeto');
+            if (modal) modal.innerHTML = ids.map(id => cartao(id, 'cardTpl_')).join('');
+            const aba = document.getElementById('gradeModelosAbaArquivos');
+            if (aba) aba.innerHTML = ids.map(id => cartao(id, 'cardTplAba_')).join('');
+        }
+        document.addEventListener('DOMContentLoaded', renderizarCardsModelosProjeto);
 
         function fecharModalNovoProjeto() {
             const modal = document.getElementById('modalNovoProjeto');
@@ -920,12 +982,16 @@
 
         function selecionarTemplateNovoProjeto(tpl) {
             state.templateNovoProjetoSelecionado = tpl;
+            // destaca o modelo escolhido no modal e na aba Arquivos
             document.querySelectorAll('.template-card').forEach(c => {
-                c.className = 'template-card border border-slate-800 bg-slate-950/60 p-4 rounded-xl cursor-pointer hover:border-slate-700 transition space-y-1.5';
+                c.className = c.dataset.tpl === tpl ? CLASSE_CARTAO_MODELO_ATIVO : CLASSE_CARTAO_MODELO;
             });
-            const selCard = document.getElementById('cardTpl_' + tpl);
-            if (selCard) {
-                selCard.className = 'template-card border-2 border-emerald-500 bg-emerald-950/20 p-4 rounded-xl cursor-pointer hover:border-emerald-400 transition space-y-1.5 relative';
+            const r = (typeof ModelosProjeto !== 'undefined') ? ModelosProjeto.resumo(tpl) : null;
+            const txt = document.getElementById('txtNovoProjetoNome');
+            // sugere o nome do modelo só se o usuário ainda não digitou um nome próprio
+            if (txt && r && tpl !== 'em_branco' && (!txt.value.trim() || txt.value === txt.dataset.valorAuto || txt.value === 'Residência Unifamiliar NBR 5410')) {
+                txt.value = r.nome.replace(/\s*\(.*\)\s*$/, '');
+                txt.dataset.valorAuto = txt.value;
             }
         }
 
@@ -961,6 +1027,8 @@
             state.prumadaPos = modelo.prumadaPos;
             state.prumadaAtiva = modelo.pavimentos.length > 1;
             state.alimentacaoExterna = Object.assign({}, state.alimentacaoExterna || {}, modelo.alimentacao, { distanciaManual: null });
+            sincronizarSeletorSistemaEntrada();
+            sincronizarNomeProjetoHeader();
             // nada do projeto anterior permanece no desenho
             state.eletrodutoWaypoints = {};
             state.transicoes = [];

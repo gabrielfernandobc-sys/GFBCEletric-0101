@@ -176,27 +176,32 @@
     // =========================================================================
     // 2. DISPOSITIVOS E LEVANTAMENTO POR CÔMODO
     // =========================================================================
-    // alimentacao: 'rede' | 'bateria' | 'ip' (rede de dados: câmera, vídeo-porteiro)
+    // energia: como o dispositivo é alimentado
+    //   'origem'  — usa o ponto de onde veio (interruptor com neutro, TUG ou TUE);
+    //   'rede'    — precisa de um ponto de energia próprio (tomada, PoE ou fonte do rack);
+    //   'bateria' — pilha/bateria, sem ponto.
+    // dados: 'ip' para os aparelhos da rede de dados (não usam o rádio da automação)
     // roteador: repete o sinal na malha (aparelhos ligados na rede elétrica)
     // cabeado: como o mesmo item fica num sistema cabeado (canal no painel, aparelho de barramento, entrada)
     const TIPOS = Object.freeze({
-        modulo_rele:      { nome: 'Módulo relé inteligente (atrás do interruptor)', grupo: 'iluminacao', icone: 'fa-toggle-on', alimentacao: 'rede', roteador: true,  neutro: true,  consumoW: 0.5, preco: 75,  cabeado: { pulsador: true, canal: '10A' } },
-        interruptor:      { nome: 'Interruptor inteligente touch (com neutro)',   grupo: 'iluminacao', icone: 'fa-toggle-on', alimentacao: 'rede', roteador: true,  neutro: true,  consumoW: 0.6, preco: 140, cabeado: { pulsador: true, canal: '10A' } },
-        dimmer:           { nome: 'Dimmer inteligente',                           grupo: 'iluminacao', icone: 'fa-sliders',   alimentacao: 'rede', roteador: true,  neutro: true,  consumoW: 0.6, preco: 170, cabeado: { pulsador: true, canal: 'dimmer' } },
-        tomada:           { nome: 'Tomada inteligente com medição',               grupo: 'tomadas',    icone: 'fa-plug',      alimentacao: 'rede', roteador: true,  neutro: false, consumoW: 0.6, preco: 110, cabeado: { canal: '16A' } },
-        controle_ir:      { nome: 'Controle infravermelho (ar-condicionado/TV)',  grupo: 'clima',      icone: 'fa-snowflake', alimentacao: 'rede', roteador: false, neutro: false, consumoW: 1.0, preco: 95,  cabeado: { barramento: 'Interface para ar-condicionado (IR)', consumoBusMa: 10, preco: 1500 } },
-        rele_potencia:    { nome: 'Relé de potência inteligente com medição',     grupo: 'cargas',     icone: 'fa-bolt',      alimentacao: 'rede', roteador: true,  neutro: true,  consumoW: 0.8, preco: 130, cabeado: { canal: '16A' } },
-        sensor_presenca:  { nome: 'Sensor de presença',                           grupo: 'sensores',   icone: 'fa-person-walking', alimentacao: 'bateria', roteador: false, consumoW: 0, preco: 120, cabeado: { barramento: 'Detector de presença de teto', consumoBusMa: 10, preco: 1100, alternativo: { entrada: true, consumo24vW: 0.5 } } },
-        sensor_abertura:  { nome: 'Sensor de abertura (porta/janela)',            grupo: 'sensores',   icone: 'fa-door-open', alimentacao: 'bateria', roteador: false, consumoW: 0, preco: 60,  cabeado: { entrada: true } },
-        sensor_fumaca:    { nome: 'Detector de fumaça',                           grupo: 'seguranca',  icone: 'fa-fire',      alimentacao: 'bateria', roteador: false, consumoW: 0, preco: 160, cabeado: { entrada: true, consumo24vW: 1.2 } },
-        sensor_gas:       { nome: 'Detector de gás (GLP/GN)',                     grupo: 'seguranca',  icone: 'fa-fire-flame-simple', alimentacao: 'rede', roteador: false, consumoW: 1.5, preco: 190, cabeado: { entrada: true, consumo24vW: 2.5 } },
-        sensor_vazamento: { nome: 'Sensor de vazamento de água',                  grupo: 'seguranca',  icone: 'fa-droplet',   alimentacao: 'bateria', roteador: false, consumoW: 0, preco: 80,  cabeado: { entrada: true } },
-        fechadura:        { nome: 'Fechadura digital integrada',                  grupo: 'acesso',     icone: 'fa-lock',      alimentacao: 'bateria', roteador: false, consumoW: 0, preco: 1200, cabeado: { semFio: true } },
-        camera:           { nome: 'Câmera IP (Wi-Fi/PoE)',                        grupo: 'acesso',     icone: 'fa-video',     alimentacao: 'ip',      roteador: false, consumoW: 5, preco: 350, cabeado: { ip: true } },
-        videoporteiro:    { nome: 'Vídeo-porteiro / campainha IP',                grupo: 'acesso',     icone: 'fa-bell',      alimentacao: 'ip',      roteador: false, consumoW: 4, preco: 450, cabeado: { ip: true } },
-        cortina:          { nome: 'Motor de cortina/persiana',                    grupo: 'conforto',   icone: 'fa-bars-staggered', alimentacao: 'rede', roteador: true, neutro: false, consumoW: 0.8, preco: 650, cabeado: { canal: 'persiana' } },
-        modulo_portao:    { nome: 'Módulo para motor de portão (contato seco)',   grupo: 'acesso',     icone: 'fa-warehouse', alimentacao: 'rede', roteador: false, neutro: false, consumoW: 0.6, preco: 95,  cabeado: { canal: '10A' } },
-        sirene:           { nome: 'Sirene de alarme',                             grupo: 'seguranca',  icone: 'fa-volume-high', alimentacao: 'rede', roteador: false, neutro: false, consumoW: 1, preco: 200, cabeado: { canal: '10A' } }
+        modulo_rele:      { nome: 'Módulo relé inteligente (atrás do interruptor)', grupo: 'iluminacao', icone: 'fa-toggle-on', energia: 'origem', roteador: true,  neutro: true,  consumoW: 0.5, preco: 75,  cabeado: { pulsador: true, canal: '10A' } },
+        interruptor:      { nome: 'Interruptor inteligente touch (com neutro)',   grupo: 'iluminacao', icone: 'fa-toggle-on', energia: 'origem', roteador: true,  neutro: true,  consumoW: 0.6, preco: 140, cabeado: { pulsador: true, canal: '10A' } },
+        dimmer:           { nome: 'Dimmer inteligente',                           grupo: 'iluminacao', icone: 'fa-sliders',   energia: 'origem', roteador: true,  neutro: true,  consumoW: 0.6, preco: 170, cabeado: { pulsador: true, canal: 'dimmer' } },
+        tomada:           { nome: 'Tomada inteligente com medição',               grupo: 'tomadas',    icone: 'fa-plug',      energia: 'origem', roteador: true,  neutro: false, consumoW: 0.6, preco: 110, cabeado: { canal: '16A' } },
+        controle_ir:      { nome: 'Controle infravermelho (ar-condicionado/TV)',  grupo: 'clima',      icone: 'fa-snowflake', energia: 'rede',   roteador: false, neutro: false, consumoW: 1.0, preco: 95,  cabeado: { barramento: 'Interface para ar-condicionado (IR)', consumoBusMa: 10, preco: 1500 } },
+        rele_potencia:    { nome: 'Relé de potência inteligente com medição',     grupo: 'cargas',     icone: 'fa-bolt',      energia: 'origem', roteador: true,  neutro: true,  consumoW: 0.8, preco: 130, cabeado: { canal: '16A' } },
+        sensor_presenca:  { nome: 'Sensor de presença',                           grupo: 'sensores',   icone: 'fa-person-walking', energia: 'bateria', roteador: false, consumoW: 0, preco: 120, cabeado: { barramento: 'Detector de presença de teto', consumoBusMa: 10, preco: 1100, alternativo: { entrada: true, consumo24vW: 0.5 } } },
+        sensor_abertura:  { nome: 'Sensor de abertura (porta/janela)',            grupo: 'sensores',   icone: 'fa-door-open', energia: 'bateria', roteador: false, consumoW: 0, preco: 60,  cabeado: { entrada: true } },
+        sensor_fumaca:    { nome: 'Detector de fumaça',                           grupo: 'seguranca',  icone: 'fa-fire',      energia: 'bateria', roteador: false, consumoW: 0, preco: 160, cabeado: { entrada: true, consumo24vW: 1.2 } },
+        sensor_gas:       { nome: 'Detector de gás (GLP/GN) de rede',             grupo: 'seguranca',  icone: 'fa-fire-flame-simple', energia: 'rede', roteador: false, consumoW: 1.5, preco: 190, cabeado: { entrada: true, consumo24vW: 2.5 } },
+        sensor_vazamento: { nome: 'Sensor de vazamento de água',                  grupo: 'seguranca',  icone: 'fa-droplet',   energia: 'bateria', roteador: false, consumoW: 0, preco: 80,  cabeado: { entrada: true } },
+        fechadura:        { nome: 'Fechadura digital a pilha',                    grupo: 'acesso',     icone: 'fa-lock',      energia: 'bateria', roteador: false, consumoW: 0, preco: 1200, cabeado: { semFio: true } },
+        fechadura_eletrica: { nome: 'Fechadura elétrica com fonte (12 V)',        grupo: 'acesso',     icone: 'fa-lock',      energia: 'rede',   roteador: false, consumoW: 10, preco: 650, cabeado: { entrada: true } },
+        camera:           { nome: 'Câmera IP (Wi-Fi/PoE)',                        grupo: 'acesso',     icone: 'fa-video',     energia: 'rede', dados: 'ip', roteador: false, consumoW: 5, preco: 350, cabeado: { ip: true } },
+        videoporteiro:    { nome: 'Vídeo-porteiro / campainha IP',                grupo: 'acesso',     icone: 'fa-bell',      energia: 'rede', dados: 'ip', roteador: false, consumoW: 4, preco: 450, cabeado: { ip: true } },
+        cortina:          { nome: 'Motor de cortina/persiana',                    grupo: 'conforto',   icone: 'fa-bars-staggered', energia: 'rede', usaTueDeOrigem: true, roteador: true, neutro: false, consumoW: 0.8, preco: 650, cabeado: { canal: 'persiana' } },
+        modulo_portao:    { nome: 'Módulo para motor de portão (contato seco)',   grupo: 'acesso',     icone: 'fa-warehouse', energia: 'origem', roteador: false, neutro: false, consumoW: 0.6, preco: 95,  cabeado: { canal: '10A' } },
+        sirene:           { nome: 'Sirene de alarme',                             grupo: 'seguranca',  icone: 'fa-volume-high', energia: 'rede', roteador: false, neutro: false, consumoW: 1, preco: 200, cabeado: { canal: '10A' } }
     });
 
     const NIVEIS = Object.freeze({ basico: 'Básico', intermediario: 'Intermediário', completo: 'Completo' });
@@ -271,7 +276,9 @@
         // porta de entrada: sala/hall do pavimento mais baixo (ou o primeiro cômodo dele)
         const menorNivel = comodos.length ? Math.min(...comodos.map(c => nivelPav(c.pavimentoId || 'terreo'))) : 0;
         const doTerreo = comodos.filter(c => nivelPav(c.pavimentoId || 'terreo') === menorNivel);
-        const entrada = doTerreo.find(c => /hall|entrada/.test(semAcento(c.nome))) || doTerreo.find(c => perfilAmbiente(c.nome) === 'sala') || doTerreo[0];
+        // "Sala de Estar e Jantar", "Living / Jantar" e "Sala" contam como sala (antes caía no 1º cômodo do térreo)
+        const entrada = doTerreo.find(c => /hall|entrada/.test(semAcento(c.nome))) ||
+            doTerreo.find(c => perfilAmbiente(c.nome) === 'sala' || /sala|estar|living/.test(semAcento(c.nome))) || doTerreo[0];
         const garagem = comodos.find(c => perfilAmbiente(c.nome) === 'garagem');
 
         comodos.forEach(c => {
@@ -349,6 +356,42 @@
             if (nivel >= 3 && ehEntrada) add('sirene', c, cx, c.y + m, { detalhe: 'Alarme' });
         });
         return lista;
+    }
+
+    /**
+     * Sincroniza a lista editada à mão com os pontos atuais do projeto:
+     *   • dispositivo com origemPontoId lê a posição, o cômodo e o pavimento atuais do ponto (e, no relé
+     *     de potência, a corrente e as fases da carga);
+     *   • se o ponto foi apagado, o dispositivo sai da lista (removidos);
+     *   • pontos que o nível transformaria em dispositivo e ainda não estão na lista viram sugestões novas
+     *     (menos os que o usuário já descartou);
+     *   • dispositivos incluídos à mão (sem origemPontoId) ficam como estão.
+     * @returns {{lista: Array, removidos: Array, novos: Array, mudou: boolean}}
+     */
+    function sincronizarDispositivos(editados, pontos, automaticos, descartados) {
+        const porId = new Map((pontos || []).map(pt => [String(pt.id), pt]));
+        const lista = [], removidos = [];
+        let mudou = false;
+        (editados || []).forEach(d => {
+            if (d.origemPontoId == null) { lista.push(d); return; }
+            const pt = porId.get(String(d.origemPontoId));
+            if (!pt) { removidos.push(d); mudou = true; return; }
+            const atual = Object.assign({}, d, { x: pt.x, y: pt.y, comodoId: pt.comodoId, pavimentoId: pt.pavimentoId || d.pavimentoId });
+            if (d.tipo === 'rele_potencia' && pt.tipo === 'TUE') {
+                const tensao = Number(pt.tensao) || 220;
+                const tri = Number(pt.fases) === 3 || /trif[aá]sic/i.test(pt.nome || '');
+                atual.ib = arred((Number(pt.pot) || 0) / (tri ? Math.sqrt(3) * tensao : tensao), 1);
+                atual.tensao = tensao;
+                if (tri) atual.fases = 3; else delete atual.fases;
+            }
+            if (atual.x !== d.x || atual.y !== d.y || String(atual.comodoId) !== String(d.comodoId) || atual.pavimentoId !== d.pavimentoId || atual.ib !== d.ib || atual.fases !== d.fases) mudou = true;
+            lista.push(atual);
+        });
+        const naLista = new Set(lista.filter(d => d.origemPontoId != null).map(d => String(d.origemPontoId)));
+        const descarte = new Set((descartados || []).map(String));
+        const novos = (automaticos || []).filter(d => d.origemPontoId != null && porId.has(String(d.origemPontoId)) &&
+            !naLista.has(String(d.origemPontoId)) && !descarte.has(String(d.origemPontoId)));
+        return { lista, removidos, novos, mudou };
     }
 
     /** Resumo por cômodo: { comodoId: { tipo: qtd } }. */
@@ -1016,7 +1059,7 @@
             cargas.push({ id: 'fonteBarramento', nome: tec.id === 'knx' ? 'Fonte do barramento KNX (e fonte 24 Vcc)' : 'Fonte 24 Vcc do painel', potW: arred(fonteW + f24, 0), dc24: tec.id !== 'knx' });
         }
         if (n('camera') || n('videoporteiro')) cargas.push({ id: 'cameras', nome: `Câmeras (${n('camera')}) e gravador/vídeo-porteiro`, potW: n('camera') * 5 + n('videoporteiro') * 4 + (n('camera') ? 25 : 0) });
-        if (n('fechadura')) cargas.push({ id: 'fechaduras', nome: `Fechaduras e controle de acesso (${n('fechadura')})`, potW: n('fechadura') * 10 });
+        if (n('fechadura_eletrica')) cargas.push({ id: 'fechaduras', nome: `Fechaduras elétricas e controle de acesso (${n('fechadura_eletrica')})`, potW: n('fechadura_eletrica') * 10 });
         if (n('sirene') || n('sensor_abertura') || n('sensor_presenca')) cargas.push({ id: 'alarme', nome: 'Central de alarme e sirene', potW: 15 });
         return cargas;
     }
@@ -1069,6 +1112,150 @@
     }
 
     // =========================================================================
+    // 6b. PONTOS DE ALIMENTAÇÃO DOS DISPOSITIVOS
+    // =========================================================================
+    // Ponto que cada tipo ligado na rede elétrica precisa; aceitas = alturas de tomada compatíveis.
+    // 'modo' poe/fonte12v/rack: não pede tomada (PoE do switch, fonte de 12 V ou tomada dedicada do rack).
+    const PONTO_ALIMENTACAO = Object.freeze({
+        cortina:            { destino: 'Motor da cortina', altura: 'alta', alturaM: 2.20, aceitas: ['alta'], motivo: 'Tomada alta, a cerca de 2,20 m (ou no forro), junto ao trilho da cortina.' },
+        sensor_gas:         { destino: 'Detector de gás', altura: 'baixa', alturaM: 0.30, aceitas: ['baixa'], motivo: 'GLP é mais pesado que o ar: detector a 0,30 m do piso, perto do fogão.' },
+        controle_ir:        { destino: 'Controle IR', altura: 'alta', aceitas: ['media', 'alta'], motivo: 'Tomada média ou alta, com o emissor voltado para o aparelho (ar-condicionado ou TV).' },
+        sirene:             { destino: 'Sirene', altura: 'alta', aceitas: ['alta'], motivo: 'Tomada alta, fora do alcance de quem passa.' },
+        camera:             { destino: 'Câmera', altura: 'alta', aceitas: ['alta'], modo: 'poe', motivo: 'PoE pelo cabo de rede do switch do rack (ou tomada alta).' },
+        videoporteiro:      { destino: 'Vídeo-porteiro', altura: 'alta', aceitas: ['media', 'alta'], modo: 'poe', motivo: 'PoE pelo cabo de rede do switch do rack (ou tomada alta).' },
+        fechadura_eletrica: { modo: 'fonte12v', motivo: 'Fonte de 12 V na central de alarme ou no rack, com cabo 2 × 0,75 mm² até a porta.' }
+    });
+    const GAS_NATURAL = Object.freeze({ destino: 'Detector de gás', altura: 'alta', alturaM: 2.50, aceitas: ['alta'], motivo: 'Gás natural é mais leve que o ar: detector alto, a até 0,30 m do teto.' });
+    // destinações de TUG que não podem ceder a tomada para a automação
+    const DESTINO_LIVRE = /^(uso geral|reserva)/i;
+
+    /**
+     * Ponto na parede mais próxima, dentro do cômodo (recuo de 0,15 m): é onde fica a caixa.
+     * @param {{x,y,largura,comprimento}} c cômodo (x/y em px, medidas em m)   @returns {{x,y}} px
+     */
+    function pontoNaParede(c, x, y, escala) {
+        const e = Number(escala) || 40, r = 0.15 * e;
+        const x0 = c.x, y0 = c.y, x1 = c.x + c.largura * e, y1 = c.y + c.comprimento * e;
+        const px = Math.min(x1 - r, Math.max(x0 + r, x)), py = Math.min(y1 - r, Math.max(y0 + r, y));
+        const d = [px - x0, x1 - px, py - y0, y1 - py];
+        const k = d.indexOf(Math.min(...d));
+        return [{ x: x0 + r, y: py }, { x: x1 - r, y: py }, { x: px, y: y0 + r }, { x: px, y: y1 - r }][k];
+    }
+
+    /**
+     * Ponto de alimentação de cada dispositivo ligado na rede elétrica (e do hub, repetidores e servidor):
+     * usa o ponto de origem, a bateria, uma TUG compatível do cômodo (até 1,5 m, altura aceita e sem
+     * destinação reservada) ou sugere a TUG que falta.
+     * @param {Object} p
+     * @param {Array} p.dispositivos  levantamento (x/y em px)
+     * @param {Array} p.pontos        pontos elétricos do projeto
+     * @param {Array} p.comodos       cômodos (x/y em px)
+     * @param {number} p.escala       px/m
+     * @param {string} p.tecnologia
+     * @param {{x,y,pavId}} [p.rack]  rack/hub em m
+     * @param {Array<{x,y,pavId}>} [p.repetidores] em m
+     * @param {boolean} [p.servidorLocal]
+     * @param {string} [p.tipoGas]          'glp' (padrão) | 'gn'
+     * @param {string} [p.cameraAlimentacao] 'poe' (padrão) | 'tomada'
+     * @param {Object} [p.niveis]           { pavId: { z0 } } para a metragem dos cabos do rack
+     */
+    function planejarAlimentacao(p) {
+        const tec = tecnologia(p.tecnologia) || TECNOLOGIAS[0];
+        const e = Number(p.escala) || 40;
+        const comodos = p.comodos || [];
+        const pontos = p.pontos || [];
+        const comodoDe = id => comodos.find(c => String(c.id) === String(id));
+        const pontoDe = id => pontos.find(pt => String(pt.id) === String(id));
+        const usadas = new Set();
+        const itens = [];
+        const rack = p.rack || null;
+        const z = pav => ((p.niveis || {})[pav] || { z0: 0 }).z0;
+        const cabo = (d) => rack ? Math.abs(d.x / e - rack.x) + Math.abs(d.y / e - rack.y) + Math.abs(z(d.pavimentoId) - z(rack.pavId)) + 3 : 0;
+        let metrosUtp = 0, metrosCabo12v = 0, fontes12v = 0, poe = 0;
+
+        const procurarTug = (c, ancora, regra, ignorar) => {
+            let melhor = null;
+            pontos.forEach(pt => {
+                if (pt.tipo !== 'TUG' || String(pt.comodoId) !== String(c.id) || usadas.has(pt.id) || (ignorar && ignorar.has(pt.id))) return;
+                if (!regra.aceitas.includes(pt.altura || 'baixa')) return;
+                if (pt.destino && !DESTINO_LIVRE.test(pt.destino) && pt.destino !== regra.destino) return;
+                const dist = Math.hypot(pt.x - ancora.x, pt.y - ancora.y) / e;
+                if (dist <= 1.5 && (!melhor || dist < melhor.dist)) melhor = { pt, dist };
+            });
+            return melhor;
+        };
+        const resolverTomada = (base, c, xPx, yPx, regra) => {
+            const ancora = pontoNaParede(c, xPx, yPx, e);
+            const achou = procurarTug(c, ancora, regra);
+            if (achou) {
+                usadas.add(achou.pt.id);
+                return Object.assign(base, { situacao: 'vinculado', pontoId: achou.pt.id, ponto: `${achou.pt.nome || 'TUG'} (${String(Math.round(achou.dist * 10) / 10).replace('.', ',')} m)`, motivo: `Tomada ${achou.pt.altura || 'baixa'} livre no cômodo, a até 1,5 m.` });
+            }
+            return Object.assign(base, {
+                situacao: 'sugerido', motivo: regra.motivo,
+                sugestao: { tipo: 'TUG', nome: `TUG ${regra.destino}`, destino: regra.destino, altura: regra.altura, alturaM: regra.alturaM, pot: 100, tensao: 127,
+                    x: Math.round(ancora.x * 10) / 10, y: Math.round(ancora.y * 10) / 10, comodoId: c.id, pavimentoId: c.pavimentoId || 'terreo' },
+                ponto: `TUG ${regra.altura}${regra.alturaM ? ` (${String(regra.alturaM).replace('.', ',')} m)` : ''} — ${regra.destino}`
+            });
+        };
+
+        (p.dispositivos || []).forEach(d => {
+            const t = TIPOS[d.tipo];
+            const c = comodoDe(d.comodoId);
+            if (!t || !c) return;
+            const base = { id: d.id, dispositivoId: d.id, tipo: d.tipo, nome: t.nome, comodoId: c.id, comodo: c.nome };
+            const origem = d.origemPontoId != null ? pontoDe(d.origemPontoId) : null;
+            if (t.energia === 'bateria') { itens.push(Object.assign(base, { situacao: 'bateria', ponto: 'Pilha/bateria', motivo: 'Não precisa de ponto: troque a bateria conforme o fabricante.' })); return; }
+            if (t.energia === 'origem' || (t.usaTueDeOrigem && origem && (origem.tipo === 'TUE' || origem.tipo === 'TUG'))) {
+                const qual = origem ? `${origem.nome || origem.tipo}` : 'interruptor do cômodo';
+                const motivo = ['modulo_rele', 'interruptor', 'dimmer'].includes(d.tipo) ? (ehCabeada(tec) ? 'Vira pulsador no barramento: a carga é comandada pelo atuador do painel.' : 'Alimentado na caixa do interruptor, com neutro.') :
+                    (d.tipo === 'tomada' ? 'É a própria tomada (TUG).' : 'Ligado ao circuito do aparelho (TUE).');
+                itens.push(Object.assign(base, { situacao: 'origem', pontoId: origem ? origem.id : null, ponto: qual, motivo }));
+                return;
+            }
+            let regra = PONTO_ALIMENTACAO[d.tipo];
+            if (d.tipo === 'sensor_gas' && p.tipoGas === 'gn') regra = GAS_NATURAL;
+            if (d.tipo === 'controle_ir' && origem && !/ar[\s-]*condicionado|split|btu/i.test(origem.nome || '')) regra = Object.assign({}, regra, { altura: 'media' });
+            if (!regra) { itens.push(Object.assign(base, { situacao: 'sugerido', motivo: 'Precisa de ponto de energia.', ponto: '—' })); return; }
+            if (regra.modo === 'fonte12v') {
+                fontes12v++; metrosCabo12v += cabo(d);
+                itens.push(Object.assign(base, { situacao: 'fonte12v', ponto: 'Fonte 12 V (central/rack)', motivo: regra.motivo }));
+                return;
+            }
+            if (regra.modo === 'poe' && p.cameraAlimentacao !== 'tomada') {
+                poe++; metrosUtp += cabo(d);
+                itens.push(Object.assign(base, { situacao: 'poe', ponto: 'PoE — cabo de rede do switch do rack', motivo: regra.motivo }));
+                return;
+            }
+            itens.push(resolverTomada(base, c, d.x, d.y, regra));
+        });
+
+        // infraestrutura sem fio: hub e servidor no rack; repetidores em tomadas
+        if (!ehCabeada(tec)) {
+            const rot = { wifi: 'Roteador Wi-Fi mesh (principal)', zigbee: 'Hub Zigbee', zwave: 'Controlador Z-Wave', thread: 'Roteador de borda Thread', blemesh: 'Gateway Bluetooth Mesh' }[tec.id] || 'Hub';
+            itens.push({ id: 'infra:hub', dispositivoId: null, tipo: 'hub', nome: rot, comodoId: null, comodo: 'Rack de automação', situacao: 'rack', ponto: 'Tomada dedicada do rack', motivo: p.incluirNoProjeto ? 'No circuito dedicado do rack/nobreak do quadro.' : 'Circuito dedicado do rack, criado ao incluir a automação no projeto.' });
+            (p.repetidores || []).forEach((q, i) => {
+                const xPx = q.x * e, yPx = q.y * e;
+                const c = comodos.find(cm => (cm.pavimentoId || 'terreo') === q.pavId && xPx >= cm.x && xPx <= cm.x + cm.largura * e && yPx >= cm.y && yPx <= cm.y + cm.comprimento * e);
+                const nome = tec.id === 'wifi' ? 'Ponto de acesso Wi-Fi mesh' : `Repetidor ${tec.nomeCurto}`;
+                const base = { id: `infra:rep${i + 1}`, dispositivoId: null, tipo: 'repetidor', nome, comodoId: c ? c.id : null, comodo: c ? c.nome : 'Área externa' };
+                if (!c) { itens.push(Object.assign(base, { situacao: 'sugerido', ponto: '—', motivo: 'Fora dos cômodos: mova o repetidor para dentro de casa.' })); return; }
+                itens.push(resolverTomada(base, c, xPx, yPx, { destino: nome, altura: tec.id === 'wifi' ? 'media' : 'baixa', aceitas: ['baixa', 'media'], motivo: 'Tomada baixa ou média: o repetidor fica ligado nela.' }));
+            });
+        }
+        if (p.servidorLocal) itens.push({ id: 'infra:servidor', dispositivoId: null, tipo: 'servidor', nome: 'Servidor local (Home Assistant)', comodoId: null, comodo: 'Rack de automação', situacao: 'rack', ponto: 'Tomada dedicada do rack', motivo: 'No rack, junto ao roteador.' });
+
+        const conta = sit => itens.filter(i => i.situacao === sit).length;
+        return {
+            itens,
+            sugestoes: itens.filter(i => i.sugestao).map(i => Object.assign({ chave: i.id }, i.sugestao)),
+            resumo: { origem: conta('origem'), bateria: conta('bateria'), vinculado: conta('vinculado'), sugerido: conta('sugerido'), rack: conta('rack'), poe: conta('poe'), fonte12v: conta('fonte12v') },
+            semPonto: conta('sugerido'),
+            metrosUtp: Math.ceil(metrosUtp * 1.1), metrosCabo12v: Math.ceil(metrosCabo12v * 1.1), fontes12v, poe
+        };
+    }
+
+    // =========================================================================
     // 7. CENAS
     // =========================================================================
     function sugerirCenas(dispositivos, nomeComodo) {
@@ -1083,7 +1270,7 @@
         if (tem('controle_ir')) sair.push('Desliga os ares-condicionados');
         if (tem('rele_potencia')) sair.push('Desliga chuveiros, aquecedores e bombas comandados');
         if (tem('cortina')) sair.push('Fecha as cortinas');
-        if (tem('fechadura')) sair.push('Tranca a porta de entrada');
+        if (tem('fechadura') || tem('fechadura_eletrica')) sair.push('Tranca a porta de entrada');
         if (tem('sensor_abertura') || tem('sensor_presenca')) sair.push('Arma o alarme (sensores de abertura e presença)');
         if (tem('camera')) sair.push('Câmeras passam a gravar e avisar por movimento');
         cenas.push({ id: 'sair', nome: 'Sair de casa', icone: 'fa-door-closed', gatilho: 'Botão na entrada, aplicativo ou quando o último celular sai de casa', acoes: sair });
@@ -1102,7 +1289,7 @@
         if (quartos.some(d => d.tipo === 'dimmer')) dormir.push('Luz dos quartos a 20% e desligando em 15 min'); else dormir.push('Apaga as luzes dos quartos em 15 min');
         if (quartos.some(d => d.tipo === 'cortina')) dormir.push('Fecha as cortinas dos quartos');
         if (quartos.some(d => d.tipo === 'controle_ir')) dormir.push('Ar-condicionado dos quartos no modo noturno');
-        if (tem('fechadura')) dormir.push('Tranca a porta de entrada');
+        if (tem('fechadura') || tem('fechadura_eletrica')) dormir.push('Tranca a porta de entrada');
         if (tem('sensor_abertura')) dormir.push('Arma o alarme só das portas e janelas (perímetro)');
         if (devs.some(d => d.tipo === 'sensor_presenca' && perfilAmbiente(nome(d.comodoId)) === 'circulacao')) dormir.push('Corredor acende a 10% ao passar de madrugada');
         cenas.push({ id: 'dormir', nome: 'Dormir', icone: 'fa-moon', gatilho: 'Botão na cabeceira, comando de voz ou horário', acoes: dormir });
@@ -1159,12 +1346,12 @@
                 if (cb.ip) add('auto_' + tipo, `${t.nome}`, 'Rede IP (PoE ou Wi-Fi), integrada ao controlador', n, 'un', t.preco, 'Segurança e acesso');
                 else if (cb.semFio) add('auto_' + tipo, `${t.nome} (sem fio, via gateway)`, 'Integrada ao sistema pelo gateway sem fio', n, 'un', t.preco, 'Acesso');
                 else if (cb.entrada && !['sensor_presenca'].includes(tipo)) {
-                    const convencional = { sensor_abertura: ['Sensor magnético de abertura com fio (contato NF)', 18], sensor_fumaca: ['Detector de fumaça convencional 24 Vcc com contato seco', 120], sensor_gas: ['Detector de gás 24 Vcc com contato seco', 220], sensor_vazamento: ['Sonda de vazamento com contato seco', 70] }[tipo];
+                    const convencional = { fechadura_eletrica: ['Fechadura elétrica 12 V com sensor de porta (contato seco)', 650], sensor_abertura: ['Sensor magnético de abertura com fio (contato NF)', 18], sensor_fumaca: ['Detector de fumaça convencional 24 Vcc com contato seco', 120], sensor_gas: ['Detector de gás 24 Vcc com contato seco', 220], sensor_vazamento: ['Sonda de vazamento com contato seco', 70] }[tipo];
                     if (convencional) add('auto_' + tipo, convencional[0], 'Ligado a uma entrada binária/digital do painel', n, 'un', convencional[1], 'Sensores');
                 } else if (tipo === 'sensor_presenca' && tec.id !== 'knx') add('auto_' + tipo, 'Sensor de presença PIR 24 Vcc com contato', 'Ligado a uma entrada digital do painel', n, 'un', 85, 'Sensores');
                 else if (tipo === 'cortina') add('auto_' + tipo, 'Motor de cortina/persiana convencional (subir/descer)', 'Comandado pelo canal de persiana do painel', n, 'un', 480, 'Conforto');
             } else {
-                add('auto_' + tipo + '_' + tec.id, `${t.nome} — ${tec.nomeCurto}`, t.neutro ? 'Exige condutor neutro na caixa' : (t.alimentacao === 'bateria' ? 'Alimentado por bateria' : 'Ligado na rede elétrica'), n, 'un', t.preco * (t.alimentacao === 'ip' ? 1 : tec.multiplicadorPreco), 'Dispositivos por cômodo');
+                add('auto_' + tipo + '_' + tec.id, `${t.nome} — ${tec.nomeCurto}`, t.neutro ? 'Exige condutor neutro na caixa' : (t.energia === 'bateria' ? 'Alimentado por bateria' : 'Ligado na rede elétrica'), n, 'un', t.preco * (t.dados === 'ip' ? 1 : tec.multiplicadorPreco), 'Dispositivos por cômodo');
             }
         });
         // itens do painel / DIN (contatores e, no cabeado, atuadores, fontes, proteção)
@@ -1179,7 +1366,13 @@
             add('auto_rep_' + tec.id, inf.repetidor.nome, 'Posições sugeridas pela simulação de alcance', p.repetidores || 0, 'un', inf.repetidor.preco, 'Rede de automação');
         }
         if (p.servidorLocal) add('auto_servidor', 'Servidor local de automação (mini PC com Home Assistant)', 'Controle local, sem depender da internet', 1, 'un', 900, 'Rede de automação');
-        if (cabeada && (cont.camera || cont.videoporteiro)) add('auto_switch_poe', 'Switch PoE 8 portas (câmeras e vídeo-porteiro)', 'No rack de automação', 1, 'un', 450, 'Rede de dados');
+        const al = p.alimentacao || null;
+        if ((al && al.poe) || (!al && cabeada && (cont.camera || cont.videoporteiro))) add('auto_switch_poe', 'Switch PoE 8 portas (câmeras e vídeo-porteiro)', 'No rack de automação', 1, 'un', 450, 'Rede de dados');
+        if (al && al.metrosUtp) add('auto_cabo_utp', 'Cabo de rede UTP Cat6 (PoE das câmeras e do vídeo-porteiro)', 'Do switch do rack até cada aparelho', al.metrosUtp, 'm', 3.2, 'Rede de dados', 0.1);
+        if (al && al.fontes12v) {
+            add('auto_fonte12v', 'Fonte 12 V 2 A com bateria (fechadura elétrica)', 'Na central de alarme ou no rack', al.fontes12v, 'un', 160, 'Acesso');
+            add('auto_cabo_12v', 'Cabo PP 2 × 0,75 mm² (alimentação 12 V da fechadura)', 'Da fonte até a porta', al.metrosCabo12v, 'm', 2.6, 'Acesso', 0.1);
+        }
         if (cabeada && p.metrosBarramento) add('auto_cabo_' + tec.id, CABO_BARRAMENTO[tec.id].nome, 'Em eletroduto próprio, separado dos condutores de força', p.metrosBarramento, 'm', CABO_BARRAMENTO[tec.id].preco, 'Barramento de automação', 0.1);
         if (p.metrosNeutro) add('auto_neutro', 'Cabo flexível 1,5 mm² azul-claro (neutro até os interruptores inteligentes)', 'NBR NM 247-3, 450/750 V', p.metrosNeutro, 'm', 1.95, 'Neutro obrigatório nos interruptores e módulos inteligentes', 0.1);
         if (p.nobreak) {
@@ -1243,7 +1436,7 @@
         s.push({ titulo: '3. Dispositivos', paragrafos: [Object.keys(cont).map(t => `${cont[t]} × ${TIPOS[t].nome}`).join('; ') + '.'] });
         if (p.rede) s.push({ titulo: '4. Rede e alcance (estimativa)', paragrafos: p.rede.aplicavel ? [
             `Simulação com perda por distância (expoente ${String(EXPOENTE_PERDA).replace('.', ',')}), paredes de ${(MATERIAIS_PAREDE[p.material] || MATERIAIS_PAREDE.alvenaria).nome.toLowerCase()} (${arred(perdaParede(tec, p.material), 1)} dB cada) e lajes de concreto (cerca de ${arred(perdaLaje(tec, 0.15), 0)} dB cada), com ${MARGEM_DESVANECIMENTO} dB de folga.`,
-            `${p.rede.conectados} de ${devs.filter(d => TIPOS[d.tipo].alimentacao !== 'ip').length} dispositivos alcançam o hub${p.repetidores ? ` com ${p.repetidores} repetidor(es)` : ''}${p.rede.fora.length ? `; ${p.rede.fora.length} ficam fora de alcance e precisam de repetidor ou mudança de posição` : ''}.`,
+            `${p.rede.conectados} de ${devs.filter(d => TIPOS[d.tipo].dados !== 'ip').length} dispositivos alcançam o hub${p.repetidores ? ` com ${p.repetidores} repetidor(es)` : ''}${p.rede.fora.length ? `; ${p.rede.fora.length} ficam fora de alcance e precisam de repetidor ou mudança de posição` : ''}.`,
             'A simulação não substitui a medição de sinal no local, com a obra pronta.'
         ] : [`Sistema cabeado: ${p.barramento ? `${p.barramento.metros} m de cabo de barramento (${minusculaInicial(p.barramento.topologia)})${p.barramento.limiteM ? `, dentro do limite de ${p.barramento.limiteM} m por linha` : ''}.` : 'barramento em eletroduto próprio.'}`] });
         if (p.painel && (p.painel.cabeado || p.painel.modulosDispositivos)) {
@@ -1266,9 +1459,10 @@
     return Object.freeze({
         DATA_REFERENCIA, TECNOLOGIAS, ECOSSISTEMAS, CRITERIOS, ROTULO_COMPAT, TIPOS, NIVEIS, MATERIAIS_PAREDE, TIPOS_LAMPADA,
         GRUPOS_CANAIS, TAMANHOS_CAIXA, MARGEM_DESVANECIMENTO,
-        tecnologia, ehCabeada, perfilAmbiente, contatorPara, levantarDispositivos, resumoPorComodo,
+        tecnologia, ehCabeada, perfilAmbiente, contatorPara, levantarDispositivos, sincronizarDispositivos, resumoPorComodo,
         prioridadesAutomaticas, dificuldades, pontuarTecnologias,
         geometriaPlanta, paredesNoSegmento, perdaEnlace, criarSimulador, simularRede, sugerirHub, sugerirRepetidores, mapaDeCalor,
+        PONTO_ALIMENTACAO, pontoNaParede, planejarAlimentacao,
         agruparCanais, distribuirEmFileiras, caixaComercial, montarPainel, itensDinDoPainel, decidirLocalPainel, metragemBarramento,
         cargasNobreakSugeridas, dimensionarNobreak, sugerirCenas, listaMateriais, quantidadesMaoDeObra, impactoEletrico, gerarMemorial
     });

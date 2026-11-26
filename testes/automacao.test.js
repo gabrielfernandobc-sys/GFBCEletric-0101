@@ -289,3 +289,123 @@ test('cenas, materiais, mão de obra e memorial', () => {
     assert.ok(mem.some(s => /Nobreak/.test(s.titulo) && /Não exigido/.test(s.paragrafos[0])));
     assert.ok(mem.some(s => /Impacto/.test(s.titulo) && s.paragrafos.some(p => /neutro/.test(p))));
 });
+
+// ---------------------------------------------------------------------------
+// Pontos de alimentação dos dispositivos
+// ---------------------------------------------------------------------------
+test('energia: cada tipo é rede elétrica, bateria ou usa o ponto de origem', () => {
+    const rede = ['cortina', 'sensor_gas', 'camera', 'videoporteiro', 'sirene', 'controle_ir', 'fechadura_eletrica'];
+    const bateria = ['sensor_presenca', 'sensor_abertura', 'sensor_fumaca', 'sensor_vazamento', 'fechadura'];
+    const origem = ['modulo_rele', 'interruptor', 'dimmer', 'tomada', 'rele_potencia', 'modulo_portao'];
+    rede.forEach(t => assert.equal(A.TIPOS[t].energia, 'rede', t));
+    bateria.forEach(t => assert.equal(A.TIPOS[t].energia, 'bateria', t));
+    origem.forEach(t => assert.equal(A.TIPOS[t].energia, 'origem', t));
+    assert.deepEqual(Object.keys(A.TIPOS).sort(), rede.concat(bateria, origem).sort());
+    ['camera', 'videoporteiro'].forEach(t => assert.equal(A.TIPOS[t].dados, 'ip'));
+    assert.equal(A.TIPOS.interruptor.neutro, true);
+});
+
+test('alimentação: vincula a TUG livre do cômodo a até 1,5 m, na altura certa', () => {
+    // sala de 5 × 4 m em (40, 40) px a 40 px/m; cortina junto à parede de cima
+    const sala = { id: 1, nome: 'Sala', x: 40, y: 40, largura: 5, comprimento: 4, pavimentoId: 'terreo' };
+    const cortina = { id: 'cortina:1:0', tipo: 'cortina', comodoId: 1, pavimentoId: 'terreo', x: 140, y: 47 };
+    const plano = pts => A.planejarAlimentacao({ dispositivos: [cortina], pontos: pts, comodos: [sala], escala: ESC, tecnologia: 'zigbee' });
+    const tug = (id, x, y, altura, destino) => ({ id, tipo: 'TUG', nome: 'TUG ' + id, comodoId: 1, x, y, altura, destino });
+    // alta, livre, a ~1 m: vincula
+    let r = plano([tug('a', 180, 46, 'alta')]);
+    assert.equal(r.itens[0].situacao, 'vinculado');
+    assert.equal(r.itens[0].pontoId, 'a');
+    assert.equal(r.semPonto, 0);
+    // baixa (altura errada), longe (> 1,5 m) ou reservada para a TV: não vincula e sugere
+    for (const pts of [[tug('b', 150, 46, 'baixa')], [tug('c', 230, 46, 'alta')], [tug('d', 150, 46, 'alta', 'TV / painel')]]) {
+        r = plano(pts);
+        assert.equal(r.itens[0].situacao, 'sugerido', JSON.stringify(pts));
+    }
+    // "Uso geral" pode ceder a tomada
+    assert.equal(plano([tug('e', 150, 46, 'alta', 'Uso geral')]).itens[0].situacao, 'vinculado');
+    // uma tomada atende um dispositivo só
+    const dois = A.planejarAlimentacao({ dispositivos: [cortina, Object.assign({}, cortina, { id: 'cortina:1:1', x: 150 })], pontos: [tug('a', 180, 46, 'alta')], comodos: [sala], escala: ESC, tecnologia: 'zigbee' });
+    assert.deepEqual(dois.itens.filter(i => i.dispositivoId).map(i => i.situacao).sort(), ['sugerido', 'vinculado']);
+});
+
+test('alimentação: ponto sugerido com altura, potência e destinação da tabela', () => {
+    const devs = levantar('completo').concat([{ id: 'fe', tipo: 'fechadura_eletrica', comodoId: 1, pavimentoId: 'terreo', x: 100, y: 190 }]);
+    const r = A.planejarAlimentacao({ dispositivos: devs, pontos: [], comodos, escala: ESC, tecnologia: 'zigbee', rack: { x: 5, y: 4, pavId: 'terreo' }, repetidores: [{ x: 6.5, y: 3, pavId: 'terreo' }] });
+    const sug = tipo => r.itens.find(i => i.tipo === tipo);
+    assert.equal(sug('cortina').sugestao.altura, 'alta');
+    assert.equal(sug('cortina').sugestao.alturaM, 2.2);
+    assert.equal(sug('cortina').sugestao.destino, 'Motor da cortina');
+    assert.equal(sug('cortina').sugestao.nome, 'TUG Motor da cortina');
+    assert.equal(sug('sensor_gas').sugestao.alturaM, 0.3);                   // GLP
+    assert.equal(sug('sirene').sugestao.altura, 'alta');
+    assert.equal(sug('controle_ir').sugestao.altura, 'alta');                 // voltado para o ar-condicionado
+    assert.equal(sug('camera').situacao, 'poe');
+    assert.equal(sug('fechadura_eletrica').situacao, 'fonte12v');
+    assert.equal(sug('hub').situacao, 'rack');
+    assert.equal(sug('repetidor').sugestao.altura, 'baixa');
+    assert.equal(sug('sensor_presenca').situacao, 'bateria');
+    assert.equal(sug('modulo_rele') || sug('interruptor') || sug('dimmer') ? 'origem' : '', 'origem');
+    r.sugestoes.forEach(s => {
+        assert.equal(s.tipo, 'TUG'); assert.equal(s.pot, 100); assert.equal(s.tensao, 127);
+        const c = comodos.find(x => x.id === s.comodoId);
+        assert.ok(s.x >= c.x && s.x <= c.x + c.largura * ESC && s.y >= c.y && s.y <= c.y + c.comprimento * ESC, s.nome);
+    });
+    assert.ok(r.metrosUtp > 0 && r.poe >= 1 && r.fontes12v === 1 && r.metrosCabo12v > 0);
+    // gás natural: alto; câmera em tomada alta
+    const gn = A.planejarAlimentacao({ dispositivos: devs, pontos: [], comodos, escala: ESC, tecnologia: 'zigbee', tipoGas: 'gn', cameraAlimentacao: 'tomada' });
+    assert.equal(gn.itens.find(i => i.tipo === 'sensor_gas').sugestao.altura, 'alta');
+    assert.equal(gn.itens.find(i => i.tipo === 'camera').sugestao.altura, 'alta');
+    // as TUGs sugeridas, uma vez lançadas, passam a ser as vinculadas
+    const lancadas = r.sugestoes.map((s, k) => Object.assign({ id: 'novo' + k }, s));
+    const depois = A.planejarAlimentacao({ dispositivos: devs, pontos: lancadas, comodos, escala: ESC, tecnologia: 'zigbee', rack: { x: 5, y: 4, pavId: 'terreo' }, repetidores: [{ x: 6.5, y: 3, pavId: 'terreo' }] });
+    assert.equal(depois.semPonto, 0);
+    // materiais: switch PoE, cabo de rede e fonte 12 V
+    const mats = A.listaMateriais({ tecnologia: 'zigbee', dispositivos: devs, painel: A.montarPainel({ tecnologia: 'zigbee', dispositivos: devs }), alimentacao: r });
+    assert.ok(mats.some(m => /Switch PoE/.test(m.item)) && mats.some(m => /UTP/.test(m.item)) && mats.some(m => /Fonte 12 V/.test(m.item)));
+    // o motor de cortina que veio de uma TUE de cortina usa a própria TUE
+    const tueCortina = { id: 'tc', tipo: 'TUE', nome: 'Cortina / Persiana Motorizada Integrada', comodoId: 1, x: 100, y: 45 };
+    const rc = A.planejarAlimentacao({ dispositivos: [{ id: 'cortina:pt', tipo: 'cortina', comodoId: 1, x: 100, y: 45, origemPontoId: 'tc' }], pontos: [tueCortina], comodos, escala: ESC, tecnologia: 'zigbee' });
+    assert.equal(rc.itens[0].situacao, 'origem');
+});
+
+// ---------------------------------------------------------------------------
+// Sincronização da lista editada à mão
+// ---------------------------------------------------------------------------
+test('lista editada: posição do ponto, ponto apagado sai da lista, sugestões novas e manuais intactos', () => {
+    const editados = levantar('intermediario').concat([{ id: 'manual:sirene:1', tipo: 'sirene', comodoId: 1, pavimentoId: 'terreo', x: 77, y: 88, origemPontoId: null, detalhe: 'Incluído manualmente' }]);
+    // o interruptor da sala mudou de lugar; o ar-condicionado do quarto foi apagado; entrou uma TUG de TV no quarto
+    const pts = pontos.filter(p => p.id !== 'e1').map(p => p.id === 'i1' ? Object.assign({}, p, { x: 99, y: 150 }) : p)
+        .concat([{ id: 't9', tipo: 'TUG', nome: 'TUG TV', destino: 'TV', pot: 100, tensao: 127, x: 120, y: 330, comodoId: 3 }]);
+    const auto = A.levantarDispositivos({ comodos, pontos: pts, pavimentos, escala: ESC, nivel: 'intermediario' });
+    const r = A.sincronizarDispositivos(editados, pts, auto, []);
+    const sala = r.lista.find(d => d.origemPontoId === 'i1');
+    assert.deepEqual([sala.x, sala.y], [99, 150]);                                  // posição atual do ponto
+    assert.equal(r.removidos.length, 1);
+    assert.equal(r.removidos[0].origemPontoId, 'e1');                               // IR do ar apagado
+    assert.ok(!r.lista.some(d => d.origemPontoId === 'e1'));
+    assert.deepEqual(r.novos.map(d => d.origemPontoId), ['t9']);                    // TV nova vira sugestão
+    assert.equal(r.novos[0].tipo, 'tomada');
+    const manual = r.lista.find(d => d.id === 'manual:sirene:1');
+    assert.deepEqual([manual.x, manual.y], [77, 88]);                               // manual fica onde estava
+    assert.ok(r.mudou);
+    // sugestão descartada pelo usuário não volta
+    assert.equal(A.sincronizarDispositivos(editados, pts, auto, ['t9']).novos.length, 0);
+    // sem mudança nos pontos: nada muda
+    const igual = A.sincronizarDispositivos(levantar('basico'), pontos, levantar('basico'), []);
+    assert.equal(igual.mudou, false);
+    assert.equal(igual.novos.length, 0);
+    // relé de potência acompanha a potência da TUE
+    const maisForte = pontos.map(p => p.id === 'e2' ? Object.assign({}, p, { pot: 5500 }) : p);
+    const rel = A.sincronizarDispositivos(levantar('intermediario'), maisForte, [], []).lista.find(d => d.origemPontoId === 'e2');
+    assert.equal(rel.ib, 25);
+});
+
+test('porta de entrada: "Sala de Estar e Jantar" e "Living / Jantar" contam como sala', () => {
+    for (const nome of ['Sala de Estar e Jantar', 'Living / Jantar']) {
+        const cs = [{ id: 1, nome: 'Suíte Master', x: 0, y: 0, largura: 4, comprimento: 4, pavimentoId: 'terreo' },
+            { id: 2, nome, x: 160, y: 0, largura: 5, comprimento: 4, pavimentoId: 'terreo' }];
+        const devs = A.levantarDispositivos({ comodos: cs, pontos: [], pavimentos, escala: ESC, nivel: 'intermediario' });
+        assert.equal(devs.find(d => d.tipo === 'fechadura').comodoId, 2, nome);
+        assert.equal(devs.find(d => d.tipo === 'videoporteiro').comodoId, 2, nome);
+    }
+});

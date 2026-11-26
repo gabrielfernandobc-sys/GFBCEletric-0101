@@ -70,7 +70,14 @@
     // Premissas padrão do projeto (ajustáveis por projeto na interface).
     // 3 circuitos no trecho de eletroduto mais carregado (saída do quadro) é a
     // premissa usual em projetos residenciais.
-    const PARAMETROS_PADRAO = Object.freeze({ circuitosAgrupados: 3, temperaturaAmbiente: 30 });
+    // sobraCaixaM: sobra de condutor deixada em cada caixa (m por extremidade do trecho);
+    // reservaCabosPct: reserva de compra sobre a metragem (perdas, emendas e cortes)
+    const PARAMETROS_PADRAO = Object.freeze({ circuitosAgrupados: 3, temperaturaAmbiente: 30, sobraCaixaM: 0.30, reservaCabosPct: 10 });
+
+    // Alturas de instalação (m do piso acabado) usadas no app: tomada baixa, média (bancada,
+    // interruptor) e alta (chuveiro, ar-condicionado); luz no teto.
+    const ALTURAS_PONTO = Object.freeze({ baixa: 0.30, media: 1.20, alta: 2.00 });
+    const ALTURA_CENTRO_QUADRO = 1.50;
 
     // Disjuntor mínimo adotado em qualquer circuito (A).
     const DISJUNTOR_MINIMO = 10;
@@ -149,6 +156,25 @@
         const base = condutoresCarregados === 3 ? IZ_METODO_B1_3C[secaoMm2] : izMetodoB1(secaoMm2);
         if (base === undefined) throw new Error(`Seção ${secaoMm2} mm² não consta da Tabela 36 (B1, 3 condutores).`);
         return base * fca * fct;
+    }
+
+    /** Altura do ponto (m): 'teto'/luz = pé-direito; baixa 0,30; media 1,20; alta 2,00. */
+    function alturaDoPonto(altura, peDireito) {
+        const pe = Number(peDireito) || 2.8;
+        if (altura === 'teto') return pe;
+        return ALTURAS_PONTO[altura] !== undefined ? ALTURAS_PONTO[altura] : ALTURAS_PONTO.media;
+    }
+
+    /**
+     * Trecho vertical do eletroduto até uma caixa na altura `alturaM`, conforme a passagem dos cabos:
+     *   'teto' — pela laje (padrão das construções brasileiras tradicionais): o eletroduto corre
+     *            embutido na laje e desce pela parede até a caixa → pé-direito − altura;
+     *   'chao' — pelo piso/contrapiso: sobe da laje de piso até a caixa → altura.
+     */
+    function trechoVertical(passagem, peDireito, alturaM) {
+        const pe = Number(peDireito) || 2.8;
+        const h = Math.max(0, Math.min(pe, Number(alturaM) || 0));
+        return passagem === 'chao' ? h : pe - h;
     }
 
     /** Carga trifásica (3F): campo fases = 3 ou "trifásico"/"3F" no nome do aparelho. */
@@ -1325,6 +1351,10 @@
         ehCargaResistiva,
         selecionarProtecaoTUE,
         calcularQuedaTensao,
+        ALTURAS_PONTO,
+        ALTURA_CENTRO_QUADRO,
+        alturaDoPonto,
+        trechoVertical,
         correnteDaCarga,
         ehCargaTrifasica,
         taxaMaximaOcupacao,
