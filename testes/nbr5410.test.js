@@ -295,3 +295,17 @@ test('demanda: recarga de veículo elétrico entra a plena carga (fator 1)', () 
     assert.ok(Math.abs(d.parcelaD.demKW - 0.7) < 1e-9);               // portão segue em "outras cargas"
     assert.ok(d.demandaTotalKW >= 12.193 + 0.7);
 });
+
+test('rotas: trecho vertical pela laje (construção tradicional) ou pelo piso, e premissas de sobra', () => {
+    // pela laje: desce do teto até a caixa
+    assert.ok(Math.abs(N.trechoVertical('teto', 2.8, N.alturaDoPonto('baixa', 2.8)) - 2.5) < 1e-9);   // tomada baixa
+    assert.ok(Math.abs(N.trechoVertical('teto', 2.8, N.alturaDoPonto('alta', 2.8)) - 0.8) < 1e-9);    // chuveiro / ar
+    assert.equal(N.trechoVertical('teto', 2.8, N.alturaDoPonto('teto', 2.8)), 0);                      // luz na própria laje
+    // pelo piso: sobe do contrapiso até a caixa; a luz exige subir até o teto
+    assert.ok(Math.abs(N.trechoVertical('chao', 2.8, N.alturaDoPonto('baixa', 2.8)) - 0.3) < 1e-9);
+    assert.equal(N.trechoVertical('chao', 2.6, N.alturaDoPonto('teto', 2.6)), 2.6);
+    // o pé-direito do pavimento muda a descida
+    assert.ok(N.trechoVertical('teto', 3.2, 0.3) > N.trechoVertical('teto', 2.6, 0.3));
+    assert.equal(N.PARAMETROS_PADRAO.sobraCaixaM, 0.30);
+    assert.equal(N.PARAMETROS_PADRAO.reservaCabosPct, 10);
+});

@@ -1237,9 +1237,12 @@
             };
 
             const quantitativoCabosPorCor = Object.values(mapCabosPorCor);
+            // reserva de compra (perdas, emendas e cortes) — premissa editável na aba do quadro
+            const parCabos = (typeof obterParametrosNBR === 'function') ? obterParametrosNBR() : {};
+            const reservaCabos = (isFinite(Number(parCabos.reservaCabosPct)) ? Number(parCabos.reservaCabosPct) : 10) / 100;
 
             quantitativoCabosPorCor.forEach(c => {
-                c.sobra = Math.ceil(c.metrosProjeto * 0.10);
+                c.sobra = Math.ceil(c.metrosProjeto * reservaCabos);
                 c.metrosTotal = c.metrosProjeto + c.sobra;
                 c.subtotal = c.metrosTotal * c.precoUnit;
                 
@@ -1307,7 +1310,7 @@
                     `${c.norma}, Cobre Classe 5, PVC 70°C Anti-chamas BWF-B`,
                     c.metrosProjeto, 'm', c.precoUnit,
                     `${c.aplicacao} - Circuitos: ${c.circuitosStr}`,
-                    0.10, c.secao.replace(' mm²', '').trim()
+                    reservaCabos, c.secao.replace(' mm²', '').trim()
                 );
             });
 

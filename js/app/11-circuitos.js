@@ -192,12 +192,39 @@
             }
         });
 
-        // CÁLCULO DE METRAGENS FÍSICAS REAIS CONFORME NBR 5410 (ALTURAS VERTICAIS, CURVATURAS E FOLGAS)
+        /**
+         * Perfil vertical das rotas de um cômodo: pé-direito e passagem dos cabos do seu pavimento
+         * ('teto' = pela laje, padrão das construções brasileiras tradicionais; 'chao' = pelo piso),
+         * subida da prumada até o pavimento e sobra deixada em cada caixa.
+         */
+        function perfilVerticalComodo(c) {
+            const par = obterParametrosNBR();
+            const pavs = state.pavimentos || [];
+            const pav = pavs.find(p => p.id === c.pavimentoId) || pavs[0] || {};
+            const pe = Number(pav.alturaPeDireito) || 2.8;
+            const passagem = pav.tipoPassagemCabos || state.tipoPassagemCabos || 'teto';
+            const sobra = isFinite(Number(par.sobraCaixaM)) ? Math.max(0, Number(par.sobraCaixaM)) : NBR5410.PARAMETROS_PADRAO.sobraCaixaM;
+            // prumada: soma o pé-direito e a laje de cada pavimento abaixo deste
+            let prumada = 0;
+            if (state.prumadaAtiva !== false && state.regimeImovel === 'mesmo_imovel') {
+                const nivel = Number(pav.nivel) || 0;
+                const base = Math.min(...pavs.map(p => Number(p.nivel) || 0));
+                pavs.filter(p => (Number(p.nivel) || 0) >= base && (Number(p.nivel) || 0) < nivel)
+                    .forEach(p => { prumada += (Number(p.alturaPeDireito) || 2.8) + (Number(p.espessuraLajeTeto) || 0.15); });
+            }
+            return {
+                pe, passagem, sobra, prumada,
+                vQuadro: NBR5410.trechoVertical(passagem, pe, NBR5410.ALTURA_CENTRO_QUADRO),   // do quadro até a laje (ou ao piso)
+                vLuz: NBR5410.trechoVertical(passagem, pe, pe),                                 // pela laje: 0; pelo piso: sobe até o teto
+                vPonto: altura => NBR5410.trechoVertical(passagem, pe, NBR5410.alturaDoPonto(altura, pe)),
+                // interruptor: pela laje desce até 1,20 m; pelo piso sobe até ele e o retorno segue até a luz no teto
+                vInterruptor: passagem === 'chao' ? pe : pe - NBR5410.ALTURAS_PONTO.media
+            };
+        }
+
+        // CÁLCULO DE METRAGENS FÍSICAS REAIS (ALTURAS VERTICAIS, CURVATURAS E SOBRAS NAS CAIXAS)
         function calcularMetragensFisicasProjeto(comodosParaCalcular, state) {
-            const peDireito = 2.80; // Pé-direito padrão NBR 5410 (2.80m)
-            const F_curva = 1.08;   // Fator de curvatura ortogonal e cantos (NBR 5410)
-            const desnivelQdt = 1.40; // Desnível vertical do QDT (centro a 1.40m da laje e 1.40m do piso)
-            const sobraCaixa = 0.20; // Folga normativa de 20cm por caixa terminal/passagem (NBR 5410 item 6.2.11)
+            const F_curva = 1.08;   // acréscimo por curvas e desvios do eletroduto
             const escala = (typeof state.escala === 'number' && state.escala > 0) ? state.escala : 40.0;
             const qdtCx = state.qdtPos.x + state.qdtPos.w / 2;
             const qdtCy = state.qdtPos.y + state.qdtPos.h / 2;
@@ -208,6 +235,8 @@
                 const luzX = c.x + w / 2;
                 const luzY = c.y + h / 2;
                 const circNum = idx + 1;
+                const pv = perfilVerticalComodo(c);
+                const sobraCaixa = pv.sobra;
 
                 const wps = state.eletrodutoWaypoints[circNum] || [];
                 const ptsRota = [{ x: qdtCx, y: qdtCy }, ...wps, { x: luzX, y: luzY }];
@@ -217,8 +246,9 @@
                     distPx += Math.hypot(ptsRota[i+1].x - ptsRota[i].x, ptsRota[i+1].y - ptsRota[i].y);
                 }
                 const distHorizQdt = (distPx / escala) * F_curva;
-                const prumada = (state.prumadaAtiva !== false && c.pavimentoId && c.pavimentoId !== 'terreo' && state.regimeImovel === 'mesmo_imovel') ? 3.0 : 0;
-                const rotaBaseQdt = distHorizQdt + desnivelQdt + sobraCaixa + prumada;
+                // quadro → caixa de luz do cômodo: horizontal + subida do quadro à laje (ou descida ao piso
+                // e subida até o teto) + prumada + sobra no quadro e na caixa
+                const rotaBaseQdt = distHorizQdt + pv.vQuadro + pv.vLuz + pv.prumada + 2 * sobraCaixa;
 
                 const ptsDoComodo = state.pontosEletricos.filter(p => p.comodoId === c.id);
                 const tugs = ptsDoComodo.filter(p => p.tipo === 'TUG');
@@ -229,9 +259,7 @@
                 let maxDistTug = 0;
                 tugs.forEach(pt => {
                     const distH = (Math.hypot(pt.x - luzX, pt.y - luzY) / escala) * F_curva;
-                    const alt = pt.altura || 'baixa';
-                    const drop = (alt === 'baixa') ? (peDireito - 0.30) : ((alt === 'alta') ? 0.70 : (peDireito - 1.20));
-                    const trecho = distH + drop + (sobraCaixa * 2);
+                    const trecho = distH + pv.vPonto(pt.altura || 'baixa') + (sobraCaixa * 2);
                     somaTrechosTugs += trecho;
                     if (trecho > maxDistTug) maxDistTug = trecho;
                 });
@@ -241,8 +269,7 @@
                 const listaSw = (interrs.length > 0) ? interrs : [{ x: c.x + 12, y: c.y + h - 12 }];
                 listaSw.forEach(sw => {
                     const distH = (Math.hypot(sw.x - luzX, sw.y - luzY) / escala) * F_curva;
-                    const drop = peDireito - 1.15; // Interruptor a 1.15m
-                    const trecho = distH + drop + (sobraCaixa * 2);
+                    const trecho = distH + pv.vInterruptor + (sobraCaixa * 2);
                     somaTrechosInterr += trecho;
                     if (trecho > maxDistInterr) maxDistInterr = trecho;
                 });
@@ -250,9 +277,8 @@
                 const trechosTue = {};
                 tues.forEach(tue => {
                     const distH = (Math.hypot(tue.x - luzX, tue.y - luzY) / escala) * F_curva;
-                    const alt = tue.altura || 'media';
-                    const drop = (alt === 'alta') ? 0.70 : ((alt === 'baixa') ? (peDireito - 0.30) : (peDireito - 1.20));
-                    const trecho = rotaBaseQdt + distH + drop + (sobraCaixa * 2);
+                    // circuito exclusivo: quadro → laje (ou piso) → caixa da TUE, sem passar pela descida da luz
+                    const trecho = distHorizQdt + pv.vQuadro + pv.prumada + distH + pv.vPonto(tue.altura || 'media') + (sobraCaixa * 2);
                     trechosTue[tue.id] = {
                         rotaFisica: Math.ceil(trecho),
                         distanciaCritica: Math.ceil(trecho)
@@ -303,6 +329,8 @@
         // Premissas de correção da capacidade de condução (FCA / FCT) do projeto
         function obterParametrosNBR() {
             if (!state.parametrosNBR) state.parametrosNBR = { ...NBR5410.PARAMETROS_PADRAO };
+            // projetos antigos: completa as premissas novas (sobra nas caixas e reserva de cabo)
+            Object.keys(NBR5410.PARAMETROS_PADRAO).forEach(k => { if (state.parametrosNBR[k] === undefined) state.parametrosNBR[k] = NBR5410.PARAMETROS_PADRAO[k]; });
             return state.parametrosNBR;
         }
 
@@ -312,6 +340,8 @@
             const p = obterParametrosNBR();
             if (campo === 'circuitosAgrupados') p.circuitosAgrupados = Math.min(30, Math.max(1, Math.round(v)));
             if (campo === 'temperaturaAmbiente') p.temperaturaAmbiente = Math.min(60, Math.max(10, v));
+            if (campo === 'sobraCaixaM') p.sobraCaixaM = Math.min(1, Math.max(0, Math.round(v * 100) / 100));
+            if (campo === 'reservaCabosPct') p.reservaCabosPct = Math.min(50, Math.max(0, Math.round(v)));
             sincronizarControlesParametrosNBR();
             atualizarTabelas();
             renderizarMemorialAba6();
@@ -324,6 +354,11 @@
             const lbl = document.getElementById('lblFatoresCorrecaoNBR');
             if (inpN) inpN.value = p.circuitosAgrupados;
             if (inpT) inpT.value = p.temperaturaAmbiente;
+            const inpS = document.getElementById('inpSobraCaixa');
+            const inpR = document.getElementById('inpReservaCabos');
+            if (inpS) inpS.value = p.sobraCaixaM;
+            if (inpR) inpR.value = p.reservaCabosPct;
+            renderizarPassagemCabosPavimentos();
             if (lbl) {
                 const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
                 const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
@@ -331,7 +366,23 @@
             }
         }
 
+        /** Passagem dos cabos de cada pavimento (pela laje ou pelo piso) na aba do quadro. */
+        function renderizarPassagemCabosPavimentos() {
+            const alvo = document.getElementById('lblPassagemCabosPavs');
+            if (!alvo) return;
+            const pavs = (state.pavimentos || []).slice().sort((a, b) => (Number(a.nivel) || 0) - (Number(b.nivel) || 0));
+            alvo.innerHTML = pavs.map(pv => {
+                const tp = pv.tipoPassagemCabos || state.tipoPassagemCabos || 'teto';
+                return `<label class="flex items-center gap-1.5"><span class="text-slate-400">${escHtml(pv.nome)} (pé-direito ${String(Number(pv.alturaPeDireito) || 2.8).replace('.', ',')} m):</span>
+                    <select onchange="alterarPassagemCabos(this.value, ${argJsEmAtributo(pv.id)})" class="bg-slate-900 border border-slate-700 text-amber-300 font-bold px-2 py-1 rounded">
+                        <option value="teto" ${tp !== 'chao' ? 'selected' : ''}>Pela laje (desce pelas paredes)</option>
+                        <option value="chao" ${tp === 'chao' ? 'selected' : ''}>Pelo piso (sobe pelas paredes)</option>
+                    </select></label>`;
+            }).join('');
+        }
+
         function atualizarTabelas() {
+            renderizarPassagemCabosPavimentos();
             // 1. Determina quais cômodos entram no cálculo (respeita regime de imóveis)
             let comodosParaCalcular = state.comodos;
             let ehUnidadeEspecifica = false;
@@ -398,8 +449,9 @@
                     distPxTotal += Math.sqrt(Math.pow(pontos[i+1].x - pontos[i].x, 2) + Math.pow(pontos[i+1].y - pontos[i].y, 2));
                 }
 
-                const acrescimoPrumada = (state.prumadaAtiva !== false && c.pavimentoId && c.pavimentoId !== 'terreo' && state.regimeImovel === 'mesmo_imovel') ? 3.2 : 0;
-                const rotaMetrosReal = (distPxTotal / state.escala) + 2.8 + acrescimoPrumada;
+                // verticais pela passagem do pavimento (laje ou piso), prumada e sobra nas caixas
+                const pvC = perfilVerticalComodo(c);
+                const rotaMetrosReal = (distPxTotal / state.escala) + pvC.vQuadro + pvC.vLuz + pvC.prumada + 2 * pvC.sobra;
 
                 const pavObj = state.pavimentos.find(p => p.id === c.pavimentoId);
                 const nomeAndar = pavObj ? pavObj.nome : 'Térreo';

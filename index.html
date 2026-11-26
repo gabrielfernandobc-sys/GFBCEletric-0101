@@ -213,7 +213,7 @@
                 <div class="h-6 w-px bg-slate-800 mx-1"></div>
                 <label class="group relative flex items-center gap-1.5" title="Clique para editar o nome do projeto">
                     <span class="sr-only">Nome do projeto</span>
-                    <input type="text" id="inputNomeProjetoHeader" value="chácara" class="border border-transparent group-hover:border-slate-700 focus:border-amber-500 rounded-lg pl-2 pr-7 py-1 text-base font-black tracking-tight text-white bg-transparent focus:bg-slate-950 w-44 lg:w-64 outline-none transition focus:ring-1 focus:ring-amber-400 truncate" onchange="atualizarNomeProjeto(this.value)">
+                    <input type="text" id="inputNomeProjetoHeader" value="Residência Unifamiliar NBR 5410" class="border border-transparent group-hover:border-slate-700 focus:border-amber-500 rounded-lg pl-2 pr-7 py-1 text-base font-black tracking-tight text-white bg-transparent focus:bg-slate-950 w-44 lg:w-64 outline-none transition focus:ring-1 focus:ring-amber-400 truncate" onchange="atualizarNomeProjeto(this.value)">
                     <i class="fa-solid fa-pen absolute right-2 text-[10px] text-slate-500 group-hover:text-amber-400 pointer-events-none"></i>
                 </label>
                 <span id="indicadorStatusSalvamento" class="hidden xl:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
@@ -1659,6 +1659,25 @@
                     </label>
                     <span id="lblFatoresCorrecaoNBR" class="font-mono text-sky-300 font-bold pb-1">FCA 0.70 × FCT 1.00 = 0.70 × Iz</span>
                     <span class="text-slate-500 text-[10px] pb-1 max-w-md">Use o nº de circuitos do trecho de eletroduto mais carregado (normalmente a saída do quadro). Circuitos em eletroduto exclusivo: 1.</span>
+                    <div class="w-full flex flex-wrap items-end gap-4 pt-2 border-t border-slate-800">
+                        <label class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-semibold">Sobra de fio em cada caixa (m)</span>
+                            <input id="inpSobraCaixa" type="number" min="0" max="1" step="0.05" value="0.3"
+                                onchange="alterarParametroNBR('sobraCaixaM', this.value)"
+                                class="w-24 bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                        </label>
+                        <label class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-semibold">Reserva de compra dos cabos (%)</span>
+                            <input id="inpReservaCabos" type="number" min="0" max="50" step="1" value="10"
+                                onchange="alterarParametroNBR('reservaCabosPct', this.value)"
+                                class="w-24 bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                        </label>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-semibold">Passagem dos cabos</span>
+                            <div id="lblPassagemCabosPavs" class="flex flex-wrap gap-3 text-[11px]"></div>
+                        </div>
+                        <span class="text-slate-500 text-[10px] pb-1 w-full">Pela laje (padrão das construções brasileiras tradicionais): o eletroduto corre embutido na laje e desce pelas paredes; cada trecho soma a descida (pé-direito − altura do ponto) e a sobra nas duas caixas. Pelo piso: sobe do contrapiso até cada caixa. A reserva entra na compra dos cabos (perdas, emendas e cortes).</span>
+                    </div>
                     <span id="lblTrechoAgrupadoNBR" class="w-full text-[11px] text-slate-300"></span>
                     <span id="lblCargaFasesNBR" class="w-full text-[11px] text-slate-300"></span>
                 </div>
@@ -2609,46 +2628,8 @@
                         </p>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                        <!-- Template 1: Casa Térrea -->
-                        <div onclick="selecionarTemplateNovoProjeto('casa_terrea')" id="cardTplAba_casa_terrea" class="template-card-item border-2 border-slate-800 hover:border-amber-500 bg-slate-950 p-4 rounded-xl cursor-pointer transition space-y-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-sm font-bold">
-                                🏠
-                            </div>
-                            <h4 class="font-bold text-white text-xs">Casa Térrea Completa</h4>
-                            <p class="text-[11px] text-slate-400">4 cômodos (Sala, Cozinha, Quarto, Banheiro) com TUGs e TUEs pré-distribuídas.</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300">1 Pavimento • NBR 5410</span>
-                        </div>
-
-                        <!-- Template 2: Sobrado -->
-                        <div onclick="selecionarTemplateNovoProjeto('sobrado')" id="cardTplAba_sobrado" class="template-card-item border-2 border-slate-800 hover:border-sky-500 bg-slate-950 p-4 rounded-xl cursor-pointer transition space-y-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30 flex items-center justify-center text-sm font-bold">
-                                🏢
-                            </div>
-                            <h4 class="font-bold text-white text-xs">Sobrado (2 Andares)</h4>
-                            <p class="text-[11px] text-slate-400">Térreo + Pavimento Superior com escada arquitetônica, prumada e QDTs independentes.</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300">2 Pavimentos • Escada</span>
-                        </div>
-
-                        <!-- Template 3: Studio -->
-                        <div onclick="selecionarTemplateNovoProjeto('apartamento')" id="cardTplAba_apartamento" class="template-card-item border-2 border-slate-800 hover:border-emerald-500 bg-slate-950 p-4 rounded-xl cursor-pointer transition space-y-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-sm font-bold">
-                                🏙️
-                            </div>
-                            <h4 class="font-bold text-white text-xs">Apartamento Studio</h4>
-                            <p class="text-[11px] text-slate-400">Ambiente integrado compacto de alta eficiência, ideal para studios e quitinetes modernas.</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Otimizado • 1 Andar</span>
-                        </div>
-
-                        <!-- Template 4: Em Branco -->
-                        <div onclick="selecionarTemplateNovoProjeto('em_branco')" id="cardTplAba_em_branco" class="template-card-item border-2 border-slate-800 hover:border-purple-500 bg-slate-950 p-4 rounded-xl cursor-pointer transition space-y-2.5">
-                            <div class="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center text-sm font-bold">
-                                📄
-                            </div>
-                            <h4 class="font-bold text-white text-xs">Projeto em Branco</h4>
-                            <p class="text-[11px] text-slate-400">Comece uma prancha totalmente limpa do zero para desenhar cômodos personalizados.</p>
-                            <span class="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300">Em Branco</span>
-                        </div>
+                    <div id="gradeModelosAbaArquivos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                        <!-- cartões gerados a partir de js/modelos-projeto.js (renderizarCardsModelosProjeto) -->
                     </div>
 
                     <div class="pt-4 border-t border-slate-800 flex justify-end">
@@ -3095,15 +3076,15 @@
                         <label id="lblOptPassagemTeto" class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-sky-500/50 transition">
                             <input type="radio" name="radCfgPassagem" value="teto" id="radCfgPassagemTeto" class="text-sky-500">
                             <div>
-                                <span class="font-bold text-white block">🏠 Pelo Teto</span>
-                                <span class="text-[10px] text-slate-400">Na laje superior / forro</span>
+                                <span class="font-bold text-white block">🏠 Pela Laje (teto)</span>
+                                <span class="text-[10px] text-slate-400">Embutido na laje, descendo pelas paredes (construção tradicional)</span>
                             </div>
                         </label>
                         <label id="lblOptPassagemChao" class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-900 cursor-pointer hover:border-emerald-500/50 transition">
                             <input type="radio" name="radCfgPassagem" value="chao" id="radCfgPassagemChao" class="text-emerald-500">
                             <div>
-                                <span class="font-bold text-white block">🧱 Pelo Chão</span>
-                                <span class="text-[10px] text-slate-400">No contrapiso / radier</span>
+                                <span class="font-bold text-white block">🧱 Pelo Piso</span>
+                                <span class="text-[10px] text-slate-400">No contrapiso / radier, subindo pelas paredes</span>
                             </div>
                         </label>
                     </div>
@@ -4476,50 +4457,8 @@
 
                 <div>
                     <span class="block font-bold text-slate-300 mb-2">Escolha o Ponto de Partida:</span>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <!-- Opção 1: Projeto em Branco -->
-                        <div onclick="selecionarTemplateNovoProjeto('em_branco')" id="cardTpl_em_branco" class="template-card border-2 border-emerald-500 bg-emerald-950/20 p-4 rounded-xl cursor-pointer hover:border-emerald-400 transition space-y-1.5 relative">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-white text-sm flex items-center gap-2">
-                                    <i class="fa-regular fa-file text-emerald-400"></i> Em Branco
-                                </span>
-                                <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold border border-emerald-500/40">Recomendado</span>
-                            </div>
-                            <p class="text-slate-400 text-[11px]">Planta limpa com 1 pavimento térreo e quadro QDT pronto para desenhar paredes e cômodos do zero.</p>
-                        </div>
-
-                        <!-- Opção 2: Casa Térrea -->
-                        <div onclick="selecionarTemplateNovoProjeto('casa_terrea')" id="cardTpl_casa_terrea" class="template-card border border-slate-800 bg-slate-950/60 p-4 rounded-xl cursor-pointer hover:border-slate-700 transition space-y-1.5">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-white text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-house text-amber-400"></i> Casa Térrea (4 Cômodos)
-                                </span>
-                                <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-bold">Completa</span>
-                            </div>
-                            <p class="text-slate-400 text-[11px]">Sala, Cozinha, Quarto e Banheiro já dimensionados com iluminação NBR 5410 e tomadas TUG/TUE.</p>
-                        </div>
-
-                        <!-- Opção 3: Sobrado 2 Pavimentos -->
-                        <div onclick="selecionarTemplateNovoProjeto('sobrado')" id="cardTpl_sobrado" class="template-card border border-slate-800 bg-slate-950/60 p-4 rounded-xl cursor-pointer hover:border-slate-700 transition space-y-1.5">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-white text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-building text-sky-400"></i> Sobrado (2 Andares)
-                                </span>
-                                <span class="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-full font-bold">Multi-Pavimento</span>
-                            </div>
-                            <p class="text-slate-400 text-[11px]">Térreo + 1º Andar conectados por Prumada Vertical 3D, lajes independentes e circuitos distribuídos.</p>
-                        </div>
-
-                        <!-- Opção 4: Apartamento Studio -->
-                        <div onclick="selecionarTemplateNovoProjeto('apartamento')" id="cardTpl_apartamento" class="template-card border border-slate-800 bg-slate-950/60 p-4 rounded-xl cursor-pointer hover:border-slate-700 transition space-y-1.5">
-                            <div class="flex items-center justify-between">
-                                <span class="font-bold text-white text-sm flex items-center gap-2">
-                                    <i class="fa-solid fa-city text-purple-400"></i> Apartamento Compacto
-                                </span>
-                                <span class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold">Studio</span>
-                            </div>
-                            <p class="text-slate-400 text-[11px]">Living integrado com cozinha americana, suíte e varanda técnica com ar-condicionado 12.000 BTU.</p>
-                        </div>
+                    <div id="gradeModelosNovoProjeto" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[52vh] overflow-y-auto pr-1">
+                        <!-- cartões gerados a partir de js/modelos-projeto.js (renderizarCardsModelosProjeto) -->
                     </div>
                 </div>
 

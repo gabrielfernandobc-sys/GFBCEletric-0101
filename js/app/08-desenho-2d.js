@@ -176,7 +176,7 @@
         }
 
         function atualizarNomeProjeto(val) {
-            if (!val) val = 'chácara';
+            if (!val) val = 'Projeto sem nome';
             if (!state.projetoAtual) state.projetoAtual = {};
             if (!state.projetoAtual) state.projetoAtual = {}; state.projetoAtual.nome = val;
             const inp = document.getElementById('inputNomeProjetoHeader');

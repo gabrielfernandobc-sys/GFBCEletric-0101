@@ -69,3 +69,30 @@ test('modelos com o número de pavimentos e cargas esperados; desconhecido vira 
     assert.equal(vazio.comodos.length, 0);
     assert.equal(vazio.terreno.largura, 12);
 });
+
+test('modelos novos: resumo para os cartões, ordem completa e cargas do catálogo', () => {
+    assert.deepEqual([...M.ORDEM].sort(), Object.keys(M.MODELOS).sort());
+    for (const id of M.ORDEM) {
+        const r = M.resumo(id);
+        assert.ok(r.nome && r.descricao && r.icone, id);
+        if (id !== 'em_branco') assert.ok(r.comodos > 0 && r.areaM2 > 0, id);
+    }
+    const popular = M.resumo('casa_popular_2q');
+    assert.ok(popular.areaM2 >= 45 && popular.areaM2 <= 55, popular.areaM2);
+    assert.equal(M.resumo('casa_3q_suite').comodos, 11);
+    const sob = M.montar('sobrado_3suites', { escala: 40 });
+    assert.equal(sob.pavimentos.length, 2);
+    assert.equal(sob.alimentacao.sistema, 'trifasico');                      // carga alta: entrada trifásica
+    assert.equal(sob.comodos.filter(c => /Suíte/.test(c.nome) && !/Banheiro/.test(c.nome)).length, 3);
+    assert.equal(sob.escadas.length, 1);
+    const apto = M.montar('apartamento_2q', { escala: 40 });
+    assert.equal(apto.pavimentos[0].alturaPeDireito, 2.6);
+    assert.equal(apto.pavimentos[0].tipoPassagemCabos, 'teto');              // fiação pela laje
+    assert.equal(M.montar('casa_terrea', { escala: 40 }).alimentacao.sistema, 'bifasico');
+    // todo modelo com cômodos tem chuveiro e os aparelhos novos usam os nomes do catálogo
+    for (const id of ['casa_popular_2q', 'casa_3q_suite', 'sobrado_3suites', 'apartamento_2q']) {
+        const tues = [].concat(...M.MODELOS[id].comodos.map(c => (c.pontos || []).filter(p => p.tipo === 'TUE')));
+        assert.ok(tues.some(t => /Chuveiro/.test(t.nome)), id);
+        tues.forEach(t => assert.ok(t.pot > 0 && [127, 220].includes(t.tensao), `${id}: ${t.nome}`));
+    }
+});
