@@ -1,0 +1,55 @@
+name: Testes
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unitarios:
+    name: Testes unitários (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: npm test
+        run: npm test
+      # O CSS do Tailwind é pré-compilado e versionado (o app roda sem build).
+      # A compilação leva ~2 s: confere se css/tailwind.css está atualizado com as classes usadas.
+      - name: CSS compilado atualizado
+        run: |
+          npm run build:css
+          git diff --exit-code --stat css/tailwind.css || { echo "::error file=css/tailwind.css::css/tailwind.css desatualizado: rode npm run build:css e faça o commit."; exit 1; }
+
+  ponta-a-ponta:
+    name: Testes das abas no navegador (Chromium)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      # Playwright fica fora do package.json (no ambiente de desenvolvimento ele já vem instalado
+      # globalmente com o Chromium); no CI instala a mesma versão só para este job.
+      - name: Instalar Playwright e Chromium
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: npm run test:e2e
+        run: npm run test:e2e

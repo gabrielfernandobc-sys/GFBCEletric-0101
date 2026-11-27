@@ -1678,6 +1678,36 @@
                         </div>
                         <span class="text-slate-500 text-[10px] pb-1 w-full">Pela laje (padrão das construções brasileiras tradicionais): o eletroduto corre embutido na laje e desce pelas paredes; cada trecho soma a descida (pé-direito − altura do ponto) e a sobra nas duas caixas. Pelo piso: sobe do contrapiso até cada caixa. A reserva entra na compra dos cabos (perdas, emendas e cortes).</span>
                     </div>
+                    <div class="w-full flex flex-wrap items-end gap-4 pt-2 border-t border-slate-800">
+                        <label class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-semibold">Tensão da rede (distribuidora)</span>
+                            <select id="selRedeTensao" onchange="alterarRedeTensao(this.value)"
+                                class="bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                                <option value="127/220">127/220 V (Sudeste, Centro-Oeste…)</option>
+                                <option value="220/380">220/380 V (Nordeste, parte do Sul…)</option>
+                            </select>
+                        </label>
+                        <label class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-semibold">Cálculo da queda de tensão</span>
+                            <select id="selMetodoQueda" onchange="alterarMetodoQueda(this.value)"
+                                class="bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                                <option value="simplificado">Simplificado (2ρLI/S, ρ a 70 °C)</option>
+                                <option value="detalhado">Detalhado (ρ na temperatura do cabo + reatância)</option>
+                            </select>
+                        </label>
+                        <label class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-semibold">Isolação dos cabos</span>
+                            <select id="selIsolacaoCabos" onchange="alterarIsolacaoCabos(this.value)"
+                                class="bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold px-2 py-1 rounded">
+                                <option value="pvc">PVC 70 °C (750 V, Tab. 36)</option>
+                                <option value="epr">EPR/XLPE 90 °C (0,6/1 kV, Tab. 37)</option>
+                            </select>
+                        </label>
+                        <span class="flex flex-col gap-0.5 pb-1 text-[10px] max-w-xl">
+                            <span id="lblRedeTensaoNBR" class="text-sky-300 font-semibold">F+N 127 V em TUGs e iluminação; aparelhos de 220 V entre fases (F+F); trifásico 3F+N em 220 V.</span>
+                            <span id="lblMetodoQuedaNBR" class="text-slate-500">ΔV = 2·ρ·L·Ib/S (monofásico) e √3·ρ·L·Ib/S (trifásico), ρ = 0,0221 Ω·mm²/m (cobre a 70 °C).</span>
+                        </span>
+                    </div>
                     <span id="lblTrechoAgrupadoNBR" class="w-full text-[11px] text-slate-300"></span>
                     <span id="lblCargaFasesNBR" class="w-full text-[11px] text-slate-300"></span>
                 </div>
@@ -2812,7 +2842,7 @@
                                     <th class="p-2.5 font-mono">I<sub>z</sub> Tab. 36</th>
                                     <th class="p-2.5 font-mono">I<sub>z</sub> corrigida</th>
                                     <th class="p-2.5 font-mono">Maior disjuntor</th>
-                                    <th class="p-2.5">Carga máx. 127 V / 220 V</th>
+                                    <th class="p-2.5">Carga máx. <span data-rede-rotulo="fnff">127V/220V</span></th>
                                     <th class="p-2.5">PE (Tab. 58)</th>
                                     <th class="p-2.5">Uso / Circuitos deste projeto</th>
                                 </tr>
@@ -2852,6 +2882,7 @@
                             <span class="font-bold text-purple-300 block mb-1">Critério 4: Queda de Tensão Máxima</span>
                             <p class="text-slate-400 text-[11px] leading-relaxed">
                                 Item 6.2.7: Limite de 4% a partir do quadro terminal ou 5% desde o ponto de entrega da concessionária.
+                                <span id="lblGuiaMetodoQueda" class="block mt-1 text-white font-mono text-[10px]">—</span>
                             </p>
                         </div>
                         <div class="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
@@ -3516,7 +3547,7 @@
                             <span class="font-black text-emerald-400 flex items-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-plug"></i> TUG (Uso Geral)
                             </span>
-                            <span class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">127V/220V</span>
+                            <span data-rede-rotulo="fnff" class="text-[9px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-mono">127V/220V</span>
                         </div>
                         <p class="text-[10px] text-slate-400 leading-tight">Tomadas para eletrodomésticos, TV, abajur, carregadores</p>
                         <div class="grid grid-cols-2 gap-1.5 pt-1">
@@ -3535,7 +3566,7 @@
                             <span class="font-black text-blue-400 flex items-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-bolt"></i> TUE (Específica)
                             </span>
-                            <span class="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-mono">220V</span>
+                            <span data-rede-rotulo="tue" class="text-[9px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded font-mono">220V</span>
                         </div>
                         <p class="text-[10px] text-slate-400 leading-tight">Cargas dedicadas exclusivas: Ar-condicionado, chuveiro, forno</p>
                         <div class="grid grid-cols-2 gap-1.5 pt-1">
@@ -3572,7 +3603,7 @@
                             <span class="font-black text-amber-400 flex items-center gap-1.5 text-xs">
                                 <i class="fa-solid fa-lightbulb"></i> Lâmpada (Teto)
                             </span>
-                            <span class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">127V</span>
+                            <span data-rede-rotulo="fn" class="text-[9px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">127V</span>
                         </div>
                         <p class="text-[10px] text-slate-400 leading-tight">Ponto de iluminação central ou adicional no forro</p>
                         <div class="grid grid-cols-2 gap-1.5 pt-1">

@@ -37,6 +37,16 @@
         25.0: 101, 35.0: 125, 50.0: 151, 70.0: 192, 95.0: 232, 120.0: 269
     };
 
+    // Isolação EPR/XLPE (90 °C), método B1, 30 °C — NBR 5410 Tabela 37 (cabos 0,6/1 kV).
+    const IZ_METODO_B1_EPR = {
+        1.5: 23, 2.5: 31, 4.0: 42, 6.0: 54, 10.0: 75, 16.0: 100,
+        25.0: 133, 35.0: 164, 50.0: 198, 70.0: 253, 95.0: 306, 120.0: 354
+    };
+    const IZ_METODO_B1_3C_EPR = {
+        1.5: 20, 2.5: 28, 4.0: 37, 6.0: 48, 10.0: 66, 16.0: 88,
+        25.0: 117, 35.0: 144, 50.0: 175, 70.0: 222, 95.0: 269, 120.0: 312
+    };
+
     // Mesmo método B1 (PVC 70 °C, 30 °C), 3 condutores carregados — alimentadores
     // bifásicos (F+F+N) e trifásicos (F+F+F) — NBR 5410 Tabela 36, coluna 3.
     const IZ_METODO_B1_3C = {
@@ -67,12 +77,50 @@
         { ate: 50, fct: 0.71 }, { ate: 55, fct: 0.61 }, { ate: 60, fct: 0.50 }
     ];
 
+    // FCT para isolação EPR/XLPE (90 °C), temperatura ambiente — NBR 5410 Tabela 40.
+    const FCT_TABELA_40_EPR = [
+        { ate: 10, fct: 1.15 }, { ate: 15, fct: 1.12 }, { ate: 20, fct: 1.08 }, { ate: 25, fct: 1.04 },
+        { ate: 30, fct: 1.00 }, { ate: 35, fct: 0.96 }, { ate: 40, fct: 0.91 }, { ate: 45, fct: 0.87 },
+        { ate: 50, fct: 0.82 }, { ate: 55, fct: 0.76 }, { ate: 60, fct: 0.71 }
+    ];
+
+    // Isolação dos condutores: temperatura máxima em serviço contínuo (NBR 5410 Tabela 35)
+    const ISOLACOES = Object.freeze({
+        pvc: Object.freeze({ id: 'pvc', rotulo: 'PVC 70 °C', temperaturaServico: 70 }),
+        epr: Object.freeze({ id: 'epr', rotulo: 'EPR/XLPE 90 °C', temperaturaServico: 90 })
+    });
+
+    // Queda de tensão no método detalhado:
+    //  - resistividade do cobre recozido a 20 °C (padrão IACS, NBR 5111 / IEC 60028) corrigida para a
+    //    temperatura de serviço da isolação: ρθ = ρ20 · [1 + α20 · (θ − 20)];
+    //  - reatância indutiva dos condutores em eletroduto, ≈ 0,08 mΩ/m (valor usual, p. ex. UTE C 15-105),
+    //    considerada a partir de 25 mm², quando passa a pesar frente à resistência;
+    //  - fator de potência da carga: 1 nas resistivas (chuveiro, torneira, aquecedor), 0,95 nas demais.
+    const RESISTIVIDADE_COBRE_20C = 0.017241;
+    const COEF_TEMPERATURA_COBRE = 0.00393;
+    const REATANCIA_CONDUTOR_OHM_M = 0.00008;
+    const SECAO_MINIMA_REATANCIA = 25;
+    const METODOS_QUEDA = Object.freeze({
+        simplificado: 'Simplificado: ΔV = 2·ρ·L·Ib/S (monofásico) ou √3·ρ·L·Ib/S (trifásico), ρ = 0,0221 Ω·mm²/m',
+        detalhado: 'Detalhado: ΔV = k·L·Ib·(ρθ/S·cos φ + X·sen φ), ρθ na temperatura de serviço da isolação e X = 0,08 mΩ/m a partir de 25 mm²'
+    });
+
     // Premissas padrão do projeto (ajustáveis por projeto na interface).
     // 3 circuitos no trecho de eletroduto mais carregado (saída do quadro) é a
     // premissa usual em projetos residenciais.
     // sobraCaixaM: sobra de condutor deixada em cada caixa (m por extremidade do trecho);
     // reservaCabosPct: reserva de compra sobre a metragem (perdas, emendas e cortes)
-    const PARAMETROS_PADRAO = Object.freeze({ circuitosAgrupados: 3, temperaturaAmbiente: 30, sobraCaixaM: 0.30, reservaCabosPct: 10 });
+    // redeTensao: '127/220' (padrão, inclusive para projetos antigos) ou '220/380';
+    // metodoQueda: 'simplificado' (2ρLI/S e √3ρLI/S com ρ a 70 °C) ou 'detalhado' (ver calcularQuedaTensao)
+    const PARAMETROS_PADRAO = Object.freeze({ circuitosAgrupados: 3, temperaturaAmbiente: 30, sobraCaixaM: 0.30, reservaCabosPct: 10, redeTensao: '127/220', metodoQueda: 'simplificado', isolacao: 'pvc' });
+
+    // Tensões nominais das redes de baixa tensão das distribuidoras (PRODIST, Módulo 8):
+    // 127/220 V (Sudeste, Centro-Oeste e boa parte do país) e 220/380 V (Nordeste, parte do Sul,
+    // DF e outras regiões). fn = fase-neutro, ff = fase-fase.
+    const REDES_TENSAO = Object.freeze({
+        '127/220': Object.freeze({ id: '127/220', fn: 127, ff: 220, rotulo: '127/220 V' }),
+        '220/380': Object.freeze({ id: '220/380', fn: 220, ff: 380, rotulo: '220/380 V' })
+    });
 
     // Alturas de instalação (m do piso acabado) usadas no app: tomada baixa, média (bancada,
     // interruptor) e alta (chuveiro, ar-condicionado); luz no teto.
@@ -122,9 +170,24 @@
     const FD_RECARGA_VEICULAR = 1.0;
     const ehRecargaVeicular = nome => /carregador|wallbox|recarga veicular|ve[ií]culo el[eé]trico/i.test(nome || '');
 
+    // Tolerância numérica: correntes (A), capacidades de condução (A) e quedas de tensão (%)
+    // são comparadas com 2 casas decimais. Assim, um ponto de 16 A por fase calculado como
+    // 16,00005 A (arredondamento da potência em W) fica no disjuntor de 16 A, e não no de 20 A.
+    const CASAS_TOLERANCIA = 2;
+
     // =========================================================================
     // 2. FUNÇÕES AUXILIARES
     // =========================================================================
+
+    /**
+     * Arredonda para `casas` decimais (padrão: 2, a tolerância das comparações normativas).
+     * O 1e-9 compensa a representação binária (16,005 × 100 = 1600,4999…).
+     */
+    function arredondar(valor, casas) {
+        const f = Math.pow(10, casas === undefined ? CASAS_TOLERANCIA : casas);
+        const v = Number(valor) || 0;
+        return Math.sign(v) * Math.round(Math.abs(v) * f + 1e-9) / f;
+    }
 
     /** Iz (A) da seção no método B1, sem correções. Lança erro para seção fora da tabela. */
     function izMetodoB1(secaoMm2) {
@@ -139,23 +202,36 @@
         return FCA_TABELA_42.find(l => n <= l.ate).fca;
     }
 
-    /**
-     * FCT da Tabela 40 (PVC, ambiente). Temperaturas intermediárias usam a linha
-     * imediatamente superior (a favor da segurança); acima de 60 °C usa 0,50.
-     */
-    function fatorTemperatura(temperaturaAmbiente) {
-        const t = Number(temperaturaAmbiente);
-        if (!isFinite(t)) return 1.00;
-        const linha = FCT_TABELA_40_PVC.find(l => t <= l.ate);
-        return linha ? linha.fct : FCT_TABELA_40_PVC[FCT_TABELA_40_PVC.length - 1].fct;
+    /** Isolação ('pvc' | 'epr'), padrão PVC 70 °C. */
+    function obterIsolacao(isolacao) {
+        return ISOLACOES[String(isolacao || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 3)] || ISOLACOES.pvc;
     }
 
-    /** Iz corrigida = Iz(B1) × FCA × FCT. */
-    function izCorrigida(secaoMm2, fca, fct, condutoresCarregados) {
-        // circuito trifásico (3 fases carregadas): coluna de 3 condutores da Tabela 36
-        const base = condutoresCarregados === 3 ? IZ_METODO_B1_3C[secaoMm2] : izMetodoB1(secaoMm2);
-        if (base === undefined) throw new Error(`Seção ${secaoMm2} mm² não consta da Tabela 36 (B1, 3 condutores).`);
-        return base * fca * fct;
+    /**
+     * FCT da Tabela 40 (ambiente; PVC ou EPR/XLPE). Temperaturas intermediárias usam a linha
+     * imediatamente superior (a favor da segurança); acima de 60 °C usa a última linha.
+     */
+    function fatorTemperatura(temperaturaAmbiente, isolacao) {
+        const t = Number(temperaturaAmbiente);
+        if (!isFinite(t)) return 1.00;
+        const tabela = obterIsolacao(isolacao).id === 'epr' ? FCT_TABELA_40_EPR : FCT_TABELA_40_PVC;
+        const linha = tabela.find(l => t <= l.ate);
+        return linha ? linha.fct : tabela[tabela.length - 1].fct;
+    }
+
+    /** Iz da Tabela 36 (PVC) ou 37 (EPR/XLPE), método B1, sem correções. */
+    function izTabela(secaoMm2, condutoresCarregados, isolacao) {
+        const epr = obterIsolacao(isolacao).id === 'epr';
+        const tabela = condutoresCarregados === 3 ? (epr ? IZ_METODO_B1_3C_EPR : IZ_METODO_B1_3C) : (epr ? IZ_METODO_B1_EPR : IZ_METODO_B1);
+        const iz = tabela[secaoMm2];
+        if (iz === undefined) throw new Error(`Seção ${secaoMm2} mm² não consta da Tabela ${epr ? 37 : 36} (B1, ${condutoresCarregados === 3 ? 3 : 2} condutores).`);
+        return iz;
+    }
+
+    /** Iz corrigida = Iz(B1) × FCA × FCT (isolação PVC, padrão, ou EPR/XLPE). */
+    function izCorrigida(secaoMm2, fca, fct, condutoresCarregados, isolacao) {
+        // circuito trifásico (3 fases carregadas): coluna de 3 condutores da Tabela 36/37
+        return izTabela(secaoMm2, condutoresCarregados === 3 ? 3 : 2, isolacao) * fca * fct;
     }
 
     /** Altura do ponto (m): 'teto'/luz = pé-direito; baixa 0,30; media 1,20; alta 2,00. */
@@ -193,6 +269,70 @@
         return Number(fases) === 3 ? P / (Math.sqrt(3) * V) : P / V;
     }
 
+    /** Rede de BT pelo id ('127/220' | '220/380') ou pelas premissas; padrão 127/220 V. */
+    function obterRede(rede) {
+        if (rede && typeof rede === 'object' && rede.fn) return rede;
+        const id = rede && typeof rede === 'object' ? rede.redeTensao : rede;
+        return REDES_TENSAO[String(id || '').replace(/\s|v/gi, '')] || REDES_TENSAO['127/220'];
+    }
+
+    /**
+     * Polos do circuito da carga na rede: trifásica → 3P (3F+N, tensão entre fases);
+     * tensão fase-fase → 2P (F+F); demais → 1P (F+N). Na rede 127/220 V um aparelho de 220 V
+     * é bifásico (F+F); na 220/380 V ele é ligado entre fase e neutro (F+N).
+     */
+    function polosDaCarga(tensaoV, fases, rede) {
+        const r = obterRede(rede);
+        if (Number(fases) === 3) return '3P';
+        return Number(tensaoV) >= r.ff - 1 ? '2P' : '1P';
+    }
+
+    /** Corrente por fase escrita no nome do aparelho ("… (16 A por fase)"), ou null. */
+    function correntePorFaseNoNome(nome) {
+        const m = String(nome || '').match(/(\d+(?:[.,]\d+)?)\s*A\s+por\s+fase/i);
+        return m ? parseFloat(m[1].replace(',', '.')) : null;
+    }
+
+    /**
+     * Tensão (V) de uma carga na rede escolhida. Os cadastros do app (modelos, catálogo,
+     * atalhos) são escritos na convenção 127/220 V; na rede 220/380 V:
+     *   TUG, iluminação, interruptor e aparelhos de 127 V → 220 V (F+N);
+     *   aparelhos de 220 V → 220 V (F+N); trifásicos → 380 V entre fases.
+     * De volta à rede 127/220 V: TUG/iluminação → 127 V, 380 V → 220 V, trifásicos → 220 V.
+     * @param {Object} carga {tipo, tensao, fases}
+     */
+    function tensaoNaRede(carga, rede) {
+        const r = obterRede(rede);
+        const c = carga || {};
+        const v = Number(c.tensao) || 0;
+        if (ehCargaTrifasica(c)) return r.ff;
+        if (c.tipo === 'TUG' || c.tipo === 'ILUM' || c.tipo === 'INTERRUPTOR' || c.tipo === 'Iluminação') return r.fn;
+        if (r.fn === 220) return v >= 380 ? 380 : 220;     // 127 e 220 V → F+N; 380 V → F+F
+        return v >= 220 ? 220 : (v > 0 ? 127 : 220);       // 380 V → 220 V (F+F); padrão 220 V
+    }
+
+    /**
+     * Potência (W) de uma carga trifásica limitada em `correnteFase` A por fase: √3 · V_ff · I.
+     * Carregador de 11 kW limitado a 16 A: 6 097 W em 127/220 V e 10 531 W em 220/380 V.
+     */
+    function potenciaTrifasicaPorCorrente(correnteFase, rede) {
+        return Math.round(Math.sqrt(3) * obterRede(rede).ff * (Number(correnteFase) || 0));
+    }
+
+    /**
+     * Potência máxima (VA) por circuito na divisão automática, mantendo as mesmas correntes da
+     * rede 127/220 V (≈ 9,4 A na iluminação e ≈ 17,3 A nas TUGs): na rede 220/380 V os limites
+     * crescem na razão 220/127 (arredondados a 100 VA para baixo).
+     */
+    function limitesPotenciaCircuito(rede) {
+        const r = obterRede(rede);
+        const k = r.fn / 127;
+        return {
+            iluminacao: Math.floor(LIMITE_POT_ILUMINACAO_VA * k / 100) * 100,
+            tug: Math.floor(LIMITE_POT_TUG_VA * k / 100) * 100
+        };
+    }
+
     /** Seção mínima do condutor de proteção (PE) — NBR 5410 Tabela 58. */
     function secaoProtecao(secaoFaseMm2) {
         if (secaoFaseMm2 <= 16) return secaoFaseMm2;
@@ -217,7 +357,8 @@
      * @param {number} ib Corrente de projeto (A)
      * @returns {{cabo: string, disj: string}}
      */
-    function selecionarProtecaoTUE(ib) {
+    function selecionarProtecaoTUE(ibBruto) {
+        const ib = arredondar(ibBruto);
         let cabo = '2.5 mm²';
         let disj = '20 A';
         if (ib <= 12) { cabo = '2.5 mm²'; disj = '16 A'; }
@@ -230,17 +371,36 @@
         return { cabo, disj };
     }
 
+    /** Resistividade do cobre (Ω·mm²/m) na temperatura θ (°C): ρ20 · [1 + α20 · (θ − 20)]. */
+    function resistividadeCobre(temperaturaC) {
+        return RESISTIVIDADE_COBRE_20C * (1 + COEF_TEMPERATURA_COBRE * ((Number(temperaturaC) || 20) - 20));
+    }
+
     /**
-     * Queda de tensão no circuito:
-     *   monofásico (fase-neutro ou fase-fase, ida e volta): ΔV = 2 · ρ · L · Ib / S
-     *   trifásico equilibrado (entre fases):               ΔV = √3 · ρ · L · Ib / S
+     * Queda de tensão no circuito.
+     *   Simplificado (padrão):
+     *     monofásico (fase-neutro ou fase-fase, ida e volta): ΔV = 2 · ρ · L · Ib / S
+     *     trifásico equilibrado (entre fases):               ΔV = √3 · ρ · L · Ib / S,  ρ = 0,0221
+     *   Detalhado (opcoes.metodo = 'detalhado'):
+     *     ΔV = k · L · Ib · (ρθ / S · cos φ + X · sen φ), k = 2 ou √3, ρθ na temperatura de serviço
+     *     da isolação (70 °C PVC, 90 °C EPR/XLPE) e X = 0,08 mΩ/m a partir de 25 mm²
      * @param {number} [fases=1] 3 para circuito trifásico
-     * @returns {{volts: number, pct: number}}
+     * @param {Object} [opcoes] { metodo: 'simplificado'|'detalhado', isolacao: 'pvc'|'epr', fp: 0..1, k }
+     * @returns {{volts: number, pct: number, metodo: string, rho: number, reatancia: number, fp: number}}
      */
-    function calcularQuedaTensao(ib, comprimentoM, secaoMm2, tensaoV, fases) {
-        const k = Number(fases) === 3 ? Math.sqrt(3) : 2;
-        const volts = (k * RESISTIVIDADE_COBRE_70C * comprimentoM * ib) / secaoMm2;
-        return { volts, pct: (volts / tensaoV) * 100 };
+    function calcularQuedaTensao(ib, comprimentoM, secaoMm2, tensaoV, fases, opcoes) {
+        const op = opcoes || {};
+        const k = op.k !== undefined ? op.k : (Number(fases) === 3 ? Math.sqrt(3) : 2);
+        if (op.metodo !== 'detalhado') {
+            const volts = (k * RESISTIVIDADE_COBRE_70C * comprimentoM * ib) / secaoMm2;
+            return { volts, pct: (volts / tensaoV) * 100, metodo: 'simplificado', rho: RESISTIVIDADE_COBRE_70C, reatancia: 0, fp: 1 };
+        }
+        const rho = resistividadeCobre(obterIsolacao(op.isolacao).temperaturaServico);
+        const fp = Math.min(1, Math.max(0, op.fp === undefined ? 1 : Number(op.fp)));
+        const sen = Math.sqrt(1 - fp * fp);
+        const x = secaoMm2 >= SECAO_MINIMA_REATANCIA ? REATANCIA_CONDUTOR_OHM_M : 0;
+        const volts = k * comprimentoM * ib * (rho / secaoMm2 * fp + x * sen);
+        return { volts, pct: (volts / tensaoV) * 100, metodo: 'detalhado', rho, reatancia: x, fp };
     }
 
     /** Taxa máxima de ocupação do eletroduto — NBR 5410 item 6.2.11.1.6. */
@@ -372,9 +532,13 @@
      */
     function dimensionarCircuito(circ, opcoes) {
         const op = Object.assign({}, PARAMETROS_PADRAO, opcoes || {});
+        const isolacao = obterIsolacao(op.isolacao);
         const fca = fatorAgrupamento(op.circuitosAgrupados);
-        const fct = fatorTemperatura(op.temperaturaAmbiente);
-        const ib = Number(circ.ibVal) || 0;
+        const fct = fatorTemperatura(op.temperaturaAmbiente, isolacao.id);
+        // Ib com a tolerância de 2 casas: é este valor que se compara com In e Iz
+        // (a queda de tensão usa a corrente sem arredondar)
+        const ibReal = Number(circ.ibVal) || 0;
+        const ib = arredondar(ibReal);
         const alertas = [];
 
         // 1. Disjuntor
@@ -389,26 +553,27 @@
         const fases = circ.polos === '3P' ? 3 : 1;
         const carregados = fases === 3 ? 3 : 2;
         const secaoMin = (circ.tipo === 'Iluminação') ? SECAO_MINIMA_ILUMINACAO : SECAO_MINIMA_FORCA;
-        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= secaoMin && izCorrigida(s, fca, fct, carregados) >= inDisj);
+        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= secaoMin && arredondar(izCorrigida(s, fca, fct, carregados, isolacao.id)) >= inDisj);
         if (idx === -1) {
             idx = SECOES_PADRONIZADAS.length - 1;
             alertas.push(`Nenhuma seção até ${SECOES_PADRONIZADAS[idx]} mm² atende In ${inDisj} A com FCA ${fca.toFixed(2)} × FCT ${fct.toFixed(2)}.`);
         }
 
-        // 3. Queda de tensão
+        // 3. Queda de tensão (método das premissas: simplificado, padrão, ou detalhado)
         const distParaDeltaV = circ.ehManual ? circ.rota : (circ.distanciaCritica || circ.rota);
-        let queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao, fases);
-        while (queda.pct > QUEDA_TENSAO_MAX_PCT && idx < SECOES_PADRONIZADAS.length - 1) {
+        const opQueda = { metodo: op.metodoQueda, isolacao: isolacao.id, fp: ehCargaResistiva(circ.nome) ? 1 : FATOR_POTENCIA_RESIDENCIAL };
+        let queda = calcularQuedaTensao(ibReal, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao, fases, opQueda);
+        while (arredondar(queda.pct) > QUEDA_TENSAO_MAX_PCT && idx < SECOES_PADRONIZADAS.length - 1) {
             idx++;
-            queda = calcularQuedaTensao(ib, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao, fases);
+            queda = calcularQuedaTensao(ibReal, distParaDeltaV, SECOES_PADRONIZADAS[idx], circ.tensao, fases, opQueda);
         }
-        const quedaOk = queda.pct <= QUEDA_TENSAO_MAX_PCT;
+        const quedaOk = arredondar(queda.pct) <= QUEDA_TENSAO_MAX_PCT;
         if (!quedaOk) {
             alertas.push(`Queda de tensão de ${queda.pct.toFixed(1)}% excede 4% mesmo com ${SECOES_PADRONIZADAS[idx]} mm²: reduza o comprimento ou divida o circuito.`);
         }
 
         const secaoNum = SECOES_PADRONIZADAS[idx];
-        const iz = izCorrigida(secaoNum, fca, fct, carregados);
+        const iz = izCorrigida(secaoNum, fca, fct, carregados, isolacao.id);
 
         circ.disj = `${inDisj} A`;
         circ.cabo = formatarSecao(secaoNum);
@@ -421,6 +586,8 @@
         circ.secaoPE = secaoProtecao(secaoNum);
         circ.deltaVVolts = queda.volts;
         circ.deltaVPct = queda.pct;
+        circ.metodoQueda = queda.metodo;
+        circ.isolacao = isolacao.id;
         circ.quedaTensaoOk = quedaOk;
         circ.quedaStatus = quedaOk
             ? `${queda.pct.toFixed(1)}% (OK ≤ 4%)`
@@ -440,7 +607,8 @@
         circ.idrTag = ehAreaMolhadaOuPotencia(circ) ? 'IDR 30mA (Obrigatório)' : 'IDR 30mA (Geral)';
 
         // 6. Verificação final Ib ≤ In ≤ Iz (corrigida)
-        circ.ampacidadeOk = (ib <= inDisj && inDisj <= iz);
+        circ.ibProjeto = ib;
+        circ.ampacidadeOk = (ib <= inDisj && inDisj <= arredondar(iz));
         circ.conforme = circ.ampacidadeOk && quedaOk && circ.eletrodutoInfo.atende;
         circ.alertas = alertas;
 
@@ -716,6 +884,7 @@
             norma: 'N-120.0001',
             ufs: ['SC'],
             tensao: '220/380V',
+            redeCategorias: '220/380',      // categorias abaixo cadastradas para a rede 220/380 V
             descricao: 'Norma Técnica Celesc de Fornecimento em Tensão Secundária - Santa Catarina.',
             tabelaIlumTug: [
                 { de: 0, ate: 1.0, fd: 0.86 },
@@ -871,6 +1040,29 @@
     // 5. CÁLCULO DE DEMANDA DA EDIFICAÇÃO (PADRÃO DE ENTRADA)
     // =========================================================================
 
+    /** Redes (ids) atendidas pela distribuidora, pelo campo `tensao` do cadastro. */
+    function redesDaConcessionaria(conc) {
+        const t = String((conc && conc.tensao) || '127/220');
+        const lista = [];
+        if (/127\s*\/\s*220/.test(t)) lista.push('127/220');
+        if (/220\s*\/\s*380/.test(t)) lista.push('220/380');
+        return lista.length ? lista : ['127/220'];
+    }
+
+    /**
+     * Categorias de atendimento da distribuidora na rede escolhida. As tabelas cadastradas valem
+     * para a rede de referência (`redeCategorias`, padrão 127/220 V); na outra rede, o limite de
+     * demanda de cada categoria (mesmo disjuntor e mesmo cabo) é escalado pela razão das tensões
+     * fase-neutro — estimativa a confirmar na norma da distribuidora (marcada `estimada`).
+     */
+    function categoriasNaRede(conc, rede) {
+        const r = obterRede(rede);
+        const base = obterRede(conc.redeCategorias || '127/220');
+        if (r.id === base.id) return conc.categorias;
+        const k = r.fn / base.fn;
+        return conc.categorias.map(c => Object.assign({}, c, { kvaMax: Math.round(c.kvaMax * k * 2) / 2, estimada: true }));
+    }
+
     /** Normaliza o sistema de alimentação para 'monofasico' | 'bifasico' | 'trifasico'. */
     function normalizarSistema(sistema) {
         const s = String(sistema || 'bifasico').toLowerCase();
@@ -884,9 +1076,12 @@
      * @param {Array<{nome: string, pot: number}>} tues Pontos de uso específico
      * @param {string} sistema 'monofasico' | 'bifasico' | 'trifasico'
      * @param {string} concessionariaId chave de CONCESSIONARIAS (padrão: cpfl)
+     * @param {string} [rede='127/220'] rede de BT ('127/220' | '220/380'): define as categorias
      */
-    function calcularDemanda(totIlum, totTug, tues, sistema, concessionariaId) {
+    function calcularDemanda(totIlum, totTug, tues, sistema, concessionariaId, rede) {
         const conc = CONCESSIONARIAS[concessionariaId] || CONCESSIONARIAS.cpfl;
+        const redeObj = obterRede(rede);
+        const categorias = categoriasNaRede(conc, redeObj);
 
         // Parcela a: iluminação e TUGs, por faixas de potência (kW)
         const potIlumTugKW = (totIlum + totTug) / 1000.0;
@@ -961,16 +1156,16 @@
         const sistLimpo = normalizarSistema(sistema);
         const tipoAlvo = sistLimpo === 'trifasico' ? 'Trifásico' : (sistLimpo === 'monofasico' ? 'Monofásico' : 'Bifásico');
 
-        let categoriaAtend = conc.categorias.find(cat => cat.tipo === tipoAlvo && demandaTotalkVA <= cat.kvaMax) || null;
+        let categoriaAtend = categorias.find(cat => cat.tipo === tipoAlvo && demandaTotalkVA <= cat.kvaMax) || null;
         if (!categoriaAtend) {
             if (sistLimpo === 'monofasico') {
-                categoriaAtend = conc.categorias.find(cat => (cat.tipo === 'Bifásico' || cat.tipo === 'Trifásico') && demandaTotalkVA <= cat.kvaMax) || null;
+                categoriaAtend = categorias.find(cat => (cat.tipo === 'Bifásico' || cat.tipo === 'Trifásico') && demandaTotalkVA <= cat.kvaMax) || null;
             } else if (sistLimpo === 'bifasico') {
-                categoriaAtend = conc.categorias.find(cat => cat.tipo === 'Trifásico' && demandaTotalkVA <= cat.kvaMax) || null;
+                categoriaAtend = categorias.find(cat => cat.tipo === 'Trifásico' && demandaTotalkVA <= cat.kvaMax) || null;
             }
         }
         if (!categoriaAtend) {
-            categoriaAtend = conc.categorias[conc.categorias.length - 1];
+            categoriaAtend = categorias[categorias.length - 1];
         }
 
         return {
@@ -984,7 +1179,11 @@
             parcelaC: { potKW: potArCondKW, demKW: demandaArKW, qtd: qtdArCond, fd: fdAr, itens: aparelhosAr },
             parcelaD: { potKW: potOutrasKW, demKW: demandaOutrasKW },
             parcelaE: { potKW: potVeKW, demKW: demandaVeKW, qtd: aparelhosVe.length, fd: FD_RECARGA_VEICULAR, itens: aparelhosVe },
-            categoriaAtend
+            categoriaAtend,
+            categorias,
+            rede: redeObj,
+            atendeRede: redesDaConcessionaria(conc).includes(redeObj.id),
+            categoriasEstimadas: categorias !== conc.categorias
         };
     }
 
@@ -1151,36 +1350,41 @@
      * @param {number} [p.tensaoFN=127]   tensão fase-neutro (V)
      * @param {number} [p.quedaTerminalMaxPct=0] maior queda nos circuitos terminais (%)
      * @param {number} [p.temperaturaAmbiente=30]
+     * @param {string} [p.metodoQueda='simplificado'] 'simplificado' | 'detalhado'
+     * @param {string} [p.isolacao='pvc'] 'pvc' | 'epr'
      */
     function dimensionarAlimentador(p) {
         const sist = normalizarSistema(p.sistema);
         const vFN = Number(p.tensaoFN) || 127;
-        const fct = fatorTemperatura(p.temperaturaAmbiente === undefined ? 30 : p.temperaturaAmbiente);
+        const isolacao = obterIsolacao(p.isolacao);
+        const fct = fatorTemperatura(p.temperaturaAmbiente === undefined ? 30 : p.temperaturaAmbiente, isolacao.id);
         const inD = Number(p.inDisjuntor) || 0;
         const L = Number(p.comprimento) || 0;
         const sVA = (Number(p.demandaKVA) || 0) * 1000;
         const nFases = sist === 'trifasico' ? 3 : (sist === 'bifasico' ? 2 : 1);
         const ib = sVA / (nFases * vFN);                     // carga equilibrada entre as fases
         const tres = sist !== 'monofasico';                  // F+F+N ou 3F: 3 condutores carregados
-        const iz = s => (tres ? IZ_METODO_B1_3C[s] : IZ_METODO_B1[s]) * fct;
+        const iz = s => izTabela(s, tres ? 3 : 2, isolacao.id) * fct;
         // monofásico: ida e volta; equilibrado: neutro sem corrente, queda fase-neutro
-        const queda = s => ((sist === 'monofasico' ? 2 : 1) * RESISTIVIDADE_COBRE_70C * L * ib / s) / vFN * 100;
+        const opQueda = { metodo: p.metodoQueda, isolacao: isolacao.id, fp: FATOR_POTENCIA_RESIDENCIAL, k: sist === 'monofasico' ? 2 : 1 };
+        const queda = s => calcularQuedaTensao(ib, L, s, vFN, 1, opQueda).pct;
         const limite = Math.max(0.5, QUEDA_TENSAO_TOTAL_MAX_PCT - (Number(p.quedaTerminalMaxPct) || 0));
         const alertas = [];
         const minimo = Math.max(Number(p.secaoMinima) || 0, SECAO_MINIMA_FORCA);
-        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= minimo && iz(s) >= inD);
+        let idx = SECOES_PADRONIZADAS.findIndex(s => s >= minimo && arredondar(iz(s)) >= inD);
         if (idx < 0) { idx = SECOES_PADRONIZADAS.length - 1; alertas.push(`Nenhuma seção até ${SECOES_PADRONIZADAS[idx]} mm² atende ${inD} A.`); }
         const porCorrente = SECOES_PADRONIZADAS[idx];
-        while (queda(SECOES_PADRONIZADAS[idx]) > limite && idx < SECOES_PADRONIZADAS.length - 1) idx++;
+        while (arredondar(queda(SECOES_PADRONIZADAS[idx])) > arredondar(limite) && idx < SECOES_PADRONIZADAS.length - 1) idx++;
         const secao = SECOES_PADRONIZADAS[idx];
         const pct = queda(secao);
-        if (pct > limite + 1e-9) alertas.push(`Queda de tensão do alimentador ${pct.toFixed(1)}% excede o disponível (${limite.toFixed(1)}%).`);
-        if (ib > inD + 1e-9) alertas.push(`Corrente de demanda (${ib.toFixed(1)} A por fase) acima do disjuntor geral (${inD} A): Ib ≤ In não é atendida (item 5.3.4.1); confira a categoria de atendimento da concessionária.`);
+        if (arredondar(pct) > arredondar(limite)) alertas.push(`Queda de tensão do alimentador ${pct.toFixed(1)}% excede o disponível (${limite.toFixed(1)}%).`);
+        if (arredondar(ib) > inD) alertas.push(`Corrente de demanda (${ib.toFixed(1)} A por fase) acima do disjuntor geral (${inD} A): Ib ≤ In não é atendida (item 5.3.4.1); confira a categoria de atendimento da concessionária.`);
         return {
             secao, secaoPorCorrente: porCorrente, secaoPE: secaoProtecao(secao), secaoNeutro: secao, comprimento: L,
             izCorrigida: iz(secao), ib, quedaPct: pct, quedaLimitePct: limite,
             quedaTotalPct: pct + (Number(p.quedaTerminalMaxPct) || 0),
             condutoresCarregados: tres ? 3 : 2, aumentouPorQueda: secao > porCorrente,
+            metodoQueda: p.metodoQueda === 'detalhado' ? 'detalhado' : 'simplificado', isolacao: isolacao.id,
             aumentouPorNorma: secao > (Number(p.secaoMinima) || 0), alertas
         };
     }
@@ -1232,6 +1436,7 @@
      * @param {string} p.esquema       esquema de aterramento ('TN-C' não admite DR)
      * @param {number} p.inGeral       corrente do disjuntor geral (A)
      * @param {Object} p.modelo        { polos: 'auto'|'2P'|'4P', corrente: 'auto'|número, sensibilidade: 30|300, tipo: 'AC'|'A' }
+     * @param {number} [p.tensaoFF=220] tensão entre fases da rede (rótulo dos IDRs F+F)
      * @returns {{idrs: Array<{id, grupo, nome, polosLetras, polos, corrente, sensibilidade, tipo, circuitos:number[]}>,
      *            direto: number[], alertas: string[]}}
      */
@@ -1296,7 +1501,7 @@
                 const letras = chave.includes('+') ? chave.split('+') : ['N', chave];
                 idrs.push(Object.assign({}, base, {
                     id: `${g.id}_${chave.replace('+', '')}`,
-                    nome: `${g.rotulo} ${chave.includes('+') ? chave.replace('+', '+') + ' (220 V)' : chave + '+N'}`,
+                    nome: `${g.rotulo} ${chave.includes('+') ? chave + ` (${Number(p.tensaoFF) || 220} V)` : chave + '+N'}`,
                     polosLetras: letras, circuitos: porChave.get(chave)
                 }));
             });
@@ -1316,6 +1521,7 @@
         FCA_TABELA_42,
         FCT_TABELA_40_PVC,
         PARAMETROS_PADRAO,
+        REDES_TENSAO,
         DIAMETRO_EXTERNO_CABO_MM,
         ELETRODUTOS_DN,
         QUEDA_TENSAO_MAX_PCT,
@@ -1326,11 +1532,33 @@
         FATOR_POTENCIA_RESIDENCIAL,
         CONCESSIONARIAS,
         IZ_METODO_B1_3C,
+        IZ_METODO_B1_EPR,
+        IZ_METODO_B1_3C_EPR,
+        FCT_TABELA_40_EPR,
+        ISOLACOES,
+        RESISTIVIDADE_COBRE_20C,
+        COEF_TEMPERATURA_COBRE,
+        REATANCIA_CONDUTOR_OHM_M,
+        SECAO_MINIMA_REATANCIA,
+        METODOS_QUEDA,
         QUEDA_TENSAO_TOTAL_MAX_PCT,
+        CASAS_TOLERANCIA,
         IDR_CORRENTES_COMERCIAIS,
         IDR_SENSIBILIDADES_MA,
         IDR_TIPOS,
         // funções
+        arredondar,
+        obterIsolacao,
+        izTabela,
+        resistividadeCobre,
+        obterRede,
+        polosDaCarga,
+        tensaoNaRede,
+        correntePorFaseNoNome,
+        potenciaTrifasicaPorCorrente,
+        limitesPotenciaCircuito,
+        redesDaConcessionaria,
+        categoriasNaRede,
         classificarAmbiente,
         tomadasMinimas,
         potenciasTomadas,

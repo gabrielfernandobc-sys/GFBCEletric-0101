@@ -369,9 +369,9 @@
                 if (selOutra) {
                     const grupos = {};
                     SUGESTOES_CARGAS_BR.forEach((item, index) => {
-                        if (item.tipo === 'TUE') {
+                        if (item.tipo === 'TUE' && itemCatalogoVisivelNaRede(item)) {
                             if (!grupos[item.grupo]) grupos[item.grupo] = [];
-                            grupos[item.grupo].push({ ...item, index });
+                            grupos[item.grupo].push({ ...itemCatalogoNaRede(item), index });
                         }
                     });
                     for (const [nomeGrupo, itens] of Object.entries(grupos)) {
@@ -399,7 +399,7 @@
         function adicionarTueCustomizadaAoComodoModal(comodoId) {
             const sel = document.getElementById(`selAddOutraTue_${comodoId}`);
             if (!sel || sel.value === '') return;
-            const item = SUGESTOES_CARGAS_BR[parseInt(sel.value, 10)];
+            const item = itemCatalogoNaRede(SUGESTOES_CARGAS_BR[parseInt(sel.value, 10)]);
             if (!item) return;
 
             const grid = document.getElementById(`gridTuesComodo_${comodoId}`);
@@ -565,6 +565,7 @@
 
             const t = (termo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const itensFiltrados = SUGESTOES_CARGAS_BR.filter(it => {
+                if (!itemCatalogoVisivelNaRede(it)) return false;
                 if (!t) return true;
                 const n = it.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
                 const g = it.grupo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -580,7 +581,7 @@
             const grupos = {};
             itensFiltrados.forEach((item, index) => {
                 if (!grupos[item.grupo]) grupos[item.grupo] = [];
-                grupos[item.grupo].push({ ...item, globalIndex: SUGESTOES_CARGAS_BR.indexOf(item) });
+                grupos[item.grupo].push({ ...itemCatalogoNaRede(item), globalIndex: SUGESTOES_CARGAS_BR.indexOf(item) });
             });
 
             for (const [nomeGrupo, itens] of Object.entries(grupos)) {
@@ -619,7 +620,7 @@
         }
 
         function inserirTueDoCatalogo(index) {
-            const it = SUGESTOES_CARGAS_BR[index];
+            const it = itemCatalogoNaRede(SUGESTOES_CARGAS_BR[index]);
             if (!it) return;
             fecharCatalogoCompletoTuesModal();
             inserirPontoRapido(it.tipo || 'TUE', it.pot, it.tensao || 220, it.altura || 'alta', it.nome, it.fases);
@@ -635,8 +636,9 @@
 
             const grupos = {};
             SUGESTOES_CARGAS_BR.forEach((item, index) => {
+                if (!itemCatalogoVisivelNaRede(item)) return;
                 if (!grupos[item.grupo]) grupos[item.grupo] = [];
-                grupos[item.grupo].push({ ...item, index });
+                grupos[item.grupo].push({ ...itemCatalogoNaRede(item), index });
             });
 
             for (const [nomeGrupo, itens] of Object.entries(grupos)) {
@@ -654,12 +656,12 @@
 
         function aoSelecionarAparelhoModalPonto(indexStr) {
             if (indexStr === '') return;
-            const item = SUGESTOES_CARGAS_BR[parseInt(indexStr, 10)];
+            const item = itemCatalogoNaRede(SUGESTOES_CARGAS_BR[parseInt(indexStr, 10)]);
             if (!item) return;
 
             document.getElementById('txtModalPontoNome').value = item.nome;
             document.getElementById('selModalPontoTipo').value = item.tipo;
-            document.getElementById('selModalPontoTensao').value = item.fases === 3 ? '220-3F' : String(item.tensao);
+            document.getElementById('selModalPontoTensao').value = valorTensaoSelect(item.tipo, item.tensao, item.fases);
             document.getElementById('numModalPontoPot').value = item.pot;
             if (item.altura) {
                 document.getElementById('selModalPontoAltura').value = item.altura;

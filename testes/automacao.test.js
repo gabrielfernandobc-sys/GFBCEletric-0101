@@ -202,7 +202,7 @@ test('painel: atuadores em 4/8/12 canais, módulos e caixa comercial', () => {
 });
 
 test('carregador trifásico: relé de potência com a corrente por fase e contator 4NA', () => {
-    const pts = pontos.concat([{ id: 'w22', tipo: 'TUE', nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', pot: 12193, tensao: 220, fases: 3, x: 400, y: 100, comodoId: 5 }]);
+    const pts = pontos.concat([{ id: 'w22', tipo: 'TUE', nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', pot: 12194, tensao: 220, fases: 3, x: 400, y: 100, comodoId: 5 }]);
     const devs = A.levantarDispositivos({ comodos, pontos: pts, pavimentos, escala: ESC, nivel: 'intermediario' });
     const w = devs.find(d => d.origemPontoId === 'w22');
     assert.equal(w.tipo, 'rele_potencia');
@@ -211,7 +211,7 @@ test('carregador trifásico: relé de potência com a corrente por fase e contat
     const painel = A.montarPainel({ tecnologia: 'zigbee', dispositivos: devs });
     assert.ok(painel.itens.some(i => /Contator modular 40 A 4NA/.test(i.nome) && i.modulos === 3));
     // trifásico de 16 A/fase também vai a contator 4NA (relé inteligente comum chaveia uma fase só)
-    const p16 = pontos.concat([{ id: 'w11', tipo: 'TUE', nome: 'Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', pot: 6096, tensao: 220, fases: 3, x: 400, y: 100, comodoId: 5 }]);
+    const p16 = pontos.concat([{ id: 'w11', tipo: 'TUE', nome: 'Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', pot: 6097, tensao: 220, fases: 3, x: 400, y: 100, comodoId: 5 }]);
     const d16 = A.levantarDispositivos({ comodos, pontos: p16, pavimentos, escala: ESC, nivel: 'intermediario' });
     assert.ok(A.montarPainel({ tecnologia: 'zigbee', dispositivos: d16 }).itens.some(i => /Contator modular 20 A 4NA/.test(i.nome)));
 });
@@ -408,4 +408,94 @@ test('porta de entrada: "Sala de Estar e Jantar" e "Living / Jantar" contam como
         assert.equal(devs.find(d => d.tipo === 'fechadura').comodoId, 2, nome);
         assert.equal(devs.find(d => d.tipo === 'videoporteiro').comodoId, 2, nome);
     }
+});
+
+// ---------------------------------------------------------------------------
+// Regras configuráveis da alimentação e alcance de rádio documentado
+// ---------------------------------------------------------------------------
+test('alimentação: distância máxima para aproveitar a TUG existente é configurável (0,5 a 5 m)', () => {
+    const sala = { id: 1, nome: 'Sala', x: 40, y: 40, largura: 5, comprimento: 4, pavimentoId: 'terreo' };
+    const sirene = { id: 'sir', tipo: 'sirene', comodoId: 1, pavimentoId: 'terreo', x: 140, y: 47 };
+    const tug = { id: 't2', tipo: 'TUG', nome: 'TUG alta', comodoId: 1, x: 220, y: 46, altura: 'alta' };     // ≈ 2 m da sirene
+    const plano = dist => A.planejarAlimentacao({ dispositivos: [sirene], pontos: [tug], comodos: [sala], escala: ESC, tecnologia: 'zigbee', distanciaMaxTugM: dist });
+    assert.equal(A.DISTANCIA_MAX_TUG_PADRAO_M, 1.5);
+    assert.equal(plano(undefined).itens[0].situacao, 'sugerido');
+    assert.equal(plano(undefined).regras.distanciaMaxTugM, 1.5);
+    const r = plano(2.5);
+    assert.equal(r.itens[0].situacao, 'vinculado');
+    assert.match(r.itens[0].motivo, /2,5 m/);
+    assert.equal(plano(0.1).regras.distanciaMaxTugM, 0.5);                    // limitado a 0,5–5 m
+    assert.equal(plano(99).regras.distanciaMaxTugM, 5);
+});
+
+test('alimentação: tomada compartilhada por até 2 dispositivos de baixo consumo (cortina fica de fora)', () => {
+    const sala = { id: 1, nome: 'Sala', x: 40, y: 40, largura: 5, comprimento: 4, pavimentoId: 'terreo' };
+    const ir = { id: 'ir', tipo: 'controle_ir', comodoId: 1, pavimentoId: 'terreo', x: 140, y: 47 };
+    const sir = { id: 'sir', tipo: 'sirene', comodoId: 1, pavimentoId: 'terreo', x: 150, y: 47 };
+    const sir2 = { id: 'sir2', tipo: 'sirene', comodoId: 1, pavimentoId: 'terreo', x: 160, y: 47 };
+    const cort = { id: 'cort', tipo: 'cortina', comodoId: 1, pavimentoId: 'terreo', x: 145, y: 47 };
+    const tug = { id: 'ta', tipo: 'TUG', nome: 'TUG alta', comodoId: 1, x: 170, y: 46, altura: 'alta' };
+    const plano = (devs, compartilhar) => A.planejarAlimentacao({ dispositivos: devs, pontos: [tug], comodos: [sala], escala: ESC, tecnologia: 'zigbee', compartilharTomada: compartilhar });
+    const sit = r => r.itens.filter(i => i.dispositivoId).map(i => `${i.dispositivoId}:${i.situacao}`);
+    // padrão: uma tomada por dispositivo
+    assert.deepEqual(sit(plano([ir, sir], false)), ['ir:vinculado', 'sir:sugerido']);
+    // compartilhada: os dois na mesma TUG
+    const r = plano([ir, sir], true);
+    assert.deepEqual(sit(r), ['ir:vinculado', 'sir:vinculado']);
+    assert.equal(r.itens[1].pontoId, 'ta');
+    assert.ok(r.itens[1].compartilhada);
+    assert.match(r.itens[1].motivo, /compartilhada/);
+    assert.equal(r.compartilhadas, 1);
+    // no máximo 2 por ponto
+    assert.deepEqual(sit(plano([ir, sir, sir2], true)), ['ir:vinculado', 'sir:vinculado', 'sir2:sugerido']);
+    // motor de cortina não é de baixo consumo: não divide a tomada
+    assert.deepEqual(sit(plano([ir, cort], true)), ['ir:vinculado', 'cort:sugerido']);
+    assert.deepEqual(sit(plano([cort, ir], true)), ['cort:vinculado', 'ir:sugerido']);
+});
+
+test('alimentação: com tomada compartilhada, dois dispositivos próximos ganham uma única TUG sugerida', () => {
+    const sala = { id: 1, nome: 'Sala', x: 40, y: 40, largura: 5, comprimento: 4, pavimentoId: 'terreo' };
+    const ir = { id: 'ir', tipo: 'controle_ir', comodoId: 1, pavimentoId: 'terreo', x: 140, y: 47 };
+    const sir = { id: 'sir', tipo: 'sirene', comodoId: 1, pavimentoId: 'terreo', x: 160, y: 47 };
+    const base = { dispositivos: [ir, sir], pontos: [], comodos: [sala], escala: ESC, tecnologia: 'zigbee', tensaoFN: 220 };
+    assert.equal(A.planejarAlimentacao(base).sugestoes.length, 2);
+    const r = A.planejarAlimentacao(Object.assign({ compartilharTomada: true }, base));
+    assert.equal(r.sugestoes.length, 1);
+    assert.equal(r.sugestoes[0].destino, 'Controle IR + Sirene');
+    assert.equal(r.sugestoes[0].tensao, 220);                                   // rede 220/380 V
+    assert.equal(r.itens[1].compartilhaCom, 'ir');
+    assert.equal(r.semPonto, 2);
+    // lançada a TUG combinada, os dois ficam vinculados a ela
+    const lancada = Object.assign({ id: 'nova' }, r.sugestoes[0]);
+    const depois = A.planejarAlimentacao(Object.assign({ compartilharTomada: true }, base, { pontos: [lancada] }));
+    assert.equal(depois.semPonto, 0);
+    assert.deepEqual(depois.itens.filter(i => i.dispositivoId).map(i => i.pontoId), ['nova', 'nova']);
+});
+
+test('alcance: modelo do mapa de calor dentro da faixa interna publicada, com a origem dos valores', () => {
+    const semFio = A.TECNOLOGIAS.filter(t => t.tipo === 'sem_fio');
+    assert.equal(semFio.length, 5);
+    assert.deepEqual(A.CENARIO_REFERENCIA_ALCANCE, { paredes: 3, material: 'alvenaria' });
+    assert.ok(A.FONTES_ALCANCE.length > 50);
+    semFio.forEach(t => {
+        const r = t.radio;
+        assert.ok(r.fonte && r.fonte.length > 40, `${t.id}: sem origem documentada`);
+        assert.ok(Number.isFinite(r.antenaDbi) && r.antenaDbi <= 0, t.id);
+        const [min, max] = r.alcanceInternoM;
+        const d = A.alcanceEstimadoM(t.id);
+        assert.ok(d >= min && d <= max, `${t.id}: ${d} m fora de ${min}–${max} m`);
+        // números da faixa batem com o texto mostrado ao usuário
+        assert.ok(t.alcance.includes(`${min} a ${max} m`), `${t.id}: ${t.alcance}`);
+        // menos paredes, mais alcance; concreto, menos
+        assert.ok(A.alcanceEstimadoM(t.id, 1) > d && A.alcanceEstimadoM(t.id, 3, 'concreto') < d);
+    });
+    // sub-GHz atravessa paredes melhor: com concreto o Z-Wave vai mais longe que o Zigbee
+    assert.ok(A.alcanceEstimadoM('zwave', 3, 'concreto') > A.alcanceEstimadoM('zigbee', 3, 'concreto'));
+    assert.equal(A.alcanceEstimadoM('knx'), null);
+});
+
+test('nobreak e TUGs sugeridas na rede 220/380 V ficam em 220 V (F+N)', () => {
+    const cargas = [{ id: 'hub', nome: 'Hub', potW: 900, selecionada: true }];
+    assert.equal(A.dimensionarNobreak({ exigido: true, cargas, autonomiaMin: 30, tipo: 'interativo' }).circuito.tensao, 127);
+    assert.equal(A.dimensionarNobreak({ exigido: true, cargas, autonomiaMin: 30, tipo: 'interativo', tensaoFN: 220 }).circuito.tensao, 220);
 });

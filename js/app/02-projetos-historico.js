@@ -1398,14 +1398,14 @@
                     txtNome.value = 'Chuveiro Elétrico / Ar Condicionado';
                 }
                 if (numPot) numPot.value = '2200';
-                if (selTensao) selTensao.value = '220';
+                if (selTensao) selTensao.value = valorTensaoSelect('TUE', 220);
                 if (selAltura) selAltura.value = 'alta';
             } else {
                 if (txtNome && (!txtNome.value || txtNome.value.includes('Chuveiro') || txtNome.value.includes('Plafon'))) {
                     txtNome.value = 'Tomada Uso Geral 10A';
                 }
                 if (numPot) numPot.value = '100';
-                if (selTensao) selTensao.value = '127';
+                if (selTensao) selTensao.value = valorTensaoSelect('TUG', 127);
                 if (selAltura) selAltura.value = 'baixa';
             }
         }

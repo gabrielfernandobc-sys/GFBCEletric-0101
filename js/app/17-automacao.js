@@ -26,6 +26,8 @@
             mapa: { pavimentoId: null, camada: 'calor' },
             tipoGas: 'glp',                // detector de gás: 'glp' (0,30 m do piso) | 'gn' (alto)
             cameraAlimentacao: 'poe',      // câmeras e vídeo-porteiro: 'poe' (switch do rack) | 'tomada'
+            distanciaMaxTugM: 1.5,         // distância máxima para aproveitar uma TUG existente do cômodo
+            compartilharTomada: false,     // uma TUG atende até 2 dispositivos de baixo consumo
             origensDescartadas: [],        // pontos cujo dispositivo o usuário removeu da lista editada
             avisoRemovidos: 0              // dispositivos que saíram porque o ponto de origem foi apagado
         };
@@ -78,6 +80,8 @@
                 mapa: { pavimentoId: null, camada: (o.mapa && o.mapa.camada === 'pontos') ? 'pontos' : 'calor' },
                 tipoGas: o.tipoGas === 'gn' ? 'gn' : 'glp',
                 cameraAlimentacao: o.cameraAlimentacao === 'tomada' ? 'tomada' : 'poe',
+                distanciaMaxTugM: num(o.distanciaMaxTugM, A.DISTANCIA_MAX_TUG_LIMITES_M[0], A.DISTANCIA_MAX_TUG_LIMITES_M[1], A.DISTANCIA_MAX_TUG_PADRAO_M),
+                compartilharTomada: !!o.compartilharTomada,
                 origensDescartadas: Array.isArray(o.origensDescartadas) ? o.origensDescartadas.filter(x => x != null).map(x => String(x).slice(0, 120)).slice(0, 1000) : [],
                 avisoRemovidos: Math.max(0, Math.min(9999, Math.round(Number(o.avisoRemovidos) || 0)))
             };
@@ -106,7 +110,8 @@
             const pontos = state.pontosEletricos || [];
             const pavs = state.pavimentos || [];
             const cfgChave = Object.assign({}, cfg, { mapa: null });     // trocar a camada do mapa não refaz a simulação
-            const chave = JSON.stringify([cfgChave, esc, state.qdtPos, pavs.map(p => [p.id, p.nivel, p.alturaPeDireito, p.espessuraLajePiso]),
+            const redeBT = redeAtivaProjeto();
+            const chave = JSON.stringify([cfgChave, esc, redeBT.id, state.qdtPos, pavs.map(p => [p.id, p.nivel, p.alturaPeDireito, p.espessuraLajePiso]),
                 comodos.map(c => [c.id, c.nome, c.x, c.y, c.largura, c.comprimento, c.pavimentoId]),
                 pontos.map(p => [p.id, p.tipo, p.nome, p.destino, p.pot, p.tensao, p.fases, p.altura, p.alturaM, Math.round(p.x), Math.round(p.y), p.comodoId]),
                 state.unifilar ? [state.unifilar.ilumPorComodo, state.unifilar.porPonto] : null]);
@@ -166,7 +171,8 @@
             const alimentacao = A.planejarAlimentacao({
                 dispositivos, pontos, comodos, escala: esc, tecnologia: tecId, rack: cabeada ? qdc : hub,
                 repetidores: cabeada ? [] : repetidores, servidorLocal: cfg.servidorLocal, tipoGas: cfg.tipoGas,
-                cameraAlimentacao: cfg.cameraAlimentacao, incluirNoProjeto: cfg.incluirNoProjeto, niveis: geo.niveis
+                cameraAlimentacao: cfg.cameraAlimentacao, incluirNoProjeto: cfg.incluirNoProjeto, niveis: geo.niveis,
+                tensaoFN: redeBT.fn, distanciaMaxTugM: cfg.distanciaMaxTugM, compartilharTomada: cfg.compartilharTomada
             });
 
             // painel, canais e barramento
@@ -206,7 +212,7 @@
             // nobreak (só quando exigido)
             const cargasNobreak = A.cargasNobreakSugeridas({ tecnologia: tecId, dispositivos, painel, servidorLocal: cfg.servidorLocal })
                 .map(c => Object.assign(c, { selecionada: !cfg.nobreak.desmarcadas.includes(c.id) }));
-            const nobreak = A.dimensionarNobreak({ exigido: cfg.nobreak.exigido, cargas: cargasNobreak, autonomiaMin: cfg.nobreak.autonomiaMin, tipo: cfg.nobreak.tipo });
+            const nobreak = A.dimensionarNobreak({ exigido: cfg.nobreak.exigido, cargas: cargasNobreak, autonomiaMin: cfg.nobreak.autonomiaMin, tipo: cfg.nobreak.tipo, tensaoFN: redeBT.fn });
             const cenas = A.sugerirCenas(dispositivos, nomeComodoAutomacao);
             const numRep = cabeada ? 0 : repetidores.length;
             const materiais = A.listaMateriais({ tecnologia: tecId, dispositivos, painel, repetidores: numRep, nobreak, metrosBarramento: barramento ? barramento.metros : 0, metrosNeutro, servidorLocal: cfg.servidorLocal, local: localPainel.local, alimentacao });
@@ -219,7 +225,7 @@
             const rack = cabeada ? qdc : hub;
             const rotaRack = Math.ceil(Math.abs(rack.x - qdc.x) + Math.abs(rack.y - qdc.y) + Math.abs(nivelZ(rack.pavId) - nivelZ(qdc.pavId)) + 2.8);
             const potRack = nobreak ? nobreak.circuito.potVA : Math.max(100, Math.ceil(cargasNobreak.reduce((s, c) => s + c.potW, 0) * 1.25 / 10) * 10);
-            const tensaoRack = nobreak ? nobreak.circuito.tensao : 127;
+            const tensaoRack = nobreak ? nobreak.circuito.tensao : redeBT.fn;
 
             const resultado = {
                 cfg, tec, tecId, cabeada, dispositivos, sugestoesNovas, radio, geo, sim, hub, repetidores, rede, alimentacao, candidatos, qdc, ctx, prioridades, ranking,
@@ -252,11 +258,11 @@
                 return {
                     num: 0, andar: andarRotulo || 'Automação', nome, escopo: { tipo: 'pontos', grupo, ids: [] },
                     tipo: 'TUE', tensao, potVal: potVA, pot: `${potVA} VA (${tensao}V)`, ibVal: ib, ib: `${ib.toFixed(1)} A`,
-                    cabo, disj, curva: 'C', polos: tensao === 220 ? '2P' : '1P', rotaCad: r.rack.rota, distanciaCritica: r.rack.rota, automacao: true
+                    cabo, disj, curva: 'C', polos: NBR5410.polosDaCarga(tensao, 1, redeAtivaProjeto()), rotaCad: r.rack.rota, distanciaCritica: r.rack.rota, automacao: true
                 };
             };
             const lista = [circ(r.nobreak ? `TUE - Nobreak ${r.nobreak.va} VA (rack de automação)` : 'TUE - Rack de automação (hub, roteador)', r.rack.potVA, r.rack.tensao, r.rack.rota, 'automacao:rack')];
-            if (r.painelSupply) lista.push(Object.assign(circ('TUE - Painel de automação (fontes do barramento)', r.painelSupply, 127, 3, 'automacao:painel'), { rotaCad: 3, distanciaCritica: 3 }));
+            if (r.painelSupply) lista.push(Object.assign(circ('TUE - Painel de automação (fontes do barramento)', r.painelSupply, redeAtivaProjeto().fn, 3, 'automacao:painel'), { rotaCad: 3, distanciaCritica: 3 }));
             return lista;
         }
 
@@ -329,7 +335,13 @@
             else if (campo === 'mapaCamada') cfg.mapa.camada = valor;
             else if (campo === 'tipoGas') cfg.tipoGas = valor === 'gn' ? 'gn' : 'glp';
             else if (campo === 'cameraAlimentacao') cfg.cameraAlimentacao = valor === 'tomada' ? 'tomada' : 'poe';
-            aplicarMudancaAutomacao(['incluir', 'nobreakExigido', 'nobreakAutonomia', 'nobreakTipo', 'painelModo', 'tipoLampada', 'tecnologia', 'nivel', 'servidorLocal', 'tipoGas', 'cameraAlimentacao'].includes(campo));
+            else if (campo === 'distanciaMaxTug') {
+                const v = parseFloat(String(valor).replace(',', '.'));
+                const [a, b] = Automacao.DISTANCIA_MAX_TUG_LIMITES_M;
+                cfg.distanciaMaxTugM = isFinite(v) ? Math.max(a, Math.min(b, Math.round(v * 10) / 10)) : Automacao.DISTANCIA_MAX_TUG_PADRAO_M;
+            }
+            else if (campo === 'compartilharTomada') cfg.compartilharTomada = !!valor;
+            aplicarMudancaAutomacao(['incluir', 'nobreakExigido', 'nobreakAutonomia', 'nobreakTipo', 'painelModo', 'tipoLampada', 'tecnologia', 'nivel', 'servidorLocal', 'tipoGas', 'cameraAlimentacao', 'distanciaMaxTug', 'compartilharTomada'].includes(campo));
         }
 
         function alterarPrioridadeAutomacao(criterio, valor) {
@@ -596,7 +608,14 @@
                 </tr>`).join('');
             const res = al.resumo;
             const corpo = `
-                <p class="text-[11px] text-slate-400">Todo dispositivo ligado na rede elétrica precisa de um ponto: a tomada do cômodo (até 1,5 m, na altura certa e sem destinação reservada), PoE, a fonte de 12 V ou a tomada do rack. ${res.origem} usam o ponto de origem (interruptor com neutro, TUG ou TUE) e ${res.bateria} funcionam a bateria.</p>
+                <p class="text-[11px] text-slate-400">Todo dispositivo ligado na rede elétrica precisa de um ponto: a tomada do cômodo (até ${String(al.regras.distanciaMaxTugM).replace('.', ',')} m, na altura certa e sem destinação reservada${al.regras.compartilharTomada ? `; até ${al.regras.maxPorTomada} dispositivos de baixo consumo por tomada` : ''}), PoE, a fonte de 12 V ou a tomada do rack. ${res.origem} usam o ponto de origem (interruptor com neutro, TUG ou TUE) e ${res.bateria} funcionam a bateria.${al.compartilhadas ? ` ${al.compartilhadas} dispositivo(s) dividem tomada.` : ''}</p>
+                <div class="flex flex-wrap items-center gap-3 text-[11px] p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                    <span class="text-slate-300 font-semibold"><i class="fa-solid fa-sliders text-violet-300"></i> Regras</span>
+                    <label class="text-slate-400">Aproveitar TUG existente a até
+                        <input id="inpDistanciaMaxTugAut" type="number" min="${Automacao.DISTANCIA_MAX_TUG_LIMITES_M[0]}" max="${Automacao.DISTANCIA_MAX_TUG_LIMITES_M[1]}" step="0.1" value="${cfg.distanciaMaxTugM}" onchange="alterarAutomacao('distanciaMaxTug', this.value)" class="w-16 ml-1 bg-slate-950 border border-slate-700 text-white rounded-lg p-1 font-mono"> m</label>
+                    <label class="text-slate-400 flex items-center gap-1.5"><input id="chkCompartilharTomadaAut" type="checkbox" ${cfg.compartilharTomada ? 'checked' : ''} onchange="alterarAutomacao('compartilharTomada', this.checked)" class="rounded bg-slate-950 border-slate-700 text-violet-500">
+                        Uma tomada pode atender até ${Automacao.MAX_DISPOSITIVOS_POR_TOMADA} dispositivos de baixo consumo (controle IR, detector de gás, sirene, câmera, repetidor; o motor de cortina não entra)</label>
+                </div>
                 <div class="flex flex-wrap items-center gap-2 text-[11px]">
                     <label class="text-slate-400">Detector de gás:
                         <select onchange="alterarAutomacao('tipoGas', this.value)" class="ml-1 bg-slate-950 border border-slate-700 text-white rounded-lg p-1.5"><option value="glp" ${cfg.tipoGas !== 'gn' ? 'selected' : ''}>GLP (botijão) — 0,30 m do piso</option><option value="gn" ${cfg.tipoGas === 'gn' ? 'selected' : ''}>Gás natural (rede) — alto</option></select></label>
@@ -621,7 +640,7 @@
                 const ativa = t.id === r.tecId;
                 return `<tr class="${ativa ? 'bg-violet-500/10' : ''} align-top">
                     <td class="p-2 font-bold text-white whitespace-nowrap">${escHtml(t.nome)}${ativa ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-violet-500 text-white">adotada</span>' : ''}<span class="block text-[10px] font-normal text-slate-500">${t.tipo === 'cabeado' ? 'Cabeado' : (t.freqMHz < 1500 ? String(t.freqMHz).replace('.', ',') + ' MHz' : '2,4 GHz')}</span></td>
-                    <td class="p-2">${escHtml(t.alcance)}</td><td class="p-2">${escHtml(t.consumo)}</td><td class="p-2">${escHtml(t.malha)}</td>
+                    <td class="p-2">${escHtml(t.alcance)}${t.radio ? `<span class="block text-[10px] text-sky-300 mt-0.5" title="${escHtml(t.radio.fonte)}">Mapa de calor: ≈ ${String(A.alcanceEstimadoM(t.id)).replace('.', ',')} m com 3 paredes de alvenaria (${t.radio.txDbm} dBm, ${t.radio.sensDbm} dBm, antena ${t.radio.antenaDbi} dBi)</span>` : ''}</td><td class="p-2">${escHtml(t.consumo)}</td><td class="p-2">${escHtml(t.malha)}</td>
                     <td class="p-2">${escHtml(t.hub)}</td><td class="p-2">${escHtml(t.semInternet)}</td><td class="p-2 whitespace-nowrap">${escHtml(t.custoPonto)}</td>
                     ${['alexa', 'google', 'apple', 'homeassistant'].map(e => `<td class="p-2 text-center font-bold ${corCompat(t.ecossistemas[e])}">${A.ROTULO_COMPAT[t.ecossistemas[e]]}</td>`).join('')}
                     <td class="p-2 text-slate-400">${escHtml(t.obsBrasil)}</td>
@@ -637,7 +656,11 @@
                         <tbody class="divide-y divide-slate-800">${linhas}</tbody>
                     </table>
                 </div>
-                <p class="text-[10px] text-slate-500">"Via ponte/hub": funciona por meio de um hub, ponte (bridge) ou do Home Assistant. Faixas de custo de referência (${A.DATA_REFERENCIA}).</p>`;
+                <p class="text-[10px] text-slate-500">"Via ponte/hub": funciona por meio de um hub, ponte (bridge) ou do Home Assistant. Faixas de custo de referência (${A.DATA_REFERENCIA}).</p>
+                <details class="text-[10px] text-slate-400"><summary class="cursor-pointer text-slate-300 font-semibold">Origem dos valores de alcance do mapa de calor</summary>
+                    <p class="mt-1">${escHtml(A.FONTES_ALCANCE)}</p>
+                    <ul class="mt-1 list-disc pl-4 space-y-0.5">${A.TECNOLOGIAS.filter(t => t.radio).map(t => `<li><strong class="text-slate-200">${escHtml(t.nomeCurto)}:</strong> ${escHtml(t.radio.fonte)} Alcance do modelo ≈ ${String(A.alcanceEstimadoM(t.id)).replace('.', ',')} m (publicado: ${t.radio.alcanceInternoM[0]} a ${t.radio.alcanceInternoM[1]} m).</li>`).join('')}</ul>
+                </details>`;
             return cardAut('3. Comparação de tecnologias', 'fa-table-columns', corpo);
         }
 

@@ -621,8 +621,7 @@
                 const nome = document.getElementById('txtModalPontoNome').value.trim();
                 const tipo = document.getElementById('selModalPontoTipo').value;
                 const valTensao = document.getElementById('selModalPontoTensao').value;
-                const tensao = parseInt(valTensao, 10);
-                const fases = (valTensao === '220-3F' && tipo === 'TUE') ? 3 : undefined;   // trifásico 3F+N
+                const { tensao, fases } = lerTensaoSelect(valTensao, tipo);                // trifásico 3F+N só em TUE
                 const pot = parseFloat(document.getElementById('numModalPontoPot').value) || 0;
                 const altura = document.getElementById('selModalPontoAltura').value;
                 const selDestino = document.getElementById('selModalPontoDestino');
@@ -701,25 +700,25 @@
             if (tipoPadrao === 'ILUM') {
                 titulo.innerHTML = `<i class="fa-solid fa-lightbulb text-amber-400"></i> Novo Ponto de Iluminação (${andarTxt})`;
                 txtNome.value = 'Plafon LED de Teto';
-                selTensao.value = '127';
+                selTensao.value = valorTensaoSelect('ILUM', 127);
                 numPot.value = '100';
                 selAltura.value = 'teto';
             } else if (tipoPadrao === 'INTERRUPTOR') {
                 titulo.innerHTML = `<i class="fa-solid fa-toggle-on text-purple-400"></i> Novo Interruptor (${andarTxt})`;
                 txtNome.value = 'Interruptor Simples';
-                selTensao.value = '127';
+                selTensao.value = valorTensaoSelect('INTERRUPTOR', 127);
                 numPot.value = '0';
                 selAltura.value = 'media';
             } else if (tipoPadrao === 'TUE') {
                 titulo.innerHTML = `<i class="fa-solid fa-bolt text-blue-400"></i> Nova Tomada TUE (${andarTxt})`;
                 txtNome.value = 'Chuveiro / Ar Condicionado';
-                selTensao.value = '220';
+                selTensao.value = valorTensaoSelect('TUE', 220);
                 numPot.value = '2200';
                 selAltura.value = 'alta';
             } else {
                 titulo.innerHTML = `<i class="fa-solid fa-plug text-emerald-400"></i> Nova Tomada TUG (${andarTxt})`;
                 txtNome.value = 'Tomada Uso Geral 10A';
-                selTensao.value = '127';
+                selTensao.value = valorTensaoSelect('TUG', 127);
                 numPot.value = '100';
                 selAltura.value = 'baixa';
             }
@@ -738,7 +737,7 @@
             titulo.innerHTML = `<i class="fa-solid ${iconTipo}"></i> Editar Ponto (${pt.tipo})`;
             document.getElementById('txtModalPontoNome').value = pt.nome;
             document.getElementById('selModalPontoTipo').value = pt.tipo;
-            document.getElementById('selModalPontoTensao').value = (pt.tipo === 'TUE' && NBR5410.ehCargaTrifasica(pt)) ? '220-3F' : String(pt.tensao);
+            document.getElementById('selModalPontoTensao').value = valorTensaoSelect(pt.tipo, pt.tensao, pt.tipo === 'TUE' && NBR5410.ehCargaTrifasica(pt) ? 3 : undefined);
             document.getElementById('numModalPontoPot').value = pt.pot;
             document.getElementById('selModalPontoAltura').value = pt.altura || (pt.tipo === 'ILUM' ? 'teto' : 'media');
             const comodoPt = state.comodos.find(c => String(c.id) === String(pt.comodoId)) || null;
