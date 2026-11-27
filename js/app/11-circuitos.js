@@ -352,8 +352,97 @@
             renderizarMemorialAba6();
         }
 
+        /**
+         * Ajusta os pontos (e as cargas dos cômodos) à rede do projeto: modelos, catálogo e atalhos
+         * usam a convenção 127/220 V e são convertidos aqui (NBR5410.tensaoNaRede). Idempotente:
+         * roda a cada cálculo e só altera o que não corresponde à rede.
+         * @returns {number} quantidade de pontos alterados
+         */
+        function normalizarPontosNaRede(rede) {
+            const r = rede || redeAtivaProjeto();
+            let alterados = 0;
+            const ajustar = (obj, campoPot) => {
+                const tri = obj.tipo === 'TUE' && NBR5410.ehCargaTrifasica(obj);
+                const v = NBR5410.tensaoNaRede(obj, r);
+                let mudou = false;
+                if (Number(obj.tensao) !== v) { obj.tensao = v; mudou = true; }
+                if (r.fn === 220 && /127\s?V/.test(obj.nome || '')) { obj.nome = obj.nome.replace(/127\s?V/g, '220V'); mudou = true; }
+                const iFase = tri ? NBR5410.correntePorFaseNoNome(obj.nome) : null;
+                if (iFase) {
+                    const pot = NBR5410.potenciaTrifasicaPorCorrente(iFase, r);
+                    if (Number(obj[campoPot]) !== pot) { obj[campoPot] = pot; mudou = true; }
+                }
+                return mudou;
+            };
+            (state.pontosEletricos || []).forEach(pt => { if (ajustar(pt, 'pot')) alterados++; });
+            (state.comodos || []).forEach(c => (c.cargas || []).forEach(cg => ajustar(Object.assign(cg, { tipo: cg.tipo || 'TUE' }), 'potencia')));
+            return alterados;
+        }
+
+        /** Descrição do método de queda de tensão e da isolação adotados (premissas e memorial). */
+        function textoMetodoQuedaNBR() {
+            const p = obterParametrosNBR();
+            const iso = NBR5410.obterIsolacao(p.isolacao);
+            if (p.metodoQueda !== 'detalhado') return `Queda de tensão pelo método simplificado: ΔV = 2·ρ·L·Ib/S (monofásico) e √3·ρ·L·Ib/S (trifásico), ρ = 0,0221 Ω·mm²/m (cobre a 70 °C). Isolação ${iso.rotulo}.`;
+            const rho = NBR5410.resistividadeCobre(iso.temperaturaServico);
+            return `Queda de tensão pelo método detalhado: ΔV = k·L·Ib·(ρθ/S·cos φ + X·sen φ), ρ${iso.temperaturaServico} = ${rho.toFixed(4).replace('.', ',')} Ω·mm²/m (cobre, isolação ${iso.rotulo}), X = 0,08 mΩ/m a partir de 25 mm², cos φ 1 nas cargas resistivas e 0,95 nas demais.`;
+        }
+
+        /** Método da queda de tensão (premissas): 'simplificado' (padrão) ou 'detalhado'. */
+        function alterarMetodoQueda(metodo) {
+            obterParametrosNBR().metodoQueda = metodo === 'detalhado' ? 'detalhado' : 'simplificado';
+            sincronizarControlesParametrosNBR();
+            atualizarTudo();
+        }
+
+        /** Isolação dos condutores (premissas): PVC 70 °C (padrão) ou EPR/XLPE 90 °C. */
+        function alterarIsolacaoCabos(isolacao) {
+            obterParametrosNBR().isolacao = NBR5410.obterIsolacao(isolacao).id;
+            sincronizarControlesParametrosNBR();
+            atualizarTudo();
+        }
+
+        /** Troca a rede de BT do projeto (premissas): 127/220 V ou 220/380 V. */
+        function alterarRedeTensao(id) {
+            const p = obterParametrosNBR();
+            const nova = NBR5410.obterRede(id);
+            if (p.redeTensao === nova.id) { atualizarInterfaceRede(); return; }
+            p.redeTensao = nova.id;
+            const n = normalizarPontosNaRede(nova);
+            atualizarInterfaceRede();
+            atualizarTudo();
+            if (typeof reconstruirCena3D === 'function') reconstruirCena3D();
+            if (typeof mostrarNotificacaoToast === 'function') {
+                mostrarNotificacaoToast(`Rede ${nova.rotulo}: ${n} ponto(s) ajustado(s) — TUGs e iluminação em ${nova.fn} V (F+N), aparelhos de 220 V ${nova.fn === 220 ? 'entre fase e neutro' : 'entre fases'}${nova.fn === 220 ? ', trifásicos em 380 V' : ''}.`, 'sucesso');
+            }
+        }
+
+        /** Seletores, rótulos e catálogo da interface conforme a rede do projeto. */
+        function atualizarInterfaceRede() {
+            const r = redeAtivaProjeto();
+            const sel = document.getElementById('selRedeTensao');
+            if (sel) sel.value = r.id;
+            const lbl = document.getElementById('lblRedeTensaoNBR');
+            if (lbl) {
+                lbl.textContent = r.fn === 220
+                    ? 'F+N 220 V em TUGs, iluminação e aparelhos de 220 V; F+F 380 V; trifásico 3F+N em 380 V.'
+                    : 'F+N 127 V em TUGs e iluminação; aparelhos de 220 V entre fases (F+F); trifásico 3F+N em 220 V.';
+            }
+            document.querySelectorAll('[data-rede-rotulo]').forEach(el => {
+                const tipo = el.getAttribute('data-rede-rotulo');
+                el.textContent = tipo === 'fn' ? `${r.fn}V` : (tipo === 'ff' ? `${r.ff}V` : (tipo === 'tue' ? `${r.fn === 220 ? '220V F+N' : '220V'}` : `${r.fn}V/${r.ff}V`));
+            });
+            const opcoesSistema = { bifasico: `Bifásico ${r.rotulo} (2 Fases + Neutro + Terra = 4 Condutores)`, trifasico: `Trifásico ${r.rotulo} (3 Fases + Neutro + Terra = 5 Condutores)`, monofasico: `Monofásico ${r.fn} V (Fase + Neutro + Terra = 3 Condutores)` };
+            const selSist = document.getElementById('selSistemaEntrada');
+            if (selSist) Array.from(selSist.options).forEach(o => { if (opcoesSistema[o.value]) o.textContent = opcoesSistema[o.value]; });
+            if (typeof atualizarOpcoesTensaoRede === 'function') atualizarOpcoesTensaoRede();
+            if (typeof setupSugestoesBR === 'function') setupSugestoesBR();
+            if (typeof popularSelectModalPontoPredefinido === 'function') popularSelectModalPontoPredefinido();
+        }
+
         function sincronizarControlesParametrosNBR() {
             const p = obterParametrosNBR();
+            atualizarInterfaceRede();
             const inpN = document.getElementById('inpCircuitosAgrupados');
             const inpT = document.getElementById('inpTemperaturaAmbiente');
             const lbl = document.getElementById('lblFatoresCorrecaoNBR');
@@ -366,9 +455,15 @@
             renderizarPassagemCabosPavimentos();
             if (lbl) {
                 const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
-                const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
+                const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente, p.isolacao);
                 lbl.textContent = `FCA ${fca.toFixed(2)} × FCT ${fct.toFixed(2)} = ${(fca * fct).toFixed(2)} × Iz`;
             }
+            const selQ = document.getElementById('selMetodoQueda');
+            if (selQ) selQ.value = p.metodoQueda === 'detalhado' ? 'detalhado' : 'simplificado';
+            const selIso = document.getElementById('selIsolacaoCabos');
+            if (selIso) selIso.value = NBR5410.obterIsolacao(p.isolacao).id;
+            const lblQ = document.getElementById('lblMetodoQuedaNBR');
+            if (lblQ) lblQ.textContent = textoMetodoQuedaNBR();
         }
 
         /** Passagem dos cabos de cada pavimento (pela laje ou pelo piso) na aba do quadro. */
@@ -388,6 +483,8 @@
 
         function atualizarTabelas() {
             renderizarPassagemCabosPavimentos();
+            const rede = redeAtivaProjeto();
+            normalizarPontosNaRede(rede);      // modelos, catálogo e atalhos vêm em 127/220 V
             // 1. Determina quais cômodos entram no cálculo (respeita regime de imóveis)
             let comodosParaCalcular = state.comodos;
             let ehUnidadeEspecifica = false;
@@ -489,8 +586,8 @@
 
                 tues.forEach(tue => {
                     totTue += tue.pot;
-                    const tensao = tue.tensao || 220;
-                    // trifásico (3F+N, 220 V entre fases): Ib = P / (√3 · V)
+                    const tensao = Number(tue.tensao) || 220;
+                    // trifásico (3F+N, tensão entre fases da rede): Ib = P / (√3 · V)
                     const tri = NBR5410.ehCargaTrifasica(tue);
                     const ib = NBR5410.correnteDaCarga(tue.pot, tensao, tri ? 3 : 1);
 
@@ -514,7 +611,7 @@
                         cabo: cabo,
                         disj: disj,
                         curva: ehResistivo ? 'B' : 'C',
-                        polos: tri ? '3P' : (tensao === 220 ? '2P' : '1P'),
+                        polos: NBR5410.polosDaCarga(tensao, tri ? 3 : 1, rede),
                         rotaCad: tueInfo.rotaFisica,
                         distanciaCritica: tueInfo.distanciaCritica
                     });
@@ -523,9 +620,10 @@
 
             // Circuitos Base com Divisão Inteligente NBR 5410 (Prevenção de Sobrecorrente em Iluminação e TUG)
             const circsBase = [];
-            const tensaoCircBase = 127;
-            const LIMITE_POT_ILUM = NBR5410.LIMITE_POT_ILUMINACAO_VA; // 1200 VA
-            const LIMITE_POT_TUG = NBR5410.LIMITE_POT_TUG_VA;          // 2200 VA
+            const tensaoCircBase = rede.fn;                            // F+N: 127 V ou 220 V
+            const limitesRede = NBR5410.limitesPotenciaCircuito(rede);
+            const LIMITE_POT_ILUM = limitesRede.iluminacao;           // 1200 VA (127 V) / 2000 VA (220 V)
+            const LIMITE_POT_TUG = limitesRede.tug;                    // 2200 VA (127 V) / 3800 VA (220 V)
 
             // 1. ILUMINAÇÃO (Se totIlum > LIMITE_POT_ILUM, divide em múltiplos circuitos com Ib <= 10A)
             if (totIlum > 0) {
@@ -839,7 +937,9 @@
                     circ.conforme = false;
                 }
                 if (distFases.sistema === 'monofasico' && circ.polos === '2P') {
-                    circ.alertas.push('Sistema monofásico não tem duas fases: com rede de 220 V fase-neutro o circuito é monopolar (F+N); com rede de 127 V, use aparelho de 127 V ou altere o sistema para bifásico.');
+                    circ.alertas.push(rede.fn === 220
+                        ? `Sistema monofásico não tem duas fases: o aparelho de ${rede.ff} V entre fases exige sistema bifásico ou trifásico (ou use a versão de 220 V, F+N).`
+                        : 'Sistema monofásico não tem duas fases: com rede de 127 V, use aparelho de 127 V ou altere o sistema para bifásico; na rede 220/380 V (premissas) o aparelho de 220 V é ligado entre fase e neutro.');
                     circ.conforme = false;
                 }
             });
@@ -971,7 +1071,7 @@
             const potTotalW = calculoDemanda.cargaInstaladaTotalKW * 1000.0;
             const potDemandaKW = calculoDemanda.demandaTotalKW;
             const potDemandakVA = calculoDemanda.demandaTotalkVA;
-            const tensaoAlim = (sistemaAlimAtual === 'monofasico') ? 127 : 220;
+            const tensaoAlim = (sistemaAlimAtual === 'monofasico') ? rede.fn : rede.ff;
             const corrGeral = (potDemandaKW * 1000) / tensaoAlim;
 
             // Disjuntor e Cabo Geral calculados segundo Norma da Concessionária e NBR 5410
@@ -1052,15 +1152,23 @@
                 comprimento: distAlimUsada,
                 demandaKVA: calculoDemanda.demandaTotalkVA,
                 quedaTerminalMaxPct: quedaTerminalMax,
-                temperaturaAmbiente: obterParametrosNBR().temperaturaAmbiente
+                temperaturaAmbiente: obterParametrosNBR().temperaturaAmbiente,
+                tensaoFN: rede.fn,
+                metodoQueda: obterParametrosNBR().metodoQueda,
+                isolacao: obterParametrosNBR().isolacao
             });
             state.alimentadorNBR = alimNBR;
             caboGeral = NBR5410.formatarSecao(alimNBR.secao).replace(/^(\d+) mm²$/, '$1.0 mm²');
             document.getElementById('lblBitolaAlimExterna').innerText = caboGeral;
             const notaAlim = document.getElementById('lblNotaAlimentadorNBR');
             if (notaAlim) {
-                notaAlim.innerHTML = `Iz ${alimNBR.izCorrigida.toFixed(0)} A (B1, ${alimNBR.condutoresCarregados} carregados) • ΔV ${alimNBR.quedaPct.toFixed(1)}% (total ${alimNBR.quedaTotalPct.toFixed(1)}% ≤ 5%)`
+                const conc = calculoDemanda.concessionaria;
+                const avisosRede = [];
+                if (!calculoDemanda.atendeRede) avisosRede.push(`<span class="block text-rose-400 mt-0.5">${escHtml(conc.nome)} informa tensão ${escHtml(conc.tensao)}: confirme com a distribuidora se a rede ${rede.rotulo} existe no local.</span>`);
+                else if (calculoDemanda.categoriasEstimadas) avisosRede.push(`<span class="block text-amber-400 mt-0.5">Categorias de ${escHtml(conc.nome)} cadastradas para outra rede: limites de demanda estimados para ${rede.rotulo} pela razão das tensões (confira a norma ${escHtml(conc.norma)}).</span>`);
+                notaAlim.innerHTML = `Rede ${rede.rotulo} • Iz ${alimNBR.izCorrigida.toFixed(0)} A (B1, ${alimNBR.condutoresCarregados} carregados) • ΔV ${alimNBR.quedaPct.toFixed(1)}% (total ${alimNBR.quedaTotalPct.toFixed(1)}% ≤ 5%)`
                     + (alimNBR.aumentouPorNorma ? ` • <span class="text-amber-400">maior que o da concessionária (${calculoDemanda.categoriaAtend.cabo})</span>` : '')
+                    + avisosRede.join('')
                     + alimNBR.alertas.map(a => `<span class="block text-rose-400 mt-0.5">${escHtml(a)}</span>`).join('');
             }
             document.getElementById('lblCaboGeral').innerText = caboGeral;
@@ -1069,7 +1177,8 @@
             // IDRs comerciais do quadro (mesmo planejamento usado no desenho do quadro e nos materiais)
             state.planoIdr = NBR5410.planejarIdrs({
                 circuitos: circuitosFinais, sistema: sistemaUsado, configIdr: state.tipoConfigIdr || 'idr_geral',
-                esquema: state.esquemaAterramento || 'TN-S', inGeral: parseInt(disjGeral, 10) || 0, modelo: state.modeloIdr
+                esquema: state.esquemaAterramento || 'TN-S', inGeral: parseInt(disjGeral, 10) || 0, modelo: state.modeloIdr,
+                tensaoFF: rede.ff
             });
             const idrsPlano = state.planoIdr.idrs;
             document.getElementById('lblIdrGeral').innerText = !idrsPlano.length

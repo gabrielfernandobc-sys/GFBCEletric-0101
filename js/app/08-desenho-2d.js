@@ -606,7 +606,7 @@
                             tipo: 'tug',
                             nome: `Descida TUG - ${c.nome}`,
                             circuito: 'Circuito TUG (Tomadas Gerais)',
-                            detalhes: 'Cabo 2.5 mm² • 127V • Fase, Neutro e Terra',
+                            detalhes: `Cabo 2.5 mm² • ${redeAtivaProjeto().fn}V • Fase, Neutro e Terra`,
                             corHover: '#10b981',
                             pts: [{ x: luzX, y: luzY }, { x: tugsOrdenadas[0].x, y: tugsOrdenadas[0].y }]
                         });
@@ -623,7 +623,7 @@
                                 tipo: 'tug',
                                 nome: `Ramal Parede TUG (${pt1.nome} -> ${pt2.nome})`,
                                 circuito: 'Circuito TUG (Tomadas Gerais)',
-                                detalhes: 'Cabo 2.5 mm² • 127V • NBR 5410',
+                                detalhes: `Cabo 2.5 mm² • ${redeAtivaProjeto().fn}V • NBR 5410`,
                                 corHover: '#10b981',
                                 pts: ptsInter
                             });
@@ -635,7 +635,7 @@
                                 tipo: 'tug',
                                 nome: `Ramal TUG - ${pt.nome} (${c.nome})`,
                                 circuito: 'Circuito TUG (Tomadas Gerais)',
-                                detalhes: 'Cabo 2.5 mm² • 127V • NBR 5410',
+                                detalhes: `Cabo 2.5 mm² • ${redeAtivaProjeto().fn}V • NBR 5410`,
                                 corHover: '#10b981',
                                 pts: [{ x: luzX, y: luzY }, { x: pt.x, y: pt.y }]
                             });

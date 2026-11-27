@@ -41,7 +41,8 @@
     const TECNOLOGIAS = Object.freeze([
         {
             id: 'wifi', nome: 'Wi-Fi (2,4 GHz)', nomeCurto: 'Wi-Fi', tipo: 'sem_fio', freqMHz: 2440,
-            radio: { txDbm: 17, txHubDbm: 20, sensDbm: -82, saltosMax: 2, malha: false },
+            radio: { txDbm: 17, txHubDbm: 20, sensDbm: -88, antenaDbi: -1, saltosMax: 2, malha: false, alcanceInternoM: [15, 30],
+                fonte: 'Datasheets Espressif ESP8266EX/ESP32 (módulos das tomadas e interruptores Wi-Fi): +17 dBm em 802.11g/n e sensibilidade ≈ −88 dBm em 6 Mbps/MCS0, a taxa usada pelos comandos; roteador doméstico +20 dBm (limite da Anatel para 2,4 GHz: 1 W EIRP); antena de PCB ≈ −1 dBi.' },
             alcance: '15 a 30 m em ambiente interno, a partir do roteador ou de cada ponto do sistema mesh',
             consumo: 'Alto: próprio para aparelhos ligados na rede elétrica; sensores a bateria duram meses',
             malha: 'Não (estrela). Um roteador Wi-Fi mesh amplia a cobertura',
@@ -56,7 +57,8 @@
         },
         {
             id: 'zigbee', nome: 'Zigbee 3.0', nomeCurto: 'Zigbee', tipo: 'sem_fio', freqMHz: 2440,
-            radio: { txDbm: 8, txHubDbm: 10, sensDbm: -95, saltosMax: 6, malha: true },
+            radio: { txDbm: 8, txHubDbm: 10, sensDbm: -95, antenaDbi: -1, saltosMax: 6, malha: true, alcanceInternoM: [10, 20],
+                fonte: 'IEEE 802.15.4 (2,4 GHz, 250 kbit/s; sensibilidade mínima da norma −85 dBm) e datasheets Silicon Labs EFR32MG21 (até +20 dBm, −104,5 dBm) e TI CC2652R (+5 dBm, −100 dBm): produto típico +8 dBm e −95 dBm na prática; coordenador +10 dBm; antena de PCB ≈ −1 dBi. Faixa de alcance publicada pela Connectivity Standards Alliance.' },
             alcance: '10 a 20 m por salto em ambiente interno; a malha estende a cobertura',
             consumo: 'Muito baixo: sensores ficam 1 a 2 anos com uma bateria',
             malha: 'Sim: aparelhos ligados na rede elétrica repetem o sinal',
@@ -71,7 +73,8 @@
         },
         {
             id: 'zwave', nome: 'Z-Wave (sub-GHz)', nomeCurto: 'Z-Wave', tipo: 'sem_fio', freqMHz: 921.42,
-            radio: { txDbm: 4, txHubDbm: 4, sensDbm: -100, saltosMax: 4, malha: true },
+            radio: { txDbm: 4, txHubDbm: 4, sensDbm: -100, antenaDbi: -8, saltosMax: 4, malha: true, alcanceInternoM: [20, 40],
+                fonte: 'Silicon Labs Z-Wave 700/800 (ZGM130S, EFR32ZG23): sensibilidade ≈ −100 dBm a 100 kbit/s, potência típica de dispositivo final +4 dBm; 921,42 MHz no Brasil (Z-Wave Alliance). Antena eletricamente pequena em 921 MHz dentro de invólucro compacto: eficiência ≈ 15% (≈ −8 dBi), o que explica o alcance interno publicado de 20 a 40 m apesar da vantagem física da faixa sub-GHz.' },
             alcance: '20 a 40 m em ambiente interno: a frequência abaixo de 1 GHz atravessa melhor as paredes',
             consumo: 'Muito baixo: sensores ficam anos com uma bateria',
             malha: 'Sim, até 4 saltos (Z-Wave Long Range usa estrela de longo alcance)',
@@ -86,7 +89,8 @@
         },
         {
             id: 'thread', nome: 'Thread / Matter', nomeCurto: 'Thread/Matter', tipo: 'sem_fio', freqMHz: 2440,
-            radio: { txDbm: 8, txHubDbm: 8, sensDbm: -95, saltosMax: 6, malha: true },
+            radio: { txDbm: 8, txHubDbm: 8, sensDbm: -95, antenaDbi: -1, saltosMax: 6, malha: true, alcanceInternoM: [10, 20],
+                fonte: 'Mesmo rádio IEEE 802.15.4 do Zigbee (Thread Group; datasheets Nordic nRF52840 e Silicon Labs EFR32MG24): +8 dBm e −95 dBm típicos; antena de PCB ≈ −1 dBi.' },
             alcance: '10 a 20 m por salto em ambiente interno; a malha estende a cobertura',
             consumo: 'Muito baixo: sensores ficam 1 a 2 anos com uma bateria',
             malha: 'Sim (rede IPv6 em malha)',
@@ -101,7 +105,8 @@
         },
         {
             id: 'blemesh', nome: 'Bluetooth Mesh', nomeCurto: 'Bluetooth Mesh', tipo: 'sem_fio', freqMHz: 2440,
-            radio: { txDbm: 4, txHubDbm: 4, sensDbm: -92, saltosMax: 6, malha: true },
+            radio: { txDbm: 4, txHubDbm: 4, sensDbm: -95, antenaDbi: -1, saltosMax: 6, malha: true, alcanceInternoM: [10, 15],
+                fonte: 'Bluetooth SIG (Mesh Profile, LE 1M) e datasheet Nordic nRF52840 (−95 dBm a 1 Mbit/s; até +8 dBm): lâmpadas e módulos usam ≈ +4 dBm; antena de PCB ≈ −1 dBi.' },
             alcance: '10 a 15 m por salto em ambiente interno',
             consumo: 'Baixo',
             malha: 'Sim (retransmissão em malha)',
@@ -245,7 +250,7 @@
         const tabela = tri
             ? [{ a: 20, mod: 2 }, { a: 25, mod: 2 }, { a: 40, mod: 3 }, { a: 63, mod: 4 }]
             : [{ a: 20, mod: 1 }, { a: 25, mod: 1 }, { a: 40, mod: 2 }, { a: 63, mod: 3 }];
-        const req = Number(ib) * 1.1;            // corrente AC-1 com folga sobre a corrente da carga
+        const req = arred(Number(ib) * 1.1, 2);  // corrente AC-1 com folga sobre a carga (tolerância de 2 casas)
         const t = tabela.find(x => x.a >= req) || tabela[tabela.length - 1];
         return { a: t.a, mod: t.mod, contatos: tri ? '4NA' : '2NA' };
     }
@@ -510,6 +515,23 @@
     const MARGEM_DESVANECIMENTO = 10;   // dB de folga sobre a sensibilidade
     const ALTURA_DISPOSITIVO = 1.2;     // m acima do piso
 
+    /*
+     * Origem dos valores do modelo de alcance (mapa de calor):
+     *  - modelo de múltiplas paredes do COST 231 (Final Report, cap. 4.7): perda de espaço livre a 1 m,
+     *    expoente de distância próximo de 2 e perdas somadas por parede e por laje atravessadas;
+     *  - perdas por material a 2,4 GHz: NIST IR 6055 (1997, atenuação de materiais de construção) e
+     *    COST 231 (parede leve ≈ 3,4 dB, pesada ≈ 6,9 dB a 1,8 GHz): drywall 3 dB, alvenaria rebocada 8 dB,
+     *    concreto 15 dB; abaixo de 1 GHz ≈ 55% disso;
+     *  - laje de concreto ≈ 20 dB a 2,4 GHz (ITU-R P.1238: 10 a 20 dB por andar em residências) e 60% disso
+     *    abaixo de 1 GHz;
+     *  - margem de desvanecimento de 10 dB (multipercurso, pessoas e móveis);
+     *  - potência, sensibilidade e antena de cada tecnologia: campo radio.fonte de TECNOLOGIAS.
+     * Conferência: no cenário de referência (3 paredes de alvenaria no mesmo pavimento), o alcance do modelo
+     * cai dentro da faixa interna publicada para cada tecnologia (radio.alcanceInternoM) — ver alcanceEstimadoM.
+     */
+    const CENARIO_REFERENCIA_ALCANCE = Object.freeze({ paredes: 3, material: 'alvenaria' });
+    const FONTES_ALCANCE = 'Modelo de múltiplas paredes do COST 231; atenuação de materiais pelo NIST IR 6055 e ITU-R P.1238 (lajes); potência e sensibilidade pelos datasheets dos rádios de cada tecnologia; conferido com as faixas de alcance interno publicadas (3 paredes de alvenaria).';
+
     const fatorFreq = f => (f > 0 && f < 1500 ? 0.55 : 1);
     const perdaParede = (tec, mat) => (MATERIAIS_PAREDE[mat] || MATERIAIS_PAREDE.alvenaria).perda24 * fatorFreq(tec.freqMHz);
     const perdaLaje = (tec, espessura) => PERDA_LAJE_24 * limitar((Number(espessura) || 0.15) / 0.15, 0.7, 1.5) * (tec.freqMHz < 1500 ? 0.6 : 1);
@@ -592,6 +614,21 @@
         return { perdaDb: arred(perdaDb, 1), distM: arred(d, 2), paredes, lajes };
     }
 
+    /**
+     * Alcance estimado (m) entre dois dispositivos no mesmo pavimento atravessando `paredes` paredes do
+     * material, com a margem de desvanecimento: o maior d em que a margem do enlace ainda é ≥ 0.
+     * Padrão: cenário de referência (3 paredes de alvenaria).
+     */
+    function alcanceEstimadoM(tecId, paredes, material) {
+        const tec = tecnologia(tecId);
+        if (!tec || !tec.radio) return null;
+        const r = tec.radio;
+        const n = paredes === undefined ? CENARIO_REFERENCIA_ALCANCE.paredes : Number(paredes) || 0;
+        const mat = material || CENARIO_REFERENCIA_ALCANCE.material;
+        const orcamento = r.txDbm + 2 * (r.antenaDbi || 0) - (r.sensDbm + MARGEM_DESVANECIMENTO) - perdaEspacoLivre1m(tec.freqMHz) - n * perdaParede(tec, mat);
+        return arred(Math.pow(10, orcamento / (10 * EXPOENTE_PERDA)), 1);
+    }
+
     /** Contexto de simulação com cache das perdas (a simulação compara muitas posições). */
     function criarSimulador(tecId, geo, material) {
         const tec = tecnologia(tecId);
@@ -608,7 +645,7 @@
         function margem(a, b) {
             const r = tec.radio;
             const tx = Math.min(a.hub ? r.txHubDbm : r.txDbm, b.hub ? r.txHubDbm : r.txDbm);
-            return arred(tx - perda(a, b).perdaDb - (r.sensDbm + MARGEM_DESVANECIMENTO), 1);
+            return arred(tx + 2 * (r.antenaDbi || 0) - perda(a, b).perdaDb - (r.sensDbm + MARGEM_DESVANECIMENTO), 1);
         }
         return { tec, geo, material, perda, margem };
     }
@@ -1091,7 +1128,9 @@
         const ahPorString = ahNecessario / paralelo;
         const ah = BATERIAS_AH.find(a => a >= ahPorString) || maiorAh;
         const serie = Math.round(vBanco / 12);
-        const tensao = va > 2200 ? 220 : 127;
+        // rede 127/220 V: até 2,2 kVA em 127 V (F+N), acima em 220 V (F+F); rede 220/380 V: 220 V (F+N)
+        const vFN = Number(p.tensaoFN) || 127;
+        const tensao = vFN >= 220 ? vFN : (va > 2200 ? 220 : vFN);
         const ib = arred(va / tensao, 1);
         // fonte 24 Vcc com DC-UPS: alternativa quando as cargas protegidas são de 24 Vcc
         const dcW = sel.filter(c => c.dc24).reduce((s, c) => s + (Number(c.potW) || 0), 0);
@@ -1118,16 +1157,22 @@
     // 'modo' poe/fonte12v/rack: não pede tomada (PoE do switch, fonte de 12 V ou tomada dedicada do rack).
     const PONTO_ALIMENTACAO = Object.freeze({
         cortina:            { destino: 'Motor da cortina', altura: 'alta', alturaM: 2.20, aceitas: ['alta'], motivo: 'Tomada alta, a cerca de 2,20 m (ou no forro), junto ao trilho da cortina.' },
-        sensor_gas:         { destino: 'Detector de gás', altura: 'baixa', alturaM: 0.30, aceitas: ['baixa'], motivo: 'GLP é mais pesado que o ar: detector a 0,30 m do piso, perto do fogão.' },
-        controle_ir:        { destino: 'Controle IR', altura: 'alta', aceitas: ['media', 'alta'], motivo: 'Tomada média ou alta, com o emissor voltado para o aparelho (ar-condicionado ou TV).' },
-        sirene:             { destino: 'Sirene', altura: 'alta', aceitas: ['alta'], motivo: 'Tomada alta, fora do alcance de quem passa.' },
-        camera:             { destino: 'Câmera', altura: 'alta', aceitas: ['alta'], modo: 'poe', motivo: 'PoE pelo cabo de rede do switch do rack (ou tomada alta).' },
-        videoporteiro:      { destino: 'Vídeo-porteiro', altura: 'alta', aceitas: ['media', 'alta'], modo: 'poe', motivo: 'PoE pelo cabo de rede do switch do rack (ou tomada alta).' },
+        sensor_gas:         { destino: 'Detector de gás', altura: 'baixa', alturaM: 0.30, aceitas: ['baixa'], baixoConsumo: true, motivo: 'GLP é mais pesado que o ar: detector a 0,30 m do piso, perto do fogão.' },
+        controle_ir:        { destino: 'Controle IR', altura: 'alta', aceitas: ['media', 'alta'], baixoConsumo: true, motivo: 'Tomada média ou alta, com o emissor voltado para o aparelho (ar-condicionado ou TV).' },
+        sirene:             { destino: 'Sirene', altura: 'alta', aceitas: ['alta'], baixoConsumo: true, motivo: 'Tomada alta, fora do alcance de quem passa.' },
+        camera:             { destino: 'Câmera', altura: 'alta', aceitas: ['alta'], modo: 'poe', baixoConsumo: true, motivo: 'PoE pelo cabo de rede do switch do rack (ou tomada alta).' },
+        videoporteiro:      { destino: 'Vídeo-porteiro', altura: 'alta', aceitas: ['media', 'alta'], modo: 'poe', baixoConsumo: true, motivo: 'PoE pelo cabo de rede do switch do rack (ou tomada alta).' },
         fechadura_eletrica: { modo: 'fonte12v', motivo: 'Fonte de 12 V na central de alarme ou no rack, com cabo 2 × 0,75 mm² até a porta.' }
     });
-    const GAS_NATURAL = Object.freeze({ destino: 'Detector de gás', altura: 'alta', alturaM: 2.50, aceitas: ['alta'], motivo: 'Gás natural é mais leve que o ar: detector alto, a até 0,30 m do teto.' });
+    const GAS_NATURAL = Object.freeze({ destino: 'Detector de gás', altura: 'alta', alturaM: 2.50, aceitas: ['alta'], baixoConsumo: true, motivo: 'Gás natural é mais leve que o ar: detector alto, a até 0,30 m do teto.' });
     // destinações de TUG que não podem ceder a tomada para a automação
     const DESTINO_LIVRE = /^(uso geral|reserva)/i;
+    // Regras configuráveis na aba: distância máxima para aproveitar uma TUG existente e tomada compartilhada.
+    // "Baixo consumo" = fonte de até ~15 W (controle IR, detector de gás, sirene, câmera, vídeo-porteiro,
+    // repetidor); o motor de cortina não entra. Compartilhada: até 2 por ponto (tomada dupla ou adaptador).
+    const DISTANCIA_MAX_TUG_PADRAO_M = 1.5;
+    const DISTANCIA_MAX_TUG_LIMITES_M = Object.freeze([0.5, 5]);
+    const MAX_DISPOSITIVOS_POR_TOMADA = 2;
 
     /**
      * Ponto na parede mais próxima, dentro do cômodo (recuo de 0,15 m): é onde fica a caixa.
@@ -1144,7 +1189,7 @@
 
     /**
      * Ponto de alimentação de cada dispositivo ligado na rede elétrica (e do hub, repetidores e servidor):
-     * usa o ponto de origem, a bateria, uma TUG compatível do cômodo (até 1,5 m, altura aceita e sem
+     * usa o ponto de origem, a bateria, uma TUG compatível do cômodo (até 1,5 m ou a distância configurada, altura aceita e sem
      * destinação reservada) ou sugere a TUG que falta.
      * @param {Object} p
      * @param {Array} p.dispositivos  levantamento (x/y em px)
@@ -1158,6 +1203,9 @@
      * @param {string} [p.tipoGas]          'glp' (padrão) | 'gn'
      * @param {string} [p.cameraAlimentacao] 'poe' (padrão) | 'tomada'
      * @param {Object} [p.niveis]           { pavId: { z0 } } para a metragem dos cabos do rack
+     * @param {number} [p.distanciaMaxTugM=1.5] distância máxima (m) para aproveitar uma TUG existente
+     * @param {boolean} [p.compartilharTomada=false] uma tomada atende até 2 dispositivos de baixo consumo
+     * @param {number} [p.tensaoFN=127] tensão das TUGs sugeridas (rede 127/220 ou 220/380 V)
      */
     function planejarAlimentacao(p) {
         const tec = tecnologia(p.tecnologia) || TECNOLOGIAS[0];
@@ -1166,37 +1214,68 @@
         const pontos = p.pontos || [];
         const comodoDe = id => comodos.find(c => String(c.id) === String(id));
         const pontoDe = id => pontos.find(pt => String(pt.id) === String(id));
-        const usadas = new Set();
+        const distMax = limitar(Number(p.distanciaMaxTugM) || DISTANCIA_MAX_TUG_PADRAO_M, DISTANCIA_MAX_TUG_LIMITES_M[0], DISTANCIA_MAX_TUG_LIMITES_M[1]);
+        const txtDist = `${String(Math.round(distMax * 100) / 100).replace('.', ',')} m`;
+        const compartilhar = !!p.compartilharTomada;
+        const usos = new Map();          // TUG → { n, baixo (todos de baixo consumo), nomes }
+        const sugeridas = [];            // TUGs sugeridas que ainda aceitam outro dispositivo
         const itens = [];
         const rack = p.rack || null;
         const z = pav => ((p.niveis || {})[pav] || { z0: 0 }).z0;
         const cabo = (d) => rack ? Math.abs(d.x / e - rack.x) + Math.abs(d.y / e - rack.y) + Math.abs(z(d.pavimentoId) - z(rack.pavId)) + 3 : 0;
         let metrosUtp = 0, metrosCabo12v = 0, fontes12v = 0, poe = 0;
 
-        const procurarTug = (c, ancora, regra, ignorar) => {
+        // destinação da TUG compatível: livre, a do próprio dispositivo ou uma combinação "A + B" que a inclua
+        const destinoAceito = (pt, regra) => !pt.destino || DESTINO_LIVRE.test(pt.destino) || String(pt.destino).split(' + ').includes(regra.destino);
+        const podeCompartilhar = (uso, baixo) => compartilhar && baixo && uso.baixo && uso.n < MAX_DISPOSITIVOS_POR_TOMADA;
+        const procurarTug = (c, ancora, regra, baixo) => {
             let melhor = null;
             pontos.forEach(pt => {
-                if (pt.tipo !== 'TUG' || String(pt.comodoId) !== String(c.id) || usadas.has(pt.id) || (ignorar && ignorar.has(pt.id))) return;
+                if (pt.tipo !== 'TUG' || String(pt.comodoId) !== String(c.id)) return;
+                const uso = usos.get(pt.id);
+                if (uso && !podeCompartilhar(uso, baixo)) return;
                 if (!regra.aceitas.includes(pt.altura || 'baixa')) return;
-                if (pt.destino && !DESTINO_LIVRE.test(pt.destino) && pt.destino !== regra.destino) return;
+                if (!destinoAceito(pt, regra)) return;
                 const dist = Math.hypot(pt.x - ancora.x, pt.y - ancora.y) / e;
-                if (dist <= 1.5 && (!melhor || dist < melhor.dist)) melhor = { pt, dist };
+                // a TUG livre ganha da compartilhada na mesma distância
+                const custo = dist + (uso ? 0.01 : 0);
+                if (dist <= distMax + 1e-9 && (!melhor || custo < melhor.custo)) melhor = { pt, dist, custo, uso };
             });
             return melhor;
         };
         const resolverTomada = (base, c, xPx, yPx, regra) => {
             const ancora = pontoNaParede(c, xPx, yPx, e);
-            const achou = procurarTug(c, ancora, regra);
+            const baixo = !!regra.baixoConsumo;
+            const achou = procurarTug(c, ancora, regra, baixo);
             if (achou) {
-                usadas.add(achou.pt.id);
-                return Object.assign(base, { situacao: 'vinculado', pontoId: achou.pt.id, ponto: `${achou.pt.nome || 'TUG'} (${String(Math.round(achou.dist * 10) / 10).replace('.', ',')} m)`, motivo: `Tomada ${achou.pt.altura || 'baixa'} livre no cômodo, a até 1,5 m.` });
+                const uso = achou.uso || { n: 0, baixo: true, nomes: [] };
+                const motivo = achou.uso
+                    ? `Tomada compartilhada com ${uso.nomes.join(', ')} (baixo consumo, até ${MAX_DISPOSITIVOS_POR_TOMADA} por ponto), a até ${txtDist}.`
+                    : `Tomada ${achou.pt.altura || 'baixa'} livre no cômodo, a até ${txtDist}.`;
+                usos.set(achou.pt.id, { n: uso.n + 1, baixo: uso.baixo && baixo, nomes: uso.nomes.concat(base.nome) });
+                return Object.assign(base, { situacao: 'vinculado', pontoId: achou.pt.id, compartilhada: !!achou.uso, ponto: `${achou.pt.nome || 'TUG'} (${String(Math.round(achou.dist * 10) / 10).replace('.', ',')} m)`, motivo });
             }
-            return Object.assign(base, {
-                situacao: 'sugerido', motivo: regra.motivo,
-                sugestao: { tipo: 'TUG', nome: `TUG ${regra.destino}`, destino: regra.destino, altura: regra.altura, alturaM: regra.alturaM, pot: 100, tensao: 127,
-                    x: Math.round(ancora.x * 10) / 10, y: Math.round(ancora.y * 10) / 10, comodoId: c.id, pavimentoId: c.pavimentoId || 'terreo' },
+            // tomada compartilhada também entre as sugeridas: um ponto novo para dois dispositivos próximos
+            if (compartilhar && baixo) {
+                const s = sugeridas.find(q => String(q.c.id) === String(c.id) && q.n < MAX_DISPOSITIVOS_POR_TOMADA && regra.aceitas.includes(q.sug.altura) &&
+                    Math.hypot(q.ancora.x - ancora.x, q.ancora.y - ancora.y) / e <= distMax + 1e-9);
+                if (s) {
+                    s.n++;
+                    s.sug.destino = `${s.sug.destino} + ${regra.destino}`;
+                    s.sug.nome = `TUG ${s.sug.destino}`;
+                    s.item.ponto = `${s.item.ponto} + ${regra.destino}`;
+                    return Object.assign(base, { situacao: 'sugerido', compartilhaCom: s.item.id, motivo: `${regra.motivo} Compartilha a tomada sugerida para ${s.item.nome} (baixo consumo).`,
+                        ponto: `Mesma TUG de ${s.item.nome}` });
+                }
+            }
+            const sug = { tipo: 'TUG', nome: `TUG ${regra.destino}`, destino: regra.destino, altura: regra.altura, alturaM: regra.alturaM, pot: 100, tensao: Number(p.tensaoFN) || 127,
+                x: Math.round(ancora.x * 10) / 10, y: Math.round(ancora.y * 10) / 10, comodoId: c.id, pavimentoId: c.pavimentoId || 'terreo' };
+            const item = Object.assign(base, {
+                situacao: 'sugerido', motivo: regra.motivo, sugestao: sug,
                 ponto: `TUG ${regra.altura}${regra.alturaM ? ` (${String(regra.alturaM).replace('.', ',')} m)` : ''} — ${regra.destino}`
             });
+            if (compartilhar && baixo) sugeridas.push({ c, ancora, sug, item, n: 1 });
+            return item;
         };
 
         (p.dispositivos || []).forEach(d => {
@@ -1240,7 +1319,7 @@
                 const nome = tec.id === 'wifi' ? 'Ponto de acesso Wi-Fi mesh' : `Repetidor ${tec.nomeCurto}`;
                 const base = { id: `infra:rep${i + 1}`, dispositivoId: null, tipo: 'repetidor', nome, comodoId: c ? c.id : null, comodo: c ? c.nome : 'Área externa' };
                 if (!c) { itens.push(Object.assign(base, { situacao: 'sugerido', ponto: '—', motivo: 'Fora dos cômodos: mova o repetidor para dentro de casa.' })); return; }
-                itens.push(resolverTomada(base, c, xPx, yPx, { destino: nome, altura: tec.id === 'wifi' ? 'media' : 'baixa', aceitas: ['baixa', 'media'], motivo: 'Tomada baixa ou média: o repetidor fica ligado nela.' }));
+                itens.push(resolverTomada(base, c, xPx, yPx, { destino: nome, altura: tec.id === 'wifi' ? 'media' : 'baixa', aceitas: ['baixa', 'media'], baixoConsumo: true, motivo: 'Tomada baixa ou média: o repetidor fica ligado nela.' }));
             });
         }
         if (p.servidorLocal) itens.push({ id: 'infra:servidor', dispositivoId: null, tipo: 'servidor', nome: 'Servidor local (Home Assistant)', comodoId: null, comodo: 'Rack de automação', situacao: 'rack', ponto: 'Tomada dedicada do rack', motivo: 'No rack, junto ao roteador.' });
@@ -1251,7 +1330,9 @@
             sugestoes: itens.filter(i => i.sugestao).map(i => Object.assign({ chave: i.id }, i.sugestao)),
             resumo: { origem: conta('origem'), bateria: conta('bateria'), vinculado: conta('vinculado'), sugerido: conta('sugerido'), rack: conta('rack'), poe: conta('poe'), fonte12v: conta('fonte12v') },
             semPonto: conta('sugerido'),
-            metrosUtp: Math.ceil(metrosUtp * 1.1), metrosCabo12v: Math.ceil(metrosCabo12v * 1.1), fontes12v, poe
+            metrosUtp: Math.ceil(metrosUtp * 1.1), metrosCabo12v: Math.ceil(metrosCabo12v * 1.1), fontes12v, poe,
+            regras: { distanciaMaxTugM: distMax, compartilharTomada: compartilhar, maxPorTomada: MAX_DISPOSITIVOS_POR_TOMADA },
+            compartilhadas: itens.filter(i => i.compartilhada || i.compartilhaCom).length
         };
     }
 
@@ -1436,6 +1517,7 @@
         s.push({ titulo: '3. Dispositivos', paragrafos: [Object.keys(cont).map(t => `${cont[t]} × ${TIPOS[t].nome}`).join('; ') + '.'] });
         if (p.rede) s.push({ titulo: '4. Rede e alcance (estimativa)', paragrafos: p.rede.aplicavel ? [
             `Simulação com perda por distância (expoente ${String(EXPOENTE_PERDA).replace('.', ',')}), paredes de ${(MATERIAIS_PAREDE[p.material] || MATERIAIS_PAREDE.alvenaria).nome.toLowerCase()} (${arred(perdaParede(tec, p.material), 1)} dB cada) e lajes de concreto (cerca de ${arred(perdaLaje(tec, 0.15), 0)} dB cada), com ${MARGEM_DESVANECIMENTO} dB de folga.`,
+            ...(tec.radio ? [`Rádio: ${tec.radio.txDbm} dBm, sensibilidade ${tec.radio.sensDbm} dBm, antena ${tec.radio.antenaDbi || 0} dBi; alcance do modelo com 3 paredes de alvenaria ≈ ${String(alcanceEstimadoM(tec.id)).replace('.', ',')} m (faixa publicada: ${tec.radio.alcanceInternoM[0]} a ${tec.radio.alcanceInternoM[1]} m). Origem: ${FONTES_ALCANCE}`] : []),
             `${p.rede.conectados} de ${devs.filter(d => TIPOS[d.tipo].dados !== 'ip').length} dispositivos alcançam o hub${p.repetidores ? ` com ${p.repetidores} repetidor(es)` : ''}${p.rede.fora.length ? `; ${p.rede.fora.length} ficam fora de alcance e precisam de repetidor ou mudança de posição` : ''}.`,
             'A simulação não substitui a medição de sinal no local, com a obra pronta.'
         ] : [`Sistema cabeado: ${p.barramento ? `${p.barramento.metros} m de cabo de barramento (${minusculaInicial(p.barramento.topologia)})${p.barramento.limiteM ? `, dentro do limite de ${p.barramento.limiteM} m por linha` : ''}.` : 'barramento em eletroduto próprio.'}`] });
@@ -1458,7 +1540,8 @@
 
     return Object.freeze({
         DATA_REFERENCIA, TECNOLOGIAS, ECOSSISTEMAS, CRITERIOS, ROTULO_COMPAT, TIPOS, NIVEIS, MATERIAIS_PAREDE, TIPOS_LAMPADA,
-        GRUPOS_CANAIS, TAMANHOS_CAIXA, MARGEM_DESVANECIMENTO,
+        GRUPOS_CANAIS, TAMANHOS_CAIXA, MARGEM_DESVANECIMENTO, CENARIO_REFERENCIA_ALCANCE,
+        DISTANCIA_MAX_TUG_PADRAO_M, DISTANCIA_MAX_TUG_LIMITES_M, MAX_DISPOSITIVOS_POR_TOMADA, FONTES_ALCANCE, alcanceEstimadoM,
         tecnologia, ehCabeada, perfilAmbiente, contatorPara, levantarDispositivos, sincronizarDispositivos, resumoPorComodo,
         prioridadesAutomaticas, dificuldades, pontuarTecnologias,
         geometriaPlanta, paredesNoSegmento, perdaEnlace, criarSimulador, simularRede, sugerirHub, sugerirRepetidores, mapaDeCalor,

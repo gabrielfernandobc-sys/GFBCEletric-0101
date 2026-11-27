@@ -1056,9 +1056,10 @@
         // Sugestão de proteção e bitola para um aparelho, calculada pela NBR 5410 com as
         // premissas do projeto (FCA/FCT) e trecho curto (a queda de tensão real depende da rota)
         function sugestaoProtecaoAparelho(pot, tensao, fases) {
-            const v = Number(tensao) || 220;
             const tri = Number(fases) === 3;
-            const c = NBR5410.dimensionarCircuito({ tipo: 'TUE', nome: '', tensao: v, ibVal: NBR5410.correnteDaCarga(pot, v, tri ? 3 : 1), rota: 10, ehManual: true, polos: tri ? '3P' : (v >= 220 ? '2P' : '1P') }, obterParametrosNBR());
+            const rede = redeAtivaProjeto();
+            const v = NBR5410.tensaoNaRede({ tipo: 'TUE', tensao: Number(tensao) || 220, fases }, rede);
+            const c = NBR5410.dimensionarCircuito({ tipo: 'TUE', nome: '', tensao: v, ibVal: NBR5410.correnteDaCarga(pot, v, tri ? 3 : 1), rota: 10, ehManual: true, polos: NBR5410.polosDaCarga(v, fases, rede) }, obterParametrosNBR());
             return `Cabo ${c.cabo} • Disj. ${c.disjuntor}A${tri ? ' 3P' : ''}`;
         }
 
@@ -1948,8 +1949,9 @@
 
             const grupos = {};
             SUGESTOES_CARGAS_BR.forEach((item, index) => {
+                if (!itemCatalogoVisivelNaRede(item)) return;
                 if (!grupos[item.grupo]) grupos[item.grupo] = [];
-                grupos[item.grupo].push({ ...item, index });
+                grupos[item.grupo].push({ ...itemCatalogoNaRede(item), index });
             });
 
             sel.innerHTML = '<option value="">-- Escolha um equipamento sugerido --</option>';
@@ -1965,16 +1967,18 @@
                 sel.appendChild(optGroup);
             }
 
+            if (sel.dataset.ligado) return;        // recriado na troca da rede: o evento já está ligado
+            sel.dataset.ligado = '1';
             sel.addEventListener('change', () => {
                 const val = sel.value;
                 if (val === '') return;
-                const item = SUGESTOES_CARGAS_BR[parseInt(val, 10)];
+                const item = itemCatalogoNaRede(SUGESTOES_CARGAS_BR[parseInt(val, 10)]);
                 if (!item) return;
 
                 document.getElementById('txtCargaNome').value = item.nome;
                 document.getElementById('selCargaTipo').value = item.tipo;
                 document.getElementById('numCargaPot').value = item.pot;
-                document.getElementById('selCargaTensao').value = item.fases === 3 ? '220-3F' : String(item.tensao);
+                document.getElementById('selCargaTensao').value = valorTensaoSelect(item.tipo, item.tensao, item.fases);
             });
         }
 
@@ -1991,8 +1995,7 @@
                 const nome = txtNome.value.trim();
                 const tipo = selTipo.value;
                 const pot = parseFloat(numPot.value);
-                const tensao = parseInt(selTensao.value, 10) || 220;
-                const fases = selTensao.value === '220-3F' ? 3 : undefined;      // trifásico 3F+N, 220 V entre fases
+                const { tensao, fases } = lerTensaoSelect(selTensao.value);      // trifásico 3F+N: "220-3F" / "380-3F"
 
                 if (!nome) {
                     alert('Por favor, informe o nome do equipamento.');

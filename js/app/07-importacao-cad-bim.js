@@ -637,9 +637,9 @@
                         <div>
                             <span class="text-[9px] text-slate-400 block">Medição:</span>
                             <select onchange="atualizarSistemaUnidade('${imovel.id}', this.value)" class="bg-slate-900 border border-slate-700 text-white text-[11px] rounded px-2 py-1 outline-none">
-                                <option value="monofasico" ${imovel.sistema === 'monofasico' ? 'selected' : ''}>Mono 127V</option>
-                                <option value="bifasico" ${imovel.sistema === 'bifasico' ? 'selected' : ''}>Bifásico 127/220V</option>
-                                <option value="trifasico" ${imovel.sistema === 'trifasico' ? 'selected' : ''}>Trifásico 220/380V</option>
+                                <option value="monofasico" ${imovel.sistema === 'monofasico' ? 'selected' : ''}>Mono ${redeAtivaProjeto().fn}V</option>
+                                <option value="bifasico" ${imovel.sistema === 'bifasico' ? 'selected' : ''}>Bifásico ${redeAtivaProjeto().rotulo.replace(' ', '')}</option>
+                                <option value="trifasico" ${imovel.sistema === 'trifasico' ? 'selected' : ''}>Trifásico ${redeAtivaProjeto().rotulo.replace(' ', '')}</option>
                             </select>
                         </div>
                         ${state.imoveis.length > 1 ? `

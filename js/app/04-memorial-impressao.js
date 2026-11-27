@@ -11,8 +11,8 @@
             const secMin = c.tipo === 'Iluminação' ? NBR5410.SECAO_MINIMA_ILUMINACAO : NBR5410.SECAO_MINIMA_FORCA;
             const partes = [
                 `I<sub>b</sub> ${fmt(c.ibVal.toFixed(1))} A ≤ I<sub>n</sub> ${c.disjuntor} A ≤ I<sub>z</sub> ${fmt((c.izCorrigida || 0).toFixed(1))} A ` +
-                    `(Tab. 36 B1 × FCA ${fmt((c.fca || 1).toFixed(2))} × FCT ${fmt((c.fct || 1).toFixed(2))})`,
-                `ΔV ${fmt(c.deltaVPct.toFixed(1))}% em ${Math.round(c.ehManual ? c.rota : (c.distanciaCritica || c.rota))} m (item 6.2.7: ≤ 4%)`,
+                    `(Tab. ${c.isolacao === 'epr' ? 37 : 36} B1 × FCA ${fmt((c.fca || 1).toFixed(2))} × FCT ${fmt((c.fct || 1).toFixed(2))})`,
+                `ΔV ${fmt(c.deltaVPct.toFixed(1))}% em ${Math.round(c.ehManual ? c.rota : (c.distanciaCritica || c.rota))} m (item 6.2.7: ≤ 4%; método ${c.metodoQueda === 'detalhado' ? 'detalhado' : 'simplificado'})`,
                 `Seção mín. ${fmt(secMin)} mm² (Tab. 47)`,
                 `PE ${fmt(c.secaoPE || c.secaoMm2)} mm² (Tab. 58)`
             ];
@@ -28,8 +28,10 @@
             const tbody = document.getElementById('tabelaGuiaBitolasNBR');
             const p = obterParametrosNBR();
             const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
-            const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
+            const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente, p.isolacao);
             const fmt = (v, d = 1) => Number(v).toFixed(d).replace('.', ',');
+            const lblMetodo = document.getElementById('lblGuiaMetodoQueda');
+            if (lblMetodo) lblMetodo.textContent = `${textoMetodoQuedaNBR()} Rede ${redeAtivaProjeto().rotulo}.`;
             const txtFatores = `${p.circuitosAgrupados} circuito(s) → FCA ${fmt(fca, 2)}; ${p.temperaturaAmbiente} °C → FCT ${fmt(fct, 2)}`;
             const l1 = document.getElementById('lblGuiaFatoresNBR');
             const l2 = document.getElementById('lblGuiaCriterioFatores');
@@ -44,12 +46,12 @@
             const circs = state.circuitosCalculados || [];
             tbody.innerHTML = '';
             NBR5410.SECOES_PADRONIZADAS.forEach(sec => {
-                const iz = NBR5410.izMetodoB1(sec);
-                const izc = NBR5410.izCorrigida(sec, fca, fct);
+                const iz = NBR5410.izTabela(sec, 2, p.isolacao);
+                const izc = NBR5410.izCorrigida(sec, fca, fct, 2, p.isolacao);
                 const maiorDj = [...NBR5410.DISJUNTORES_PADRONIZADOS].reverse().find(d => d <= izc);
                 const doProjeto = circs.filter(c => c.secaoMm2 === sec);
                 if (sec > 25 && doProjeto.length === 0) return; // seções grandes só quando usadas
-                const cargas = maiorDj ? `${fmt(maiorDj * 127 / 1000)} kW / ${fmt(maiorDj * 220 / 1000)} kW` : '—';
+                const cargas = maiorDj ? `${fmt(maiorDj * redeAtivaProjeto().fn / 1000)} kW / ${fmt(maiorDj * redeAtivaProjeto().ff / 1000)} kW` : '—';
                 const lista = doProjeto.length
                     ? doProjeto.map(c => `<span class="inline-block mr-1 mb-0.5 px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 font-mono text-[10px]" title="${c.nome}">C${c.num} ${c.disjuntor}A</span>`).join('')
                     : '<span class="text-slate-600">não usada neste projeto</span>';
@@ -116,7 +118,8 @@
         function htmlJustificativaBitolasImpressao() {
             const p = obterParametrosNBR();
             const fca = NBR5410.fatorAgrupamento(p.circuitosAgrupados);
-            const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente);
+            const fct = NBR5410.fatorTemperatura(p.temperaturaAmbiente, p.isolacao);
+            const iso = NBR5410.obterIsolacao(p.isolacao);
             const fmt = (v, d = 1) => Number(v).toFixed(d).replace('.', ',');
             const circs = state.circuitosCalculados || [];
             const secoes = [...new Set(circs.map(c => c.secaoMm2))].sort((a, b) => a - b);
@@ -124,14 +127,14 @@
             const linhas = secoes.map(sec => {
                 const usam = circs.filter(c => c.secaoMm2 === sec);
                 const lista = usam.map(c => `C${c.num} (${c.disjuntor} A)`).join(', ');
-                return `<tr><td ${td}><strong>${fmt(sec, sec % 1 ? 1 : 0)} mm²</strong></td><td ${td}>${fmt(NBR5410.izMetodoB1(sec))} A</td>` +
-                       `<td ${td}>${fmt(NBR5410.izCorrigida(sec, fca, fct))} A</td><td ${td}>${fmt(NBR5410.secaoProtecao(sec), NBR5410.secaoProtecao(sec) % 1 ? 1 : 0)} mm²</td><td ${td}>${lista}</td></tr>`;
+                return `<tr><td ${td}><strong>${fmt(sec, sec % 1 ? 1 : 0)} mm²</strong></td><td ${td}>${fmt(NBR5410.izTabela(sec, 2, p.isolacao))} A</td>` +
+                       `<td ${td}>${fmt(NBR5410.izCorrigida(sec, fca, fct, 2, p.isolacao))} A</td><td ${td}>${fmt(NBR5410.secaoProtecao(sec), NBR5410.secaoProtecao(sec) % 1 ? 1 : 0)} mm²</td><td ${td}>${lista}</td></tr>`;
             }).join('');
             const alertas = circs.filter(c => c.alertas && c.alertas.length).map(c => `C${c.num}: ${c.alertas.join(' ')}`);
             return `<p style="margin: 0 0 4px 0;">Critérios: seção mínima da Tabela 47 (1,5 mm² iluminação; 2,5 mm² força); disjuntor = menor corrente nominal comercial ≥ I<sub>b</sub>;
-                    seção = menor que atende I<sub>n</sub> ≤ I<sub>z</sub> × FCA × FCT (Tabela 36, método B1, cobre/PVC 70 °C, 2 condutores carregados) e queda de tensão ≤ 4% (item 6.2.7).
-                    Premissas deste projeto: ${p.circuitosAgrupados} circuito(s) por eletroduto → FCA ${fmt(fca, 2)} (Tabela 42); ${p.temperaturaAmbiente} °C → FCT ${fmt(fct, 2)} (Tabela 40).
-                    Condutor de proteção (PE) pela Tabela 58.</p>
+                    seção = menor que atende I<sub>n</sub> ≤ I<sub>z</sub> × FCA × FCT (Tabela ${iso.id === 'epr' ? 37 : 36}, método B1, cobre/${iso.rotulo}, 2 condutores carregados) e queda de tensão ≤ 4% (item 6.2.7).
+                    Premissas deste projeto: rede ${redeAtivaProjeto().rotulo}; ${p.circuitosAgrupados} circuito(s) por eletroduto → FCA ${fmt(fca, 2)} (Tabela 42); ${p.temperaturaAmbiente} °C → FCT ${fmt(fct, 2)} (Tabela 40).
+                    ${textoMetodoQuedaNBR()} Correntes e quedas comparadas com 2 casas decimais. Condutor de proteção (PE) pela Tabela 58.</p>
                 <table style="width: 100%; border-collapse: collapse; font-size: 7.5pt; margin: 4px 0 6px 0;">
                     <thead><tr style="background: #f1f5f9;"><th ${td}>Bitola</th><th ${td}>I<sub>z</sub> Tab. 36</th><th ${td}>I<sub>z</sub> corrigida</th><th ${td}>PE</th><th ${td}>Circuitos (disjuntor)</th></tr></thead>
                     <tbody>${linhas}</tbody>

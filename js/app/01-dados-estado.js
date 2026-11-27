@@ -9,6 +9,71 @@
             return `${tri ? '3F ' : ''}${obj.tensao}V`;
         }
 
+        /** Rede de BT do projeto (premissas): 127/220 V (padrão) ou 220/380 V — js/nbr5410.js. */
+        function redeAtivaProjeto() {
+            return NBR5410.obterRede(typeof state !== 'undefined' && state ? state.parametrosNBR : null);
+        }
+
+        /** Opções de tensão dos seletores de ponto/carga na rede do projeto. */
+        function opcoesTensaoRede() {
+            const r = redeAtivaProjeto();
+            return r.fn === 220
+                ? [{ valor: '220', rotulo: '220 V (F+N)' }, { valor: '380', rotulo: '380 V (F+F)' }, { valor: '380-3F', rotulo: '380 V trifásico (3F+N)' }]
+                : [{ valor: '127', rotulo: '127 V' }, { valor: '220', rotulo: '220 V' }, { valor: '220-3F', rotulo: '220 V trifásico (3F+N)' }];
+        }
+
+        /** Valor do seletor de tensão para a carga (convenção 127/220 V convertida para a rede do projeto). */
+        function valorTensaoSelect(tipo, tensao, fases) {
+            const carga = { tipo, tensao, fases };
+            const v = NBR5410.tensaoNaRede(carga, redeAtivaProjeto());
+            return NBR5410.ehCargaTrifasica(carga) ? `${v}-3F` : String(v);
+        }
+
+        /** Lê o seletor de tensão: { tensao, fases } (fases = 3 no trifásico). */
+        function lerTensaoSelect(valor, tipo) {
+            const tri = /-3F$/.test(String(valor || '')) && (tipo === undefined || tipo === 'TUE');
+            const tensao = parseInt(valor, 10) || (tipo === 'TUE' ? 220 : redeAtivaProjeto().fn);
+            return { tensao, fases: tri ? 3 : undefined };
+        }
+
+        /** Recria as opções dos seletores de tensão mantendo a escolha (convertida) de cada um. */
+        function atualizarOpcoesTensaoRede() {
+            ['selCargaTensao', 'selModalPontoTensao'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const atual = lerTensaoSelect(sel.value);
+                sel.innerHTML = opcoesTensaoRede().map(o => `<option value="${o.valor}">${o.rotulo}</option>`).join('');
+                sel.value = valorTensaoSelect('TUE', atual.tensao || 220, atual.fases);
+            });
+        }
+
+        /**
+         * Aparelho do catálogo na rede do projeto. O catálogo é escrito em 127/220 V; na rede
+         * 220/380 V, os aparelhos de 127 V passam a 220 V (F+N), os trifásicos a 380 V entre fases
+         * e os carregadores limitados por corrente (correnteFase) têm a potência recalculada.
+         */
+        function itemCatalogoNaRede(item) {
+            const r = redeAtivaProjeto();
+            if (!item || r.fn !== 220) return item;
+            const c = Object.assign({}, item);
+            c.tensao = NBR5410.tensaoNaRede(item, r);
+            c.nome = String(item.nome).replace(/127\s?V/g, '220V');
+            if (item.correnteFase && NBR5410.ehCargaTrifasica(item)) {
+                c.pot = NBR5410.potenciaTrifasicaPorCorrente(item.correnteFase, r);
+                c.desc = `Limitado a ${item.correnteFase} A por fase: na rede 220/380 V entrega √3 × 380 V × ${item.correnteFase} A ≈ ${(c.pot / 1000).toFixed(1).replace('.', ',')} kW. Circuito 3F+N+PE; siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.`;
+            } else if (c.desc) {
+                c.desc = String(c.desc).replace(/127\s?V/g, '220V');
+            }
+            return c;
+        }
+
+        /** Na rede 220/380 V, esconde as variantes de 127 V que já têm o mesmo aparelho em 220 V. */
+        function itemCatalogoVisivelNaRede(item) {
+            if (!item || redeAtivaProjeto().fn !== 220 || Number(item.tensao) !== 127) return true;
+            const nome220 = String(item.nome).replace(/127\s?V/g, '220V');
+            return !(nome220 !== item.nome && SUGESTOES_CARGAS_BR.some(o => o !== item && Number(o.tensao) === 220 && o.nome === nome220));
+        }
+
         // =========================================================================
         // BIBLIOTECA EXTENSIVA DE CARGAS E APARELHOS DO MERCADO BRASILEIRO (NBR 5410)
         // =========================================================================
@@ -120,8 +185,8 @@
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Furadeira de Bancada / Serra Oficina', tipo: 'TUE', pot: 1200, tensao: 220, altura: 'media', icon: 'fa-toolbox', desc: 'Maquinário de bancada e marcenaria' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Cortador de Grama Elétrico / Roçadeira', tipo: 'TUE', pot: 1800, tensao: 220, altura: 'media', icon: 'fa-scissors', desc: 'Ponto externo para jardinagem pesada' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 3,7 kW (16 A / 220V)', tipo: 'TUE', pot: 3520, tensao: 220, altura: 'media', icon: 'fa-car-battery', desc: 'Wallbox de menor potência: 16 A × 220 V' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', tipo: 'TUE', pot: 6096, tensao: 220, fases: 3, altura: 'media', icon: 'fa-car-battery', desc: 'Modelo de 11 kW limitado a 16 A por fase: na rede 127/220 V entrega √3 × 220 V × 16 A ≈ 6,1 kW (11 kW só em 230/400 V). Circuito 3F+N+PE; confira se o modelo aceita 220 V entre fases, siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.' },
-            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', tipo: 'TUE', pot: 12193, tensao: 220, fases: 3, altura: 'media', icon: 'fa-car-battery', desc: 'Modelo de 22 kW limitado a 32 A por fase: na rede 127/220 V entrega √3 × 220 V × 32 A ≈ 12,2 kW (22 kW só em 230/400 V). Circuito 3F+N+PE; confira se o modelo aceita 220 V entre fases, siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 11 kW trifásico (16 A por fase)', tipo: 'TUE', pot: 6097, correnteFase: 16, tensao: 220, fases: 3, altura: 'media', icon: 'fa-car-battery', desc: 'Modelo de 11 kW limitado a 16 A por fase: na rede 127/220 V entrega √3 × 220 V × 16 A ≈ 6,1 kW (11 kW só em 230/400 V). Circuito 3F+N+PE; confira se o modelo aceita 220 V entre fases, siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.' },
+            { grupo: 'Garagem & Área Externa (TUE)', nome: 'Carregador Veicular Wallbox 22 kW trifásico (32 A por fase)', tipo: 'TUE', pot: 12194, correnteFase: 32, tensao: 220, fases: 3, altura: 'media', icon: 'fa-car-battery', desc: 'Modelo de 22 kW limitado a 32 A por fase: na rede 127/220 V entrega √3 × 220 V × 32 A ≈ 12,2 kW (22 kW só em 230/400 V). Circuito 3F+N+PE; confira se o modelo aceita 220 V entre fases, siga o disjuntor do manual e use IDR tipo A com detecção de 6 mA CC (ou tipo B) se não for interno.' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Motor Portão Deslizante Pesado ½ cv', tipo: 'TUE', pot: 850, tensao: 220, altura: 'alta', icon: 'fa-door-open', desc: 'Automatizador para portões pesados (≈3,9 A)' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Máquina de Solda Inversora 160 A', tipo: 'TUE', pot: 5000, tensao: 220, altura: 'media', icon: 'fa-bolt', desc: 'Solda eletrodo revestido: tomada 220V de 32 A' },
             { grupo: 'Garagem & Área Externa (TUE)', nome: 'Central de Cerca Elétrica / Alarme', tipo: 'TUE', pot: 50, tensao: 127, altura: 'alta', icon: 'fa-shield-halved', desc: 'Ponto dedicado para central de segurança' },

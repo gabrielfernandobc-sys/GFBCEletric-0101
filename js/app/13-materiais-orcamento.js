@@ -2,6 +2,14 @@
    Quantitativo de materiais, tabela de preços de referência, orçamento e exportação Excel.
    Script clássico (escopo global compartilhado): os módulos de js/app/ são
    carregados em ordem numérica pelo index.html e dependem dessa ordem. */
+        /** Cabo dos circuitos conforme a isolação das premissas (PVC 70 °C 750 V ou EPR/XLPE 90 °C 0,6/1 kV). */
+        function descricaoCaboIsolacao() {
+            const iso = NBR5410.obterIsolacao(obterParametrosNBR().isolacao);
+            return iso.id === 'epr'
+                ? { nome: 'Cabo Flexível de Cobre 0,6/1 kV', plural: 'Cabos Flexíveis de Cobre 0,6/1 kV (NBR 7286 / NBR 5410)', norma: 'NBR 7286 / NBR 5410', isolacao: 'HEPR/XLPE 90°C Anti-chamas', isolacaoCurta: 'HEPR/XLPE 90°C' }
+                : { nome: 'Cabo Flexível de Cobre 750V', plural: 'Cabos Flexíveis de Cobre 750V (NBR NM 247-3 / NBR 5410)', norma: 'NBR NM 247-3 / NBR 5410', isolacao: 'PVC 70°C Anti-chamas BWF-B', isolacaoCurta: 'PVC 70°C BWF-B' };
+        }
+
         // =========================================================================
         // MOTOR DE QUANTITATIVO AVANÇADO DE MATERIAIS & ORÇAMENTO NBR 5410
         // =========================================================================
@@ -1169,8 +1177,8 @@
                 } else if (circ.tipo === 'TUG') {
                     if (circ.polos === '2P') {
                         // 220V Bifásico
-                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, 'Fase 1 dos circuitos bifásicos de tomadas 220V');
-                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, 'Fase 2 dos circuitos bifásicos de tomadas 220V');
+                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, `Fase 1 dos circuitos bifásicos de tomadas ${redeAtivaProjeto().ff}V`);
+                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, `Fase 2 dos circuitos bifásicos de tomadas ${redeAtivaProjeto().ff}V`);
                         registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Pino central de terra das tomadas NBR 14136');
                     } else {
                         // 127V Monofásico
@@ -1181,18 +1189,18 @@
                 } else if (circ.tipo === 'TUE') {
                     if (circ.polos === '3P') {
                         // Cargas trifásicas 3F+N 220 V (carregador veicular trifásico)
-                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, 'Fase 1 dos circuitos trifásicos 220V');
-                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, 'Fase 2 dos circuitos trifásicos 220V');
-                        registrarCaboCor(bitola, 'Condutor Fase 3 (T)', 'Branco / Cinza', '#94a3b8', rota, ref, prc, 'Fase 3 dos circuitos trifásicos 220V');
+                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, `Fase 1 dos circuitos trifásicos ${redeAtivaProjeto().ff}V`);
+                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, `Fase 2 dos circuitos trifásicos ${redeAtivaProjeto().ff}V`);
+                        registrarCaboCor(bitola, 'Condutor Fase 3 (T)', 'Branco / Cinza', '#94a3b8', rota, ref, prc, `Fase 3 dos circuitos trifásicos ${redeAtivaProjeto().ff}V`);
                         registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, 'Neutro do circuito trifásico (eletrônica do aparelho)');
                         registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Aterramento obrigatório da carcaça do aparelho TUE');
                     } else if (circ.polos === '2P') {
                         // Cargas 220V bifásicas (Chuveiro, Torneira, Ar, Forno)
-                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, 'Fase 1 para aparelhos de alta potência 220V');
-                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, 'Fase 2 para aparelhos de alta potência 220V');
+                        registrarCaboCor(bitola, 'Condutor Fase 1 (R)', 'Preto', '#1e293b', rota, ref, prc, `Fase 1 para aparelhos de alta potência ${redeAtivaProjeto().ff}V`);
+                        registrarCaboCor(bitola, 'Condutor Fase 2 (S)', 'Vermelho', '#ef4444', rota, ref, prc, `Fase 2 para aparelhos de alta potência ${redeAtivaProjeto().ff}V`);
                         registrarCaboCor(bitola, 'Condutor de Proteção (PE)', 'Verde', '#10b981', rota, ref, prc, 'Aterramento obrigatório da carcaça do aparelho TUE');
                         if (NBR5410.tueComNeutro(circ.nome)) {
-                            registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, 'Neutro para placa eletrônica/comando 127V do aparelho');
+                            registrarCaboCor(bitola, 'Condutor Neutro (N)', 'Azul Claro', '#3b82f6', rota, ref, prc, `Neutro para placa eletrônica/comando ${redeAtivaProjeto().fn}V do aparelho`);
                         }
                     } else {
                         // 127V Monofásico TUE
@@ -1318,8 +1326,8 @@
             cabosOrdenadosAgrupados.forEach(c => {
                 addItem(
                     'Condutores Elétricos', 'condutores',
-                    `Cabo Flexível de Cobre 750V ${c.secao} - Cor: ${c.cor} (${c.funcao})`,
-                    `${c.norma}, Cobre Classe 5, PVC 70°C Anti-chamas BWF-B`,
+                    `${descricaoCaboIsolacao().nome} ${c.secao} - Cor: ${c.cor} (${c.funcao})`,
+                    `${descricaoCaboIsolacao().norma}, Cobre Classe 5, ${descricaoCaboIsolacao().isolacao}`,
                     c.metrosProjeto, 'm', c.precoUnit,
                     `${c.aplicacao} - Circuitos: ${c.circuitosStr}`,
                     reservaCabos, c.secao.replace(' mm²', '').trim()
@@ -1449,7 +1457,7 @@
                 curva: 'Curva C (5 a 10×In)',
                 correnteStr: disjGeral,
                 correnteA: parseInt(disjGeral) || 50,
-                tensao: sistemaUsado === 'monofasico' ? '127V / 230V' : '220V / 400V',
+                tensao: sistemaUsado === 'monofasico' ? `${redeAtivaProjeto().fn}V / 230V` : `${redeAtivaProjeto().ff}V / 400V`,
                 icn: '3 kA / 5 kA a 230/400V (NBR IEC 60898)',
                 qtdProjeto: numQdts,
                 reserva: 0,
@@ -1475,14 +1483,14 @@
                         curva: 'Curva C (5 a 10×In)',
                         correnteStr: ampStr,
                         correnteA: parseInt(ampStr) || 20,
-                        tensao: (tri || bi) ? '220V / 400V' : '127V / 230V',
+                        tensao: (tri || bi) ? `${redeAtivaProjeto().ff}V / 400V` : `${redeAtivaProjeto().fn}V / 230V`,
                         icn: '3 kA (NBR IEC 60898)',
                         qtdProjeto: 0,
                         reserva: 0,
                         qtdTotal: 0,
                         precoUnit: (typeof obterPrecoMaterial === 'function') ? obterPrecoMaterial('protecao', chavePreco[0], chavePreco[1]) : chavePreco[1],
                         circuitos: [],
-                        funcao: tri ? 'Proteção individual de circuitos trifásicos 220V (3F+N)' : (bi ? 'Proteção individual de circuitos bifásicos 220V' : 'Proteção individual de circuitos terminais 127V')
+                        funcao: tri ? `Proteção individual de circuitos trifásicos ${redeAtivaProjeto().ff}V (3F+N)` : (bi ? `Proteção individual de circuitos bifásicos ${redeAtivaProjeto().ff}V` : `Proteção individual de circuitos terminais ${redeAtivaProjeto().fn}V`)
                     };
                 }
                 mapDisjuntores[key].qtdProjeto += 1;
@@ -2010,7 +2018,7 @@
                                             <i class="fa-solid fa-bolt"></i> BITOLA ${gb.secao}
                                         </span>
                                         <span class="text-white text-xs font-bold">
-                                            Cabos Flexíveis de Cobre 750V (NBR NM 247-3 / NBR 5410)
+                                            ${descricaoCaboIsolacao().plural}
                                         </span>
                                         <span class="text-[11px] text-amber-300/80 font-mono font-medium">
                                             — ${gb.cores.length} ${gb.cores.length === 1 ? 'cor normativa' : 'cores normativas'}
@@ -2069,7 +2077,7 @@
                                     <span class="text-[10px] text-slate-400 block mt-0.5">${c.norma}</span>
                                 </td>
                                 <td class="p-3 align-top text-slate-400 text-[11px] font-mono leading-snug">
-                                    NBR NM 247-3 / NBR 5410<br><span class="text-slate-500">PVC 70°C BWF-B</span>
+                                    ${descricaoCaboIsolacao().norma}<br><span class="text-slate-500">${descricaoCaboIsolacao().isolacaoCurta}</span>
                                 </td>
                                 <td class="p-3 align-top text-right font-mono text-slate-300 text-xs">
                                     ${c.metrosProjeto} m
@@ -2117,7 +2125,7 @@
                                 <span class="text-[10px] text-slate-400 block mt-0.5">${c.norma}</span>
                             </td>
                             <td class="p-3 align-top text-slate-400 text-[11px] font-mono leading-snug">
-                                NBR NM 247-3 / NBR 5410<br><span class="text-slate-500">PVC 70°C BWF-B</span>
+                                ${descricaoCaboIsolacao().norma}<br><span class="text-slate-500">${descricaoCaboIsolacao().isolacaoCurta}</span>
                             </td>
                             <td class="p-3 align-top text-right font-mono text-slate-300 text-xs">
                                 ${c.metrosProjeto} m

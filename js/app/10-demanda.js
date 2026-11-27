@@ -109,7 +109,7 @@
             }
             // Cálculo normativo em js/nbr5410.js; aqui apenas resolvemos os padrões a partir do estado
             const sistema = sistemaAlim || (state.alimentacaoExterna && state.alimentacaoExterna.sistema) || state.sistemaAlimentacao || 'bifasico';
-            return NBR5410.calcularDemanda(totIlum, totTug, tues, sistema, concessionariaId);
+            return NBR5410.calcularDemanda(totIlum, totTug, tues, sistema, concessionariaId, redeAtivaProjeto());
         }
 
         // =========================================================================
